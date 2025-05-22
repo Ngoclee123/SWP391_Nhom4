@@ -2,62 +2,100 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 
 function Header() {
-  const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const [activeLink, setActiveLink] = useState('');
+
+  const handleNavClick = (sectionId) => {
+    setActiveLink(sectionId);
+    if (sectionId === '') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: 'smooth' });
+      }
+    }
+  };
 
   return (
     <header className="bg-white shadow-md fixed w-full top-0 z-50">
       <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-        {/* Logo */}
-        <div className="text-2xl font-bold text-blue-800">
-          <Link to="/">Baby Health Hub</Link>
+        {/* Logo và tên */}
+        <div className="flex items-center space-x-3">
+          <img
+            src="/images/Logo.jpg"
+            alt="Baby Health Hub Logo"
+            className="w-20 h-20 object-contain rounded-full"
+          />
+          <div className="text-xl font-bold text-blue-800">
+            <Link to="/">Baby Health Hub</Link>
+          </div>
         </div>
 
-        {/* Menu điều hướng (ẩn trên mobile, hiện trên desktop) */}
-        <nav className="hidden md:flex space-x-6">
-          <Link to="/" className="text-gray-700 hover:text-blue-600">Trang chủ</Link>
-          <Link to="/#services" className="text-gray-700 hover:text-blue-600">Dịch vụ</Link>
-          <Link to="/#team" className="text-gray-700 hover:text-blue-600">Đội ngũ</Link>
-          <Link to="/#news" className="text-gray-700 hover:text-blue-600">Tin tức</Link>
-          <Link to="/#contact" className="text-gray-700 hover:text-blue-600">Liên hệ</Link>
+        {/* Menu điều hướng (chỉ hiển thị trên desktop) */}
+        <nav className="flex space-x-6">
+          <Link
+            to="/"
+            className={`text-gray-700 hover:text-blue-600 hover:scale-110 transform transition duration-200 ${
+              activeLink === '' ? 'text-blue-600' : ''
+            }`}
+            onClick={() => handleNavClick('')}
+          >
+            Trang chủ
+          </Link>
+          <Link
+            to="/#services"
+            className={`text-gray-700 hover:text-blue-600 hover:scale-110 transform transition duration-200 ${
+              activeLink === 'services' ? 'text-blue-600' : ''
+            }`}
+            onClick={() => handleNavClick('services')}
+          >
+            Dịch vụ
+          </Link>
+          <Link
+            to="/#team"
+            className={`text-gray-700 hover:text-blue-600 hover:scale-110 transform transition duration-200 ${
+              activeLink === 'team' ? 'text-blue-600' : ''
+            }`}
+            onClick={() => handleNavClick('team')}
+          >
+            Đội ngũ
+          </Link>
+          <Link
+            to="/#news"
+            className={`text-gray-700 hover:text-blue-600 hover:scale-110 transform transition duration-200 ${
+              activeLink === 'news' ? 'text-blue-600' : ''
+            }`}
+            onClick={() => handleNavClick('news')}
+          >
+            Tin tức
+          </Link>
+          <Link
+            to="/#contact"
+            className={`text-gray-700 hover:text-blue-600 hover:scale-110 transform transition duration-200 ${
+              activeLink === 'contact' ? 'text-blue-600' : ''
+            }`}
+            onClick={() => handleNavClick('contact')}
+          >
+            Liên hệ
+          </Link>
         </nav>
 
-        {/* Nút đăng nhập/đăng ký và toggle menu cho mobile */}
-        <div className="flex items-center space-x-4">
-          {/* Nút đăng nhập và đăng ký (hiện trên desktop, ẩn trên mobile) */}
-          <div className="hidden md:flex space-x-4">
-            <Link to="/login" className="text-gray-700 hover:text-blue-600">Đăng nhập</Link>
-            <Link to="/register" className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition duration-300">
-              Đăng ký
-            </Link>
-          </div>
-
-          {/* Toggle menu cho mobile */}
-          <div className="md:hidden">
-            <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="text-gray-700 focus:outline-none">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={isMenuOpen ? "M6 18L18 6M6 6l12 12" : "M4 6h16M4 12h16M4 18h16"} />
-              </svg>
-            </button>
-          </div>
+        {/* Nút đăng nhập/đăng ký (chỉ hiển thị trên desktop) */}
+        <div className="flex space-x-4">
+          <Link
+            to="/login"
+            className="border-2 border-blue-300 text-blue-600 px-4 py-2 rounded-full hover:bg-blue-100 hover:border-blue-400 hover:scale-105 transform transition duration-200 font-semibold"
+          >
+            Đăng nhập
+          </Link>
+          <Link
+            to="/register"
+            className="bg-blue-300 text-white px-4 py-2 rounded-full hover:bg-blue-400 hover:scale-105 transform transition duration-200 font-semibold shadow-md"
+          >
+            Đăng ký
+          </Link>
         </div>
       </div>
-
-      {/* Menu mobile (hiện khi toggle) */}
-      {isMenuOpen && (
-        <div className="md:hidden bg-white shadow-md">
-          <nav className="flex flex-col space-y-2 px-4 py-2">
-            <Link to="/" className="text-gray-700 hover:text-blue-600">Trang chủ</Link>
-            <Link to="/#services" className="text-gray-700 hover:text-blue-600">Dịch vụ</Link>
-            <Link to="/#team" className="text-gray-700 hover:text-blue-600">Đội ngũ</Link>
-            <Link to="/#news" className="text-gray-700 hover:text-blue-600">Tin tức</Link>
-            <Link to="/#contact" className="text-gray-700 hover:text-blue-600">Liên hệ</Link>
-            <Link to="/login" className="text-gray-700 hover:text-blue-600">Đăng nhập</Link>
-            <Link to="/register" className="bg-blue-600 text-white px-4 py-2 rounded-full hover:bg-blue-700 transition duration-300 mt-2">
-              Đăng ký
-            </Link>
-          </nav>
-        </div>
-      )}
     </header>
   );
 }
