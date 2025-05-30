@@ -17,8 +17,14 @@ public class DoctorController {
     private DoctorService doctorService;
 
     @GetMapping("/search")
-    public ResponseEntity<List<Doctor>> searchDoctors(@ModelAttribute DoctorSearchDTO searchDTO) {
-        List<Doctor> doctors = doctorService.searchDoctors(searchDTO);
+    public ResponseEntity<List<Doctor>> searchDoctors(
+            @RequestParam(value = "specialtyId", required = false) Integer specialtyId,
+            @RequestParam(value = "fullName", required = false) String fullName,
+            @RequestParam(value = "availabilityStatus", required = false) String availabilityStatus,
+            @RequestParam(value = "location", required = false) String location,
+            @RequestParam(value = "availabilityTime", required = false) String availabilityTime) {
+
+        List<Doctor> doctors = doctorService.searchDoctors(specialtyId, fullName, availabilityStatus, location, availabilityTime);
         return ResponseEntity.ok(doctors);
     }
 

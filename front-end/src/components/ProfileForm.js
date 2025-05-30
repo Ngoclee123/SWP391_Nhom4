@@ -1,116 +1,269 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
+import UserService from '../service/userService'; // Giả định đây là service để gọi API
 
 function ProfileForm() {
-  const [profile, setProfile] = useState({
-    accountId: 1, // Giả sử accountId = 1, thay bằng logic xác thực thực tế
-    fullName: '',
-    phoneNumber: '',
-    address: ''
-  });
-  const [message, setMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
+    const [userData, setUserData] = useState({
+        fullName: '',
+        dateOfBirth: '',
+        gender: '',
+        phoneNumber: '',
+        email: '',
+        address: ''
+    });
+    const [errors, setErrors] = useState({});
+    const [loading, setLoading] = useState(false);
+    const [message, setMessage] = useState('');
 
-  // Lấy dữ liệu từ backend khi component mount
-  useEffect(() => {
-    const fetchProfile = async () => {
-      try {
-        const response = await axios.get(`http://localhost:8080/api/parents/profile/${profile.accountId}`);
-        setProfile(response.data);
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-        setMessage('Failed to load profile');
-      } finally {
-        setLoading(false);
-      }
+    const userService = new UserService();
+
+    // Lấy thông tin người dùng hiện tại khi component mount
+    useEffect(() => {
+        const fetchUserData = async () => {
+            try {
+                const response = await userService.getUserProfile(); // Giả định API trả về thông tin người dùng
+                setUserData(response);
+            } catch (error) {
+                console.error('Error fetching user data:', error);
+                setMessage('Không thể tải thông tin người dùng');
+            }
+        };
+        fetchUserData();
+    }, []);
+
+    // Xử lý thay đổi giá trị input
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setUserData({ ...userData, [name]: value });
+
+        // Xóa lỗi khi người dùng bắt đầu nhập
+        if (value.trim()) {
+            setErrors({ ...errors, [name]: '' });
+        }
     };
-    fetchProfile();
-  }, [profile.accountId]);
 
-  // Xử lý thay đổi input
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProfile({ ...profile, [name]: value });
-  };
+    // Validate form trước khi submit
+    const validateForm = () => {
+        const newErrors = {};
+        if (!userData.fullName.trim()) newErrors.fullName = 'Họ và tên là bắt buộc';
+        if (!userData.dateOfBirth) newErrors.dateOfBirth = 'Ngày sinh là bắt buộc';
+        if (!userData.gender) newErrors.gender = 'Vui lòng chọn giới tính';
+        if (!userData.phoneNumber.trim()) {
+            newErrors.phoneNumber = 'Số điện thoại là bắt buộc';
+        } else if (!/^\d{10,11}$/.test(userData.phoneNumber)) {
+            newErrors.phoneNumber = 'Số điện thoại không hợp lệ (10-11 chữ số)';
+        }
+        if (!userData.email.trim()) {
+            newErrors.email = 'Email là bắt buộc';
+        } else if (!/\S+@\S+\.\S+/.test(userData.email)) {
+            newErrors.email = 'Email không hợp lệ';
+        }
+        if (!userData.address.trim()) newErrors.address = 'Địa chỉ là bắt buộc';
 
-  // Gửi dữ liệu cập nhật lên backend
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    try {
-      await axios.put(`http://localhost:8080/api/parents/profile/${profile.accountId}`, profile);
-      setMessage('Profile updated successfully');
-      setTimeout(() => setMessage(''), 3000); // Tự động xóa thông báo sau 3 giây
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      setMessage('Failed to update profile');
-      setTimeout(() => setMessage(''), 3000);
-    }
-  };
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
-  if (loading) {
+    // Xử lý submit form
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        if (!validateForm()) return;
+
+        setLoading(true);
+        try {
+            await userService.updateUserProfile(userData); // Giả định API cập nhật thông tin người dùng
+            setMessage('Cập nhật hồ sơ thành công!');
+            setTimeout(() => navigate('/profile'), 2000); // Chuyển hướng sau 2 giây
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            setMessage('Cập nhật hồ sơ thất bại. Vui lòng thử lại.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Xử lý hủy và quay lại
+    const handleCancel = () => {
+        navigate('/profile');
+    };
+
     return (
-      <div className="container mx-auto py-10 text-center">
-        <p className="text-gray-600">Loading profile...</p>
-      </div>
-    );
-  }
+        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-200 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{marginTop: '100px'}}>
+          {/* Logo bên trái */}
+                <div className="w-full md:w-1/2 flex justify-center md:justify-start">
+                    <img
+                        src="https://pclinic.ohayo.io.vn/_next/image?url=%2F_next%2Fstatic%2Fmedia%2FBookingBanner.73393a3c.png&w=1920&q=75" // Thay bằng logo "Baby Health Hub" thực tế
+                        alt="Baby Health Hub Logo"
+                        className="w-[450px] max-w-full h-auto rounded-lg shadow-xl transform hover:scale-105 transition duration-300"
+                    />
+                </div>
+            <div className="max-w-lg w-full space-y-8 bg-white p-8 rounded-xl shadow-lg">
+                <div>
+                    <h2 className="text-center text-3xl font-extrabold text-blue-900">
+                        Cập nhật hồ sơ
+                    </h2>
+                    <p className="mt-2 text-center text-sm text-gray-600">
+                        Vui lòng điền đầy đủ thông tin bên dưới
+                    </p>
+                </div>
 
-  return (
-    <div className="container mx-auto py-10">
-      <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-2xl border border-gray-200">
-        <h2 className="text-3xl font-semibold text-gray-800 mb-6 text-center">Edit Your Profile</h2>
-        {message && (
-          <p className={`text-center mb-4 p-2 rounded ${message.includes('success') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
-            {message}
-          </p>
-        )}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Full Name</label>
-            <input
-              type="text"
-              name="fullName"
-              value={profile.fullName || ''}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-              placeholder="Enter your full name"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Phone Number</label>
-            <input
-              type="text"
-              name="phoneNumber"
-              value={profile.phoneNumber || ''}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              required
-              placeholder="Enter your phone number"
-            />
-          </div>
-          <div>
-            <label className="block text-gray-700 font-medium mb-2">Address</label>
-            <input
-              type="text"
-              name="address"
-              value={profile.address || ''}
-              onChange={handleInputChange}
-              className="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
-              placeholder="Enter your address"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-primary text-white p-3 rounded-lg hover:bg-secondary transition duration-300"
-            disabled={loading}
-          >
-            Update Profile
-          </button>
-        </form>
-      </div>
-    </div>
-  );
+                {message && (
+                    <div
+                        className={`text-center p-3 rounded-lg ${
+                            message.includes('thành công') ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}
+                    >
+                        {message}
+                    </div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Nhóm thông tin cá nhân */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-medium text-gray-900">Thông tin cá nhân</h3>
+                        <div>
+                            <label htmlFor="fullName" className="block text-sm font-medium text-gray-700">
+                                Họ và tên
+                            </label>
+                            <input
+                                type="text"
+                                name="fullName"
+                                value={userData.fullName}
+                                onChange={handleInputChange}
+                                className={`mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
+                                    errors.fullName ? 'border-red-500' : ''
+                                }`}
+                                placeholder="Nhập họ và tên"
+                            />
+                            {errors.fullName && (
+                                <p className="mt-1 text-sm text-red-600">{errors.fullName}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="dateOfBirth" className="block text-sm font-medium text-gray-700">
+                                Ngày sinh
+                            </label>
+                            <input
+                                type="date"
+                                name="dateOfBirth"
+                                value={userData.dateOfBirth}
+                                onChange={handleInputChange}
+                                className={`mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
+                                    errors.dateOfBirth ? 'border-red-500' : ''
+                                }`}
+                            />
+                            {errors.dateOfBirth && (
+                                <p className="mt-1 text-sm text-red-600">{errors.dateOfBirth}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="gender" className="block text-sm font-medium text-gray-700">
+                                Giới tính
+                            </label>
+                            <select
+                                name="gender"
+                                value={userData.gender}
+                                onChange={handleInputChange}
+                                className={`mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
+                                    errors.gender ? 'border-red-500' : ''
+                                }`}
+                            >
+                                <option value="">Chọn giới tính</option>
+                                <option value="Male">Nam</option>
+                                <option value="Female">Nữ</option>
+                                <option value="Other">Khác</option>
+                            </select>
+                            {errors.gender && (
+                                <p className="mt-1 text-sm text-red-600">{errors.gender}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Nhóm thông tin liên hệ */}
+                    <div className="space-y-4">
+                        <h3 className="text-lg font-medium text-gray-900">Thông tin liên hệ</h3>
+                        <div>
+                            <label htmlFor="phoneNumber" className="block text-sm font-medium text-gray-700">
+                                Số điện thoại
+                            </label>
+                            <input
+                                type="tel"
+                                name="phoneNumber"
+                                value={userData.phoneNumber}
+                                onChange={handleInputChange}
+                                className={`mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
+                                    errors.phoneNumber ? 'border-red-500' : ''
+                                }`}
+                                placeholder="Nhập số điện thoại"
+                            />
+                            {errors.phoneNumber && (
+                                <p className="mt-1 text-sm text-red-600">{errors.phoneNumber}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+                                Email
+                            </label>
+                            <input
+                                type="email"
+                                name="email"
+                                value={userData.email}
+                                onChange={handleInputChange}
+                                className={`mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
+                                    errors.email ? 'border-red-500' : ''
+                                }`}
+                                placeholder="Nhập email"
+                            />
+                            {errors.email && (
+                                <p className="mt-1 text-sm text-red-600">{errors.email}</p>
+                            )}
+                        </div>
+
+                        <div>
+                            <label htmlFor="address" className="block text-sm font-medium text-gray-700">
+                                Địa chỉ
+                            </label>
+                            <input
+                                type="text"
+                                name="address"
+                                value={userData.address}
+                                onChange={handleInputChange}
+                                className={`mt-1 block w-full px-4 py-3 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200 ${
+                                    errors.address ? 'border-red-500' : ''
+                                }`}
+                                placeholder="Nhập địa chỉ"
+                            />
+                            {errors.address && (
+                                <p className="mt-1 text-sm text-red-600">{errors.address}</p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Nút điều khiển */}
+                    <div className="flex space-x-4">
+                        <button
+                            type="submit"
+                            className="flex-1 py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200"
+                            disabled={loading}
+                        >
+                            {loading ? 'Đang lưu...' : 'Lưu thay đổi'}
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleCancel}
+                            className="flex-1 py-3 px-4 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition duration-200"
+                        >
+                            Hủy
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
 }
 
 export default ProfileForm;
