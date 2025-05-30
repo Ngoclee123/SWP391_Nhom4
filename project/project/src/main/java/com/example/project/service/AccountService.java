@@ -14,4 +14,10 @@ public class AccountService {
     public Account getAccountById(int accountId) {
         return accountRepository.findById(accountId).orElse(null);
     }
+
+
+    public Account findByUsername(String username) {
+        return accountRepository.findByUsername(username);
+    }
+
 }
