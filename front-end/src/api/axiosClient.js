@@ -1,6 +1,6 @@
 import axios from "axios";
 import queryString from 'query-string';
-import UserService from "../service/userService";
+import UserService from "../service/userService"; // Nhập instance trực tiếp
 
 const axiosClient = axios.create({
     baseURL: "http://localhost:8080",
@@ -11,8 +11,7 @@ const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use(async (req) => {
-    const userService = new UserService();
-    const token = userService.getToken();
+    const token = UserService.getToken();
     if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register")) {
         req.headers.common.Authorization = "Bearer " + token;
     }
