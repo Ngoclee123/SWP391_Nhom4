@@ -1,27 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
+import UserService from '../service/userService';
 
 function Header() {
     const navigate = useNavigate();
     const location = useLocation();
     const [activeLink, setActiveLink] = useState(location.pathname + location.hash);
+    const [isLoggedIn, setIsLoggedIn] = useState(UserService.isLoggedIn());
+    const [fullName, setFullName] = useState(UserService.getFullName() || '');
+
+    useEffect(() => {
+        setIsLoggedIn(UserService.isLoggedIn());
+        setFullName(UserService.getFullName() || '');
+    }, [location]);
 
     const handleNavClick = (path, sectionId) => {
         setActiveLink(path + (sectionId ? `#${sectionId}` : ''));
 
-        // Chuyển route nếu cần
         if (path !== location.pathname) {
             navigate(path + (sectionId ? `#${sectionId}` : ''));
         }
 
-        // Cuộn về đầu trang khi nhấp vào "Trang chủ"
         if (path === '/home' && !sectionId) {
             setTimeout(() => {
                 window.scrollTo({ top: 0, behavior: 'smooth' });
-            }, 100); // Delay để đảm bảo route đã chuyển xong
-        }
-        // Cuộn đến section cho các mục khác trong /home
-        else if (path === '/home' && sectionId) {
+            }, 100);
+        } else if (path === '/home' && sectionId) {
             setTimeout(() => {
                 const element = document.getElementById(sectionId);
                 if (element) {
@@ -31,10 +35,16 @@ function Header() {
         }
     };
 
+    const handleLogout = () => {
+        UserService.removeUser();
+        setIsLoggedIn(false);
+        setFullName('');
+        navigate('/login');
+    };
+
     return (
         <header className="bg-white shadow-md fixed w-full top-0 z-50">
             <div className="container mx-auto px-4 py-4 flex justify-between items-center">
-                {/* Logo và tên */}
                 <div className="flex items-center space-x-3">
                     <img
                         src="/images/Logo.jpg"
@@ -48,7 +58,6 @@ function Header() {
                     </div>
                 </div>
 
-                {/* Menu điều hướng */}
                 <nav className="flex space-x-6">
                     <Link
                         to="/home"
@@ -115,26 +124,41 @@ function Header() {
                     </Link>
                 </nav>
 
-                {/* Nút đăng nhập/đăng ký */}
                 <div className="flex space-x-4">
-                    <Link
-                        to="/login"
-                        className={`border-2 border-blue-300 text-blue-600 px-4 py-2 rounded-full hover:bg-blue-100 hover:border-blue-400 hover:scale-105 transform transition duration-200 font-semibold ${
-                            activeLink === '/login' ? 'bg-blue-100 border-blue-400' : ''
-                        }`}
-                        onClick={() => handleNavClick('/login', '')}
-                    >
-                        Đăng nhập
-                    </Link>
-                    <Link
-                        to="/register"
-                        className={`bg-blue-300 text-white px-4 py-2 rounded-full hover:bg-blue-400 hover:scale-105 transform transition duration-200 font-semibold shadow-md ${
-                            activeLink === '/register' ? 'bg-blue-400' : ''
-                        }`}
-                        onClick={() => handleNavClick('/register', '')}
-                    >
-                        Đăng ký
-                    </Link>
+                    {isLoggedIn ? (
+                        <>
+                            <span className="text-gray-700 flex items-center">
+                                👤 Xin chào, {fullName || 'Người dùng'}
+                            </span>
+                            <button
+                                onClick={handleLogout}
+                                className="bg-red-500 text-white px-4 py-2 rounded-full hover:bg-red-600 hover:scale-105 transform transition duration-200 font-semibold shadow-md"
+                            >
+                                Đăng xuất
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <Link
+                                to="/login"
+                                className={`border-2 border-blue-300 text-blue-600 px-4 py-2 rounded-full hover:bg-blue-100 hover:border-blue-400 hover:scale-105 transform transition duration-200 font-semibold ${
+                                    activeLink === '/login' ? 'bg-blue-100 border-blue-400' : ''
+                                }`}
+                                onClick={() => handleNavClick('/login', '')}
+                            >
+                                Đăng nhập
+                            </Link>
+                            <Link
+                                to="/register"
+                                className={`bg-blue-300 text-white px-4 py-2 rounded-full hover:bg-blue-400 hover:scale-105 transform transition duration-200 font-semibold shadow-md ${
+                                    activeLink === '/register' ? 'bg-blue-400' : ''
+                                }`}
+                                onClick={() => handleNavClick('/register', '')}
+                            >
+                                Đăng ký
+                            </Link>
+                        </>
+                    )}
                 </div>
             </div>
         </header>
