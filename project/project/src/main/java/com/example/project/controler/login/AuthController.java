@@ -41,9 +41,9 @@ public class AuthController {
         }
 
         if (passwordEncoder.matches(loginRequest.getPassword(), account.getPasswordHash())) {
-            String token = jwtUtil.generateToken(account.getUsername());
+            String token = jwtUtil.generateToken(account.getUsername(), account.getId()); // Truyền accountId
             logger.info("Login successful for username: {}, token: {}", loginRequest.getUsername(), token);
-            return ResponseEntity.ok(new AuthResponse(token));
+            return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName()));
         } else {
             logger.warn("Login failed: Invalid password for username {}. Raw: {}, Stored: {}",
                     loginRequest.getUsername(), loginRequest.getPassword(), account.getPasswordHash());
@@ -56,49 +56,33 @@ public class AuthController {
         logger.warn("GET method not allowed on /login endpoint");
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("GET method not allowed on /login");
     }
-
-    @GetMapping("/accounts")
-    public ResponseEntity<?> getAllAccounts() {
-        logger.info("Fetching all accounts for inspection.");
-        accountService.printAllAccounts(); // In ra console
-        return ResponseEntity.ok(accountService.getAllAccounts()); // Trả về danh sách cho client
-    }
 }
 
-// DTO cho yêu cầu đăng nhập
 class LoginRequest {
     private String username;
     private String password;
 
-    public String getUsername() {
-        return username;
-    }
-
-    public void setUsername(String username) {
-        this.username = username;
-    }
-
-    public String getPassword() {
-        return password;
-    }
-
-    public void setPassword(String password) {
-        this.password = password;
-    }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getPassword() { return password; }
+    public void setPassword(String password) { this.password = password; }
 }
 
 class AuthResponse {
     private String token;
+    private String username;
+    private String fullName;
 
-    public AuthResponse(String token) {
+    public AuthResponse(String token, String username, String fullName) {
         this.token = token;
+        this.username = username;
+        this.fullName = fullName;
     }
 
-    public String getToken() {
-        return token;
-    }
-
-    public void setToken(String token) {
-        this.token = token;
-    }
+    public String getToken() { return token; }
+    public void setToken(String token) { this.token = token; }
+    public String getUsername() { return username; }
+    public void setUsername(String username) { this.username = username; }
+    public String getFullName() { return fullName; }
+    public void setFullName(String fullName) { this.fullName = fullName; }
 }
