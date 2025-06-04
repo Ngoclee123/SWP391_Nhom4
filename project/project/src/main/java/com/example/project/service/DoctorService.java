@@ -6,18 +6,16 @@ import com.example.project.model.Specialty;
 import com.example.project.repository.DoctorRepository;
 import com.example.project.repository.SpecialtyRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.event.ApplicationReadyEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
-
 @Service
-public abstract class DoctorService {
+public class DoctorService {
 
     @Autowired
     private DoctorRepository doctorRepository;
@@ -25,48 +23,95 @@ public abstract class DoctorService {
     @Autowired
     private SpecialtyRepository specialtyRepository;
 
-    public List<Specialty> getSpecialties() {
+    public List<Specialty> getAllSpecialties() {
         return specialtyRepository.findAll();
     }
 
-    public List<Doctor> searchDoctors(Integer specialtyId, String fullName, String availabilityStatus, String location, String availabilityTime) {
-        List<Doctor> doctors = doctorRepository.findAll();
-
-        if (specialtyId != null) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getSpecialty() == specialtyId)
-                    .collect(Collectors.toList());
-        }
-
-        if (fullName != null && !fullName.isEmpty()) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getFullName().toLowerCase().contains(fullName.toLowerCase()))
-                    .collect(Collectors.toList());
-        }
-
-        if (availabilityStatus != null && !availabilityStatus.isEmpty()) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getAvailability().equalsIgnoreCase(availabilityStatus))
-                    .collect(Collectors.toList());
-        }
-
-        if (location != null && !location.isEmpty()) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getLocational() != null && doctor.getLocational().toLowerCase().contains(location.toLowerCase()))
-                    .collect(Collectors.toList());
-        }
-
+    public List<DoctorSearchDTO> searchDoctors(Integer specialtyId, String fullName, String availabilityStatus, String location, String availabilityTime) {
+        Instant searchTime = null;
         if (availabilityTime != null && !availabilityTime.isEmpty()) {
-            LocalDateTime searchTime = LocalDateTime.parse(availabilityTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getAvailabilityTime() != null && doctor.getAvailabilityTime().isAfter(Instant.from(searchTime)))
-                    .collect(Collectors.toList());
+            try {
+                searchTime = Instant.parse(availabilityTime);
+            } catch (Exception e) {
+                throw new IllegalArgumentException("Invalid availabilityTime format");
+            }
         }
 
-        return doctors;
+        final Instant finalSearchTime = searchTime; // Biến final để sử dụng trong lambda
+
+        List<Doctor> doctors = doctorRepository.searchDoctors(specialtyId, fullName, availabilityStatus, location, finalSearchTime);
+        return doctors.stream().map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+
+            // Lấy thông tin từ DoctorAvailability
+            if (doctor.getAvailabilities() != null && !doctor.getAvailabilities().isEmpty()) {
+                doctor.getAvailabilities().stream()
+                        .filter(da -> availabilityStatus == null || da.getStatus().equals(availabilityStatus))
+                        .filter(da -> finalSearchTime == null ||
+                                (da.getStartTime().isBefore(finalSearchTime) || da.getStartTime().equals(finalSearchTime)) &&
+                                        (da.getEndTime().isAfter(finalSearchTime) || da.getEndTime().equals(finalSearchTime)))
+                        .findFirst()
+                        .ifPresent(da -> {
+                            dto.setAvailabilityStatus(da.getStatus());
+                            dto.setStartTime(da.getStartTime().toString());
+                            dto.setEndTime(da.getEndTime().toString());
+                        });
+            }
+
+            return dto;
+        }).collect(Collectors.toList());
     }
 
-    public abstract List<Doctor> searchDoctors(DoctorSearchDTO searchDTO);
+    public DoctorSearchDTO getDoctorById(Integer doctorId) {
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found with id: " + doctorId));
 
-    public abstract List<Specialty> getAllSpecialties();
+        DoctorSearchDTO dto = new DoctorSearchDTO();
+        dto.setId(doctor.getId());
+        dto.setFullName(doctor.getFullName());
+        dto.setBio(doctor.getBio());
+        dto.setPhoneNumber(doctor.getPhoneNumber());
+        dto.setImgs(doctor.getImgs());
+        dto.setLocational(doctor.getLocational());
+        dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+        dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+
+        // Lấy thông tin từ DoctorAvailability
+        if (doctor.getAvailabilities() != null && !doctor.getAvailabilities().isEmpty()) {
+            doctor.getAvailabilities().stream()
+                    .findFirst()
+                    .ifPresent(da -> {
+                        dto.setAvailabilityStatus(da.getStatus());
+                        dto.setStartTime(da.getStartTime().toString());
+                        dto.setEndTime(da.getEndTime().toString());
+                    });
+        }
+
+        return dto;
+    }
+
+    public Doctor findDoctorByAccountId(Integer accountId) {
+        return doctorRepository.findByAccountId(accountId).orElse(null);
+    }
+
+    @EventListener(ApplicationReadyEvent.class)
+    public void printAllDoctorsOnStartup() {
+        System.out.println("=== Printing all doctors on application startup ===");
+        List<Doctor> allDoctors = doctorRepository.findAll();
+        allDoctors.forEach(doctor -> {
+            System.out.println("Doctor ID: " + doctor.getId() +
+                    ", Full Name: " + doctor.getFullName() +
+                    ", Specialty ID: " + (doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : "null") +
+                    ", Phone: " + doctor.getPhoneNumber() +
+                    ", Location: " + doctor.getLocational());
+        });
+    }
 }

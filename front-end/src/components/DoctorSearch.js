@@ -4,6 +4,7 @@ import DoctorService from '../service/DoctorService';
 
 function DoctorSearch() {
     const navigate = useNavigate();
+    const doctorService = DoctorService;
     const [searchCriteria, setSearchCriteria] = useState({
         specialtyId: '',
         fullName: '',
@@ -18,20 +19,20 @@ function DoctorSearch() {
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
     const searchRef = useRef(null);
 
-    const doctorService = new DoctorService();
-
     useEffect(() => {
-        const fetchSpecialties = async () => {
+        const fetchInitialData = async () => {
             try {
-                const response = await doctorService.getSpecialties();
-                setSpecialties(response);
+                const specialtiesResponse = await doctorService.getAllSpecialties();
+                console.log('Fetched specialties:', specialtiesResponse);
+                setSpecialties(Array.isArray(specialtiesResponse) ? specialtiesResponse : []);
             } catch (error) {
-                console.error('Error fetching specialties:', error);
+                console.error('Error fetching initial data:', error);
+                setMessage('Không thể tải dữ liệu ban đầu');
+                setSpecialties([]);
             }
         };
-        fetchSpecialties();
+        fetchInitialData();
 
-        // Đóng form khi nhấp ra ngoài
         const handleClickOutside = (event) => {
             if (searchRef.current && !searchRef.current.contains(event.target)) {
                 setIsSearchExpanded(false);
@@ -44,13 +45,29 @@ function DoctorSearch() {
     const handleSearch = async (e) => {
         e.preventDefault();
         setLoading(true);
+        setMessage('');
         try {
-            const response = await doctorService.searchDoctors(searchCriteria);
-            setDoctors(response);
-            setMessage(response.length ? 'Tìm kiếm thành công' : 'Không tìm thấy bác sĩ nào');
+            const doctorsResponse = await doctorService.searchDoctors({
+                ...searchCriteria,
+                availabilityTime: searchCriteria.availabilityTime ? new Date(searchCriteria.availabilityTime).toISOString() : ''
+            });
+
+            if (!Array.isArray(doctorsResponse) || doctorsResponse.length === 0) {
+                setDoctors([]);
+                setMessage('Không tìm thấy bác sĩ nào');
+                return;
+            }
+
+            setDoctors(doctorsResponse);
+            setMessage('Tìm kiếm thành công');
         } catch (error) {
             console.error('Error searching doctors:', error);
-            setMessage('Không thể tìm kiếm bác sĩ');
+            if (error.response && error.response.status === 401) {
+                setMessage('Vui lòng đăng nhập để tìm kiếm bác sĩ');
+            } else {
+                setMessage('Không thể tìm kiếm bác sĩ');
+            }
+            setDoctors([]);
         } finally {
             setLoading(false);
         }
@@ -69,8 +86,8 @@ function DoctorSearch() {
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-200">
-            {/* Hình ảnh minh họa trên cùng, gần bằng kích thước trang */}
-            <div className="w-full h-60 md:h-96 bg-blue-150 flex items-center justify-center overflow-hidden" style={{marginTop: '120px'}}>
+            {/* Banner */}
+            <div className="w-full h-60 md:h-96 bg-blue-150 flex items-center justify-center overflow-hidden" style={{ marginTop: '120px' }}>
                 <img
                     src="https://pclinic.ohayo.io.vn/_next/static/media/BookingByDoctorBanner.44b2fe83.svg"
                     alt="Gia đình và trẻ em"
@@ -78,11 +95,11 @@ function DoctorSearch() {
                 />
             </div>
 
-            {/* Thanh input tìm kiếm */}
+            {/* Thanh tìm kiếm bác sĩ */}
             <div className="w-full max-w-4xl mx-auto px-4 mt-6">
                 <div ref={searchRef} className="relative">
                     <div
-                        className="flex items-center border border-gray-300 rounded-lg p-2 bg-white shadow-sm"
+                        className="flex items-center border border-gray-300 rounded-lg p-2 bg-white shadow-sm cursor-pointer"
                         onClick={() => setIsSearchExpanded(!isSearchExpanded)}
                     >
                         <input
@@ -90,35 +107,26 @@ function DoctorSearch() {
                             name="fullName"
                             value={searchCriteria.fullName}
                             onChange={handleInputChange}
-                            placeholder="Nhập tên bác sĩ..."
-                            className="flex-1 outline-none text-gray-700"
+                            placeholder="Tìm kiếm bác sĩ..."
+                            className="flex-1 outline-none text-gray-700 px-3 py-2"
                         />
                         <button
                             type="button"
                             onClick={handleSearch}
                             className="ml-2 text-gray-500 hover:text-blue-500 focus:outline-none"
                         >
-                            <svg
-                                className="w-5 h-5"
-                                fill="none"
-                                stroke="currentColor"
-                                viewBox="0 0 24 24"
-                            >
-                                <path
-                                    strokeLinecap="round"
-                                    strokeLinejoin="round"
-                                    strokeWidth="2"
-                                    d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1114.65 6.65 7.5 7.5 0 1116.65 16.65z"
-                                />
+                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 21l-4.35-4.35m0 0A7.5 7.5 0 1114.65 6.65 7.5 7.5 0 1116.65 16.65z" />
                             </svg>
                         </button>
                     </div>
 
-                    {/* Form mở rộng khi nhấp vào */}
+                    {/* Form tìm kiếm mở rộng */}
                     {isSearchExpanded && (
                         <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10">
                             <form onSubmit={handleSearch} className="space-y-4">
                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700">Chuyên khoa</label>
                                     <select
                                         name="specialtyId"
                                         value={searchCriteria.specialtyId}
@@ -127,13 +135,14 @@ function DoctorSearch() {
                                     >
                                         <option value="">Chọn chuyên khoa</option>
                                         {specialties.map((specialty) => (
-                                            <option key={specialty.specialtyId} value={specialty.specialtyId}>
+                                            <option key={specialty.id} value={specialty.id}>
                                                 {specialty.name}
                                             </option>
                                         ))}
                                     </select>
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700">Địa điểm</label>
                                     <input
                                         type="text"
                                         name="location"
@@ -144,6 +153,7 @@ function DoctorSearch() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700">Thời gian khả dụng</label>
                                     <input
                                         type="datetime-local"
                                         name="availabilityTime"
@@ -153,6 +163,7 @@ function DoctorSearch() {
                                     />
                                 </div>
                                 <div>
+                                    <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
                                     <select
                                         name="availabilityStatus"
                                         value={searchCriteria.availabilityStatus}
@@ -167,9 +178,8 @@ function DoctorSearch() {
                                 </div>
                                 <button
                                     type="submit"
-                                    className={`w-full py-2 rounded-lg font-semibold text-white transition duration-300 ${
-                                        isFormValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
-                                    }`}
+                                    className={`w-full py-2 rounded-lg font-semibold text-white transition duration-300 ${isFormValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
+                                        }`}
                                     disabled={!isFormValid}
                                 >
                                     Tìm kiếm
@@ -180,7 +190,7 @@ function DoctorSearch() {
                 </div>
             </div>
 
-            {/* Kết quả tìm kiếm */}
+            {/* Kết quả tìm kiếm bác sĩ */}
             <div className="w-full max-w-4xl mx-auto px-4 mt-10">
                 {loading && <p className="text-center text-gray-600">Đang tìm kiếm...</p>}
                 {message && !loading && (
@@ -190,26 +200,31 @@ function DoctorSearch() {
                 )}
                 {doctors.length > 0 && (
                     <div>
-                        <h3 className="text-xl font-semibold text-blue-900 mb-4 text-center">Kết quả tìm kiếm</h3>
-                        <ul className="space-y-4">
+                        <h3 className="text-xl font-semibold text-blue-900 mb-4 text-center">Kết quả tìm kiếm bác sĩ</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             {doctors.map((doctor) => (
-                                <li key={doctor.doctorId} className="p-4 bg-gray-50 rounded-lg shadow flex justify-between items-center">
-                                    <div>
+                                <div key={doctor.id} className="p-4 bg-white rounded-lg shadow-lg flex items-start space-x-4">
+                                    <img
+                                        src={doctor.imgs || '/images/default-doctor.jpg'}
+                                        alt={doctor.fullName}
+                                        className="w-24 h-24 object-cover rounded-full"
+                                    />
+                                    <div className="flex-1">
                                         <p className="text-lg font-medium text-blue-900">{doctor.fullName}</p>
-                                        <p className="text-gray-600">Chuyên khoa: {specialties.find(s => s.specialtyId === doctor.specialtyId)?.name || 'N/A'}</p>
-                                        <p className="text-gray-600">Địa điểm: {doctor.location || 'N/A'}</p>
-                                        <p className="text-gray-600">Thời gian rảnh: {doctor.availabilityTime || 'N/A'}</p>
+                                        <p className="text-gray-600">Chuyên khoa: {doctor.specialtyName || 'N/A'}</p>
+                                        <p className="text-gray-600">Tiểu sử: {doctor.bio ? doctor.bio.slice(0, 100) + (doctor.bio.length > 100 ? '...' : '') : 'N/A'}</p>
                                         <p className="text-gray-600">Số điện thoại: {doctor.phoneNumber || 'N/A'}</p>
+                                        <p className="text-gray-600">Địa điểm: {doctor.locational || 'N/A'}</p>
                                     </div>
                                     <button
                                         onClick={() => handleBookNow(doctor)}
-                                        className="bg-blue-700 text-white px-4 py-2 rounded-lg hover:bg-blue-800 transition duration-300"
+                                        className="bg-blue-700 text-white py-2 px-4 hover:bg-blue-800 transition duration-300"
                                     >
                                         Đặt lịch ngay
                                     </button>
-                                </li>
+                                </div>
                             ))}
-                        </ul>
+                        </div>
                     </div>
                 )}
             </div>

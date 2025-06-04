@@ -16,9 +16,11 @@ public class JwtUtil {
     private final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
     private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10 giờ
 
-    public String generateToken(String username) {
+    // Cập nhật generateToken để thêm accountId
+    public String generateToken(String username, Integer accountId) {
         return Jwts.builder()
                 .setSubject(username)
+                .claim("accountId", accountId) // Thêm accountId vào token
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(SECRET_KEY, SignatureAlgorithm.HS512)
@@ -31,6 +33,15 @@ public class JwtUtil {
                 .parseClaimsJws(token)
                 .getBody();
         return claims.getSubject();
+    }
+
+    // Thêm phương thức để lấy accountId từ token
+    public Integer extractAccountId(String token) {
+        Claims claims = Jwts.parser()
+                .setSigningKey(SECRET_KEY)
+                .parseClaimsJws(token)
+                .getBody();
+        return claims.get("accountId", Integer.class);
     }
 
     public boolean validateToken(String token) {
