@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserService from '../../service/userService';
+import { jwtDecode } from 'jwt-decode';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -17,9 +18,10 @@ function Login() {
                 username: username.trim(),
                 password: password.trim(),
             });
-            UserService.setUser(response.token, response.username, response.fullName);
+            
+           UserService.setUser(response.token, response.username, response.fullName, response.accountId);
             setError('');
-            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName });
+            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName ,accountId: response.accountId });
             const from = location.state?.from || '/';
             navigate(from, { replace: true });
         } catch (error) {

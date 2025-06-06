@@ -26,7 +26,7 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
-        // Bỏ qua kiểm tra token cho các endpoint liên quan đến doctors
+        // Bỏ qua kiểm tra token cho các endpoint được phép
         if (path.startsWith("/api/login") || path.startsWith("/api/register") ||
                 path.startsWith("/api/vnpay") || path.startsWith("/api/appointments") ||
                 path.startsWith("/api/doctors") || path.startsWith("/api/parents") ||
