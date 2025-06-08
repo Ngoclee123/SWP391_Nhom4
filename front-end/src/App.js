@@ -16,8 +16,7 @@ import Register from './components/regiters/Register';
 import HealthNewsWebsite, { ArticleDetail } from './components/NewHeath';
 import AdminDashboards from './components/admin/AdminDashboard';
 import DoctorDetail from './components/booking/DoctorDetail';
-import { ReceiptCent } from 'lucide-react';
-import Reception from './components/doctor/Reception';
+import DoctorDashboard from './components/doctor/DoctorDashboard';
 import BookingConfirmation from './components/booking/BookingConfirmation';
 import Login from './components/login/Login';
 import ChangePassword from './components/ChangePassword';
@@ -25,7 +24,7 @@ import ChangePassword from './components/ChangePassword';
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isAdminRoute = window.location.pathname.startsWith('/admin');
-  const isRecepRoute = window.location.pathname.startsWith('/reception');
+  const isDoctorRoute = window.location.pathname.startsWith('/doctor');
 
   return (
     <Router>
@@ -49,8 +48,8 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                     <Route path="/admin1" element={<AdminDashboards />} />
-                     <Route path="/doctor/:id" element={<DoctorDetail />} />{" "}
-                      <Route path="/reception" element={<Reception/>} />
+                    <Route path="/doctor/:id" element={<DoctorDetail />} />{" "}
+                    <Route path="/doctor1" element={<DoctorDashboard/>} />
                       <Route
                                   path="/booking-confirmation"
                                   element={<BookingConfirmation />}
