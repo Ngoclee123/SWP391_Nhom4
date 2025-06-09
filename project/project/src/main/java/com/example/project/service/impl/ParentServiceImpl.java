@@ -13,7 +13,7 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 
 @Service
-public class ParentServiceImpl implements ParentService {
+public class ParentServiceImpl extends ParentService {
 
     @Autowired
     private ParentRepository parentRepository;
@@ -28,7 +28,7 @@ public class ParentServiceImpl implements ParentService {
             throw new RuntimeException("Parent not found for account ID: " + accountId);
         }
         ParentProfileDTO dto = new ParentProfileDTO();
-        dto.setAccountId(accountId);
+
         dto.setFullName(parent.getFullName());
         dto.setPhoneNumber(parent.getPhoneNumber());
         dto.setAddress(parent.getAddress());

@@ -11,19 +11,31 @@ const axiosClient = axios.create({
 });
 
 axiosClient.interceptors.request.use(async (req) => {
-    const userService = new UserService();
-    const token = userService.getToken();
-    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register")) {
-        req.headers.common.Authorization = "Bearer " + token;
+    const token = UserService.getToken();
+    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register") && !req.url.startsWith("/api/doctors")) {
+        req.headers = req.headers || {};
+        req.headers.Authorization = "Bearer " + token;
     }
     return req;
 });
 
-axiosClient.interceptors.response.use((response) => {
-    if (response && response.data) {
-        return response.data;
+axiosClient.interceptors.response.use(
+    (response) => {
+        console.log('Response:', response);
+        if (response && response.data) {
+            return response.data;
+        }
+        return []; // Trả về mảng rỗng nếu không có data
+    },
+    (error) => {
+        console.error('Axios error:', {
+            status: error.response?.status,
+            data: error.response?.data,
+            message: error.message,
+            url: error.config?.url,
+        });
+        throw error;
     }
-    return response;
-}, (error) => { throw error; });
+);
 
 export default axiosClient;

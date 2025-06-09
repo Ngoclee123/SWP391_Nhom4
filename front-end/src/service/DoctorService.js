@@ -1,21 +1,54 @@
+// src/service/DoctorService.js
 import axiosClient from "../api/axiosClient";
 
 class DoctorService {
-    /**
-     * Fetches the list of all specialties from the server.
-     * 
-     * @returns {Promise} A promise that resolves to the response from the server containing the list of specialties.
-     */
-
-    getSpecialties() {
-        const url = '/api/doctors/specialties';
-        return axiosClient.get(url);
+    async getDoctorById(doctorId) {
+        const url = `/api/doctors/${doctorId}`;
+        console.log(`Fetching doctor profile from: ${url}`);
+        try {
+            const response = await axiosClient.get(url);
+            console.log('Doctor profile response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching doctor profile:', error);
+            throw error;
+        }
     }
 
-    searchDoctors(criteria) {
+    async getAllSpecialties() {
+        const url = '/api/doctors/specialties';
+        console.log(`Fetching specialties from: ${url}`);
+        try {
+            const response = await axiosClient.get(url);
+            console.log('Specialties response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching specialties:', error);
+            return [];
+        }
+    }
+
+    async searchDoctors(criteria) {
         const url = '/api/doctors/search';
-        return axiosClient.get(url, { params: criteria });
+        const config = {
+            params: {
+                ...criteria,
+                specialtyId: criteria.specialtyId ? parseInt(criteria.specialtyId) : undefined
+            }
+        };
+        console.log('Searching doctors with criteria:', criteria, 'and config:', config);
+        try {
+            const response = await axiosClient.get(url, config);
+            console.log('Search response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching doctor IDs:', error);
+            if (error.response && error.response.status === 401) {
+                console.warn('Unauthorized access - Please log in');
+            }
+            return [];
+        }
     }
 }
 
-export default DoctorService;
+export default new DoctorService();

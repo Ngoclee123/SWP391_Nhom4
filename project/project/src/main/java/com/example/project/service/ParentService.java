@@ -1,8 +1,57 @@
 package com.example.project.service;
 
 import com.example.project.dto.ParentProfileDTO;
+import com.example.project.model.Account;
+import com.example.project.model.Parent;
+import com.example.project.repository.AccountRepository;
+import com.example.project.repository.ParentRepository;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
 
-public interface ParentService {
-    ParentProfileDTO getParentProfile(int accountId);
-    void updateParentProfile(int accountId, ParentProfileDTO profileDTO);
+@Service
+public class ParentService {
+
+    @Autowired
+    private ParentRepository parentRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    public ParentProfileDTO getParentProfile(int accountId) {
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+        Parent parent = parentRepository.findByAccountId(accountId);
+        if (parent == null) {
+            throw new RuntimeException("Parent profile not found");
+        }
+
+        return new ParentProfileDTO(
+                parent.getFullName(), // Ưu tiên fullName từ Parent
+                account.getEmail(),
+                parent.getPhoneNumber(), // Ưu tiên phoneNumber từ Parent
+                parent.getAddress() != null ? parent.getAddress() : account.getAddress(),
+                parent.getDateOfBirth()
+        );
+    }
+
+    public void updateParentProfile(int accountId, ParentProfileDTO profileDTO) {
+        Parent parent = parentRepository.findByAccountId(accountId);
+        if (parent == null) {
+            throw new RuntimeException("Parent profile not found");
+        }
+        Account account = accountRepository.findById(accountId)
+                .orElseThrow(() -> new RuntimeException("Account not found"));
+
+        // Cập nhật Parent
+        parent.setFullName(profileDTO.getFullName());
+        parent.setPhoneNumber(profileDTO.getPhoneNumber());
+        parent.setAddress(profileDTO.getAddress());
+
+        // Cập nhật Account (chỉ email)
+        account.setEmail(profileDTO.getEmail());
+
+        // Lưu vào database
+        parentRepository.save(parent);
+        accountRepository.save(account);
+    }
 }
