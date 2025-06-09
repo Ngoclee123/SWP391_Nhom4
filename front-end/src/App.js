@@ -20,6 +20,7 @@ import { ReceiptCent } from 'lucide-react';
 import Reception from './components/doctor/Reception';
 import BookingConfirmation from './components/booking/BookingConfirmation';
 import Login from './components/login/Login';
+import ChangePassword from './components/ChangePassword';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,7 +55,9 @@ function App() {
                                   path="/booking-confirmation"
                                   element={<BookingConfirmation />}
                                 />
+                                <Route path="/change-password/:accountId" element={<ChangePassword />} />
                   <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
+                    
                 </Routes>
               </main>
               {!isAdminRoute && <Footer />}

@@ -18,7 +18,6 @@ import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
-
     @Autowired
     private JwtUtil jwtUtil;
 
@@ -26,15 +25,13 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
-        // Bỏ qua kiểm tra token cho các endpoint liên quan đến doctors
         if (path.startsWith("/api/login") || path.startsWith("/api/register") ||
                 path.startsWith("/api/vnpay") || path.startsWith("/api/appointments") ||
                 path.startsWith("/api/doctors") || path.startsWith("/api/parents") ||
-                path.equals("/api/accounts/")) {
+                path.equals("/api/accounts/") || path.startsWith("/api/auth/google/callback")) {
             chain.doFilter(request, response);
             return;
         }
-
         String authorizationHeader = request.getHeader("Authorization");
         String username = null;
         String jwt = null;
@@ -43,11 +40,11 @@ public class JwtFilter extends OncePerRequestFilter {
             jwt = authorizationHeader.substring(7);
             username = jwtUtil.extractUsername(jwt);
         }
-
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtUtil.validateToken(jwt)) {
+                String role = jwtUtil.extractRole(jwt);
                 List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+                authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
                 UsernamePasswordAuthenticationToken authenticationToken =
                         new UsernamePasswordAuthenticationToken(username, null, authorities);
                 authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserService from '../../service/userService';
@@ -10,17 +10,39 @@ function Login() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    useEffect(() => {
+        // Kiểm tra nếu quay lại từ Google OAuth
+        const urlParams = new URLSearchParams(location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            const role = urlParams.get('role');
+            const username = urlParams.get('username');
+            const fullName = urlParams.get('fullName');
+            const accountId = urlParams.get('accountId');
+            UserService.setUser(token, username, fullName, accountId);
+            if (role && role.toLowerCase() === "user") {
+                navigate('/home', { replace: true });
+            } else {
+                navigate('/login', { replace: true });
+            }
+        }
+    }, [location.search, navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        let endpoint = '/api/login/user';
+        if (location.pathname.includes('/login/admin')) endpoint = '/api/login/admin';
+        else if (location.pathname.includes('/login/doctor')) endpoint = '/api/login/doctor';
+
         try {
-            const response = await axiosClient.post('/api/login', {
+            const response = await axiosClient.post(endpoint, {
                 username: username.trim(),
                 password: password.trim(),
             });
-            UserService.setUser(response.token, response.username, response.fullName);
+            UserService.setUser(response.token, response.username, response.fullName, response.accountId);
             setError('');
-            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName });
-            const from = location.state?.from || '/';
+            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName, accountId: response.accountId, role: response.role });
+            const from = location.state?.from || `/${response.role.toLowerCase()}`;
             navigate(from, { replace: true });
         } catch (error) {
             console.error('Đăng nhập thất bại:', error);
@@ -30,6 +52,10 @@ function Login() {
                 setError('Đã có lỗi xảy ra, vui lòng thử lại!');
             }
         }
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
     };
 
     const isFormValid = username.trim() !== '' && password.trim() !== '';
@@ -86,6 +112,13 @@ function Login() {
                             disabled={!isFormValid}
                         >
                             Đăng nhập
+                        </button>
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            className={`w-full py-3 rounded-lg font-semibold text-white transition duration-300 bg-red-600 hover:bg-red-700`}
+                        >
+                            Đăng nhập với Google
                         </button>
                     </form>
                     <div className="mt-6 text-center text-gray-700">

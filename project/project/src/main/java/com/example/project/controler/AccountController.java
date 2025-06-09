@@ -1,5 +1,6 @@
 package com.example.project.controler;
 
+import com.example.project.dto.ChangePasswordDTO;
 import com.example.project.dto.ParentProfileDTO;
 import com.example.project.model.Account;
 import com.example.project.model.Parent;
@@ -80,4 +81,22 @@ public class AccountController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update profile");
         }
     }
+    @PutMapping("/change-password/{accountId}")
+    public ResponseEntity<?> changePassword(@PathVariable Integer accountId, @RequestBody ChangePasswordDTO changePasswordDTO) {
+        logger.info("Changing password for accountId: {}", accountId);
+        try {
+            boolean success = accountService.changePassword(accountId, changePasswordDTO.getCurrentPassword(), changePasswordDTO.getNewPassword());
+            if (!success) {
+                logger.warn("Invalid current password or account not found for accountId: {}", accountId);
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Mật khẩu hiện tại không đúng hoặc tài khoản không tồn tại");
+            }
+            return ResponseEntity.ok("Đổi mật khẩu thành công");
+        } catch (Exception e) {
+            logger.error("Error changing password for accountId {}: {}", accountId, e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Lỗi khi đổi mật khẩu");
+        }
+
+
+    }
+
 }
