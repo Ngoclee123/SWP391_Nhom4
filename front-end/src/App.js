@@ -21,6 +21,7 @@ import Reception from './components/doctor/Reception';
 import BookingConfirmation from './components/booking/BookingConfirmation';
 import Login from './components/login/Login';
 import ChangePassword from './components/ChangePassword';
+import ChatButton from './components/ChatButton';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -61,6 +62,7 @@ function App() {
                 </Routes>
               </main>
               {!isAdminRoute && <Footer />}
+              {!isAdminRoute && !isRecepRoute && <ChatButton />}
            
               
             </div>
