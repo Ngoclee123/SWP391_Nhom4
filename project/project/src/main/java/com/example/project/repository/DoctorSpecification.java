@@ -6,8 +6,8 @@ import com.example.project.model.Specialty;
 import jakarta.persistence.criteria.*;
 import org.springframework.data.jpa.domain.Specification;
 
-import java.sql.Timestamp;
 import java.time.Instant;
+import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -22,41 +22,41 @@ public class DoctorSpecification {
             List<Predicate> predicates = new ArrayList<>();
 
             if (specialtyId != null) {
-                Join<Doctor, Specialty> specialtyJoin = root.join("specialty", JoinType.LEFT);
+                Join<Doctor, Specialty> specialtyJoin = root.join("specialty", JoinType.INNER);
                 predicates.add(criteriaBuilder.equal(specialtyJoin.get("id"), specialtyId));
             }
 
-            if (fullName != null && !fullName.isEmpty()) {
+            if (fullName != null && !fullName.trim().isEmpty()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("fullName")),
-                        "%" + fullName.toLowerCase() + "%"
+                        "%" + fullName.toLowerCase().trim() + "%"
                 ));
             }
 
-            if (location != null && !location.isEmpty()) {
+            if (location != null && !location.trim().isEmpty()) {
                 predicates.add(criteriaBuilder.like(
                         criteriaBuilder.lower(root.get("locational")),
-                        "%" + location.toLowerCase() + "%"
+                        "%" + location.toLowerCase().trim() + "%"
                 ));
             }
 
             if (availabilityStatus != null || availabilityTime != null) {
-                Join<Doctor, DoctorAvailability> availabilityJoin = root.join("availabilities", JoinType.LEFT);
+                Join<Doctor, DoctorAvailability> availabilityJoin = root.join("availabilities", JoinType.INNER);
 
-                if (availabilityStatus != null && !availabilityStatus.isEmpty()) {
-                    predicates.add(criteriaBuilder.equal(availabilityJoin.get("status"), availabilityStatus));
+                if (availabilityStatus != null && !availabilityStatus.trim().isEmpty()) {
+                    predicates.add(criteriaBuilder.equal(availabilityJoin.get("status"), availabilityStatus.trim()));
                 }
 
                 if (availabilityTime != null) {
-                    Timestamp timestamp = Timestamp.from(availabilityTime);
-                    Path<Timestamp> startTimePath = availabilityJoin.get("startTime");
-                    Path<Timestamp> endTimePath = availabilityJoin.get("endTime");
-                    predicates.add(criteriaBuilder.lessThanOrEqualTo(startTimePath, timestamp)); // start_time <= availabilityTime
-                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(endTimePath, timestamp)); // end_time >= availabilityTime
-                    // Remove the redundant conditions
+                    // Adjust availabilityTime to the start of the day in UTC to match the availability window
+                    Instant startOfDay = availabilityTime.atZone(ZoneOffset.UTC).toLocalDate().atStartOfDay().toInstant(ZoneOffset.UTC);
+                    System.out.println("Debug: Adjusted availabilityTime start: " + startOfDay);
+                    predicates.add(criteriaBuilder.lessThanOrEqualTo(availabilityJoin.get("startTime"), availabilityTime));
+                    predicates.add(criteriaBuilder.greaterThanOrEqualTo(availabilityJoin.get("endTime"), startOfDay));
                 }
             }
 
+            query.distinct(true);
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

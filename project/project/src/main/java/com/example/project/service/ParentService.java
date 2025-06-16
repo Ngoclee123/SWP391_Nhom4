@@ -54,4 +54,19 @@ public class ParentService {
         parentRepository.save(parent);
         accountRepository.save(account);
     }
+    public Integer getParentIdByUsername(String username) {
+        // Find the Account by username
+        Account account = accountRepository.findByUsername(username);
+        if (account == null) {
+            return null; // or throw an exception depending on your security requirements
+        }
+
+        // Find the Parent by accountId
+        Parent parent = parentRepository.findByAccountId(account.getId());
+        if (parent == null) {
+            return null; // or throw an exception
+        }
+
+        return parent.getId();
+    }
 }

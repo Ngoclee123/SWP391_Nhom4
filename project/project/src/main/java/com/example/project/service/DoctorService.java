@@ -7,19 +7,21 @@ import com.example.project.repository.DoctorRepository;
 import com.example.project.repository.DoctorSpecification;
 import com.example.project.repository.SpecialtyRepository;
 import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.EventListener;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
-import java.nio.charset.StandardCharsets;
 import java.time.Instant;
-import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
 @Service
 public class DoctorService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DoctorService.class);
 
     @Autowired
     private DoctorRepository doctorRepository;
@@ -28,23 +30,38 @@ public class DoctorService {
     private SpecialtyRepository specialtyRepository;
 
     public List<Specialty> getAllSpecialties() {
+        logger.info("Fetching all specialties");
         return specialtyRepository.findAll();
     }
-    public List<DoctorSearchDTO> searchDoctors(Integer specialtyId, String fullName, String availabilityStatus, String location, String availabilityTime) {
-        final Integer localSpecialtyId = specialtyId;
-        final String localFullName = fullName;
-        final String localAvailabilityStatus = availabilityStatus;
-        final String localLocation = location;
 
-        final Instant finalSearchTime = (availabilityTime != null && !availabilityTime.isEmpty())
-                ? Instant.parse(availabilityTime.replace(" ", "T") + "+07:00") // Ensure +07:00 timezone
-                : null;
+    public Page<DoctorSearchDTO> searchDoctors(
+            Integer specialtyId,
+            String fullName,
+            String availabilityStatus,
+            String location,
+            String availabilityTime,
+            Pageable pageable) {
+        logger.info("Searching doctors with criteria: specialtyId={}, fullName={}, availabilityStatus={}, location={}, availabilityTime={}",
+                specialtyId, fullName, availabilityStatus, location, availabilityTime);
 
-        List<Doctor> doctors = doctorRepository.findAll(
-                DoctorSpecification.searchDoctors(localSpecialtyId, localFullName, localAvailabilityStatus, localLocation, finalSearchTime)
+        Instant searchTime = null;
+        if (availabilityTime != null && !availabilityTime.trim().isEmpty()) {
+            try {
+                // Parse the UTC ISO string sent from the frontend
+                searchTime = Instant.parse(availabilityTime);
+                logger.debug("Parsed availabilityTime: {}", searchTime);
+            } catch (Exception e) {
+                logger.error("Invalid availabilityTime format: {}", availabilityTime, e);
+                throw new IllegalArgumentException("Invalid availabilityTime format");
+            }
+        }
+
+        Page<Doctor> doctors = doctorRepository.findAll(
+                DoctorSpecification.searchDoctors(specialtyId, fullName, availabilityStatus, location, searchTime),
+                pageable
         );
 
-        return doctors.stream().map(doctor -> {
+        return doctors.map(doctor -> {
             DoctorSearchDTO dto = new DoctorSearchDTO();
             dto.setId(doctor.getId());
             dto.setFullName(doctor.getFullName());
@@ -55,28 +72,24 @@ public class DoctorService {
             dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
             dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
 
-            if (doctor.getAvailabilities() != null && !doctor.getAvailabilities().isEmpty()) {
-                final String finalAvailabilityStatus = localAvailabilityStatus;
-                doctor.getAvailabilities().stream()
-                        .filter(da -> finalAvailabilityStatus == null || da.getStatus().equals(finalAvailabilityStatus))
-                        .filter(da -> finalSearchTime == null ||
-                                (da.getStartTime().isBefore(finalSearchTime) || da.getStartTime().equals(finalSearchTime)) &&
-                                        (da.getEndTime().isAfter(finalSearchTime) || da.getEndTime().equals(finalSearchTime)))
-                        .findFirst()
-                        .ifPresent(da -> {
-                            dto.setAvailabilityStatus(da.getStatus());
-                            dto.setStartTime(da.getStartTime().toString());
-                            dto.setEndTime(da.getEndTime().toString());
-                        });
-            }
+            // Map the first available slot (filtered by query)
+            doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+                dto.setAvailabilityStatus(da.getStatus());
+                dto.setStartTime(da.getStartTime().toString());
+                dto.setEndTime(da.getEndTime().toString());
+            });
 
             return dto;
-        }).collect(Collectors.toList());
+        });
     }
 
     public DoctorSearchDTO getDoctorById(Integer doctorId) {
-        Doctor doctor = doctorRepository.findById(doctorId)
-                .orElseThrow(() -> new RuntimeException("Doctor not found with id: " + doctorId));
+        logger.info("Fetching doctor with ID: {}", doctorId);
+        Doctor doctor = doctorRepository.findByIdWithAvailabilities(doctorId)
+                .orElseThrow(() -> {
+                    logger.error("Doctor not found with ID: {}", doctorId);
+                    return new RuntimeException("Doctor not found with ID: " + doctorId);
+                });
 
         DoctorSearchDTO dto = new DoctorSearchDTO();
         dto.setId(doctor.getId());
@@ -88,39 +101,28 @@ public class DoctorService {
         dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
         dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
 
-        // Lấy thông tin từ DoctorAvailability
-        if (doctor.getAvailabilities() != null && !doctor.getAvailabilities().isEmpty()) {
-            doctor.getAvailabilities().stream()
-                    .findFirst()
-                    .ifPresent(da -> {
-                        dto.setAvailabilityStatus(da.getStatus());
-                        dto.setStartTime(da.getStartTime().toString());
-                        dto.setEndTime(da.getEndTime().toString());
-                    });
-        }
+        doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+            dto.setAvailabilityStatus(da.getStatus());
+            dto.setStartTime(da.getStartTime().toString());
+            dto.setEndTime(da.getEndTime().toString());
+        });
 
         return dto;
     }
+    // New method to fetch Doctor entity
+    public Doctor getDoctorEntityById(Integer doctorId) {
+        logger.info("Fetching doctor entity with ID: {}", doctorId);
+        return doctorRepository.findById(doctorId)
+                .orElseThrow(() -> {
+                    logger.error("Doctor not found with ID: {}", doctorId);
+                    return new RuntimeException("Doctor not found with ID: " + doctorId);
+                });
+    }
 
     public Doctor findDoctorByAccountId(Integer accountId) {
+        logger.info("Fetching doctor by account ID: {}", accountId);
         return doctorRepository.findByAccountId(accountId).orElse(null);
     }
-
-
-
-    @EventListener(ApplicationReadyEvent.class)
-    @Transactional
-    public void printAllDoctorsOnStartup() {
-        System.out.println("=== Printing all doctors on application startup ===");
-        List<Doctor> allDoctors = doctorRepository.findAllWithAvailabilities();
-        allDoctors.forEach(doctor -> {
-            System.out.println("Doctor ID: " + doctor.getId() +
-                    ", Full Name: " + doctor.getFullName() +
-                    ", Bytes: " + Arrays.toString(doctor.getFullName().getBytes(StandardCharsets.UTF_8)) +
-                    ", Specialty ID: " + (doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : "null") +
-                    ", Phone: " + doctor.getPhoneNumber() +
-                    ", availabilities: " + doctor.getAvailabilities() +
-                    ", Location: " + doctor.getLocational());
-        });
-    }
 }
+
+

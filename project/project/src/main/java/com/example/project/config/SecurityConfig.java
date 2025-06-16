@@ -13,6 +13,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
 import java.util.Arrays;
 
 @Configuration
@@ -44,7 +45,12 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login/admin", "/api/login/user", "/api/login/doctor", "/api/register", "/oauth2/authorization/google", "/login/oauth2/code/*", "/login", "/oauth2/redirect", "/api/vnpay/**", "/api/appointments/**", "/api/doctors/**", "/api/parents/**", "/api/accounts/").permitAll()
+                        .requestMatchers("/api/login/**", "/api/register", "/oauth2/authorization/google",
+                                "/login/oauth2/code/*", "/login", "/oauth2/redirect",
+                                "/api/vnpay/**", "/api/doctors/**", "/api/vaccines/**",
+                                "/api/parents/patients", "/api/vaccine-appointments/available/**").permitAll()
+                        .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")
+                        .requestMatchers("/api/vaccine-appointments/confirm/**").hasRole("DOCTOR")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parent/**").hasRole("USER")
                         .requestMatchers("/api/doctor/**").hasRole("DOCTOR")

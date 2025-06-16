@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import DoctorService from '../service/DoctorService';
+import DoctorService from '../../service/DoctorService';
 
 function DoctorSearch() {
     const navigate = useNavigate();
@@ -10,13 +10,15 @@ function DoctorSearch() {
         fullName: '',
         availabilityStatus: '',
         location: '',
-        availabilityTime: ''
+        availabilityTime: '' // Default to empty, user selects via datetime-local
     });
     const [doctors, setDoctors] = useState([]);
     const [specialties, setSpecialties] = useState([]);
     const [loading, setLoading] = useState(false);
     const [message, setMessage] = useState('');
     const [isSearchExpanded, setIsSearchExpanded] = useState(false);
+    const [page, setPage] = useState(0);
+    const [totalPages, setTotalPages] = useState(0);
     const searchRef = useRef(null);
 
     useEffect(() => {
@@ -47,23 +49,33 @@ function DoctorSearch() {
         setLoading(true);
         setMessage('');
         try {
-            const doctorsResponse = await doctorService.searchDoctors({
+            const availabilityTimeUTC = searchCriteria.availabilityTime
+    ? new Date(new Date(searchCriteria.availabilityTime).getTime() + (7 * 60 * 60 * 1000)).toISOString()
+    : '';
+            console.log('Sent availabilityTimeUTC:', availabilityTimeUTC); // Debug log
+            const response = await doctorService.searchDoctors({
                 ...searchCriteria,
-                availabilityTime: searchCriteria.availabilityTime ? new Date(searchCriteria.availabilityTime).toISOString() : ''
+                availabilityTime: availabilityTimeUTC,
+                page,
+                size: 10
             });
 
-            if (!Array.isArray(doctorsResponse) || doctorsResponse.length === 0) {
+            if (!response.content || response.content.length === 0) {
                 setDoctors([]);
                 setMessage('Không tìm thấy bác sĩ nào');
+                setTotalPages(0);
                 return;
             }
 
-            setDoctors(doctorsResponse);
+            setDoctors(response.content);
+            setTotalPages(response.totalPages);
             setMessage('Tìm kiếm thành công');
         } catch (error) {
             console.error('Error searching doctors:', error);
-            if (error.response && error.response.status === 401) {
+            if (error.message.includes('Unauthorized')) {
                 setMessage('Vui lòng đăng nhập để tìm kiếm bác sĩ');
+            } else if (error.message.includes('Invalid')) {
+                setMessage('Dữ liệu tìm kiếm không hợp lệ');
             } else {
                 setMessage('Không thể tìm kiếm bác sĩ');
             }
@@ -82,6 +94,13 @@ function DoctorSearch() {
         navigate('/book-appointment', { state: { doctor } });
     };
 
+    const handlePageChange = (newPage) => {
+        if (newPage >= 0 && newPage < totalPages) {
+            setPage(newPage);
+            handleSearch({ preventDefault: () => {} });
+        }
+    };
+
     const isFormValid = searchCriteria.specialtyId || searchCriteria.fullName || searchCriteria.availabilityStatus || searchCriteria.location || searchCriteria.availabilityTime;
 
     return (
@@ -95,7 +114,7 @@ function DoctorSearch() {
                 />
             </div>
 
-            {/* Thanh tìm kiếm bác sĩ */}
+            {/* Search Bar */}
             <div className="w-full max-w-4xl mx-auto px-4 mt-6">
                 <div ref={searchRef} className="relative">
                     <div
@@ -121,7 +140,7 @@ function DoctorSearch() {
                         </button>
                     </div>
 
-                    {/* Form tìm kiếm mở rộng */}
+                    {/* Expanded Search Form */}
                     {isSearchExpanded && (
                         <div className="absolute left-0 right-0 mt-2 bg-white border border-gray-300 rounded-lg shadow-lg p-4 z-10">
                             <form onSubmit={handleSearch} className="space-y-4">
@@ -190,7 +209,7 @@ function DoctorSearch() {
                 </div>
             </div>
 
-            {/* Kết quả tìm kiếm bác sĩ */}
+            {/* Search Results */}
             <div className="w-full max-w-4xl mx-auto px-4 mt-10">
                 {loading && <p className="text-center text-gray-600">Đang tìm kiếm...</p>}
                 {message && !loading && (
@@ -215,6 +234,8 @@ function DoctorSearch() {
                                         <p className="text-gray-600">Tiểu sử: {doctor.bio ? doctor.bio.slice(0, 100) + (doctor.bio.length > 100 ? '...' : '') : 'N/A'}</p>
                                         <p className="text-gray-600">Số điện thoại: {doctor.phoneNumber || 'N/A'}</p>
                                         <p className="text-gray-600">Địa điểm: {doctor.locational || 'N/A'}</p>
+                                        {/* <p className="text-gray-600">Trạng thái: {doctor.availabilityStatus || 'N/A'}</p>
+                                        <p className="text-gray-600">Thời gian: {doctor.startTime ? `${doctor.startTime} - ${doctor.endTime}` : 'N/A'}</p> */}
                                     </div>
                                     <button
                                         onClick={() => handleBookNow(doctor)}
@@ -224,6 +245,24 @@ function DoctorSearch() {
                                     </button>
                                 </div>
                             ))}
+                        </div>
+                        {/* Pagination Controls */}
+                        <div className="flex justify-center mt-6">
+                            <button
+                                onClick={() => handlePageChange(page - 1)}
+                                disabled={page === 0}
+                                className="px-4 py-2 mx-1 bg-gray-200 rounded disabled:opacity-50"
+                            >
+                                Previous
+                            </button>
+                            <span className="px-4 py-2">{`Trang ${page + 1} của ${totalPages}`}</span>
+                            <button
+                                onClick={() => handlePageChange(page + 1)}
+                                disabled={page >= totalPages - 1}
+                                className="px-4 py-2 mx-1 bg-gray-200 rounded disabled:opacity-50"
+                            >
+                                Next
+                            </button>
                         </div>
                     </div>
                 )}

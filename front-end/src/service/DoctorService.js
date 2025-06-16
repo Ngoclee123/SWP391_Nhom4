@@ -1,4 +1,3 @@
-// src/service/DoctorService.js
 import axiosClient from "../api/axiosClient";
 
 class DoctorService {
@@ -11,7 +10,7 @@ class DoctorService {
             return response;
         } catch (error) {
             console.error('Error fetching doctor profile:', error);
-            throw error;
+            throw new Error(error.response?.data?.error || 'Không thể tải thông tin bác sĩ');
         }
     }
 
@@ -24,7 +23,7 @@ class DoctorService {
             return response;
         } catch (error) {
             console.error('Error fetching specialties:', error);
-            return [];
+            throw new Error('Không thể tải danh sách chuyên khoa');
         }
     }
 
@@ -40,13 +39,16 @@ class DoctorService {
         try {
             const response = await axiosClient.get(url, config);
             console.log('Search response:', response);
-            return response;
+            return response; // Expect { content: [], totalPages: number, ... }
         } catch (error) {
-            console.error('Error fetching doctor IDs:', error);
-            if (error.response && error.response.status === 401) {
-                console.warn('Unauthorized access - Please log in');
+            console.error('Error fetching doctors:', error);
+            if (error.response?.status === 401) {
+                throw new Error('Unauthorized access - Please log in');
+            } else if (error.response?.status === 400) {
+                throw new Error(error.response.data.error || 'Dữ liệu tìm kiếm không hợp lệ');
+            } else {
+                throw new Error(error.response?.data?.error || 'Không thể tìm kiếm bác sĩ');
             }
-            return [];
         }
     }
 }

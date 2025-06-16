@@ -1,7 +1,7 @@
 import React from "react";
 import { Link, useParams } from "react-router-dom";
 import { Heart, Calendar, User, ArrowLeft, Clock, Share2, BookmarkPlus, Eye, ThumbsUp } from 'lucide-react';
-import { healthArticles } from './data/articlesData';
+import { healthArticles } from '../data/articlesData';
 
 // Component NewsCard với thiết kế hiện đại
 function NewsCard({ title, date, excerpt, image, category, readTime, views, likes, id }) {

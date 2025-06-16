@@ -12,7 +12,10 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(async (req) => {
     const token = UserService.getToken();
-    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register") && !req.url.startsWith("/api/auth/google/callback") && !req.url.startsWith("/api/doctors")) {
+    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register") && 
+        !req.url.startsWith("/api/auth/google/callback") && !req.url.startsWith("/api/doctors") && 
+        !req.url.startsWith("/api/vaccines") && !req.url.startsWith("/api/parents/patients") && 
+        !req.url.startsWith("/api/vaccine-appointments/available")) {
         req.headers = req.headers || {};
         req.headers.Authorization = "Bearer " + token;
     }
@@ -32,7 +35,6 @@ axiosClient.interceptors.response.use(
     }
 );
 
-// Hàm xử lý redirect từ Google OAuth
 const handleOAuthRedirect = () => {
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
@@ -51,7 +53,6 @@ const handleOAuthRedirect = () => {
     }
 };
 
-// Gọi handleOAuthRedirect khi component mount
 if (window.location.pathname === '/home' && window.location.search) {
     handleOAuthRedirect();
 }
