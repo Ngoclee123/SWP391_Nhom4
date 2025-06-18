@@ -13,6 +13,7 @@ import org.springframework.stereotype.Service;
 import java.time.Instant;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.time.ZoneId;
 
 @Service
 public class DoctorService {
@@ -54,10 +55,18 @@ public class DoctorService {
             // Lấy thông tin từ DoctorAvailability
             if (doctor.getAvailabilities() != null && !doctor.getAvailabilities().isEmpty()) {
                 doctor.getAvailabilities().stream()
-                        .filter(da -> availabilityStatus == null || da.getStatus().equals(availabilityStatus))
-                        .filter(da -> finalSearchTime == null ||
-                                (da.getStartTime().isBefore(finalSearchTime) || da.getStartTime().equals(finalSearchTime)) &&
-                                        (da.getEndTime().isAfter(finalSearchTime) || da.getEndTime().equals(finalSearchTime)))
+                        .filter(da -> {
+                            // Chuyển LocalDateTime thành Instant
+                            ZoneId zoneId = ZoneId.systemDefault();
+                            Instant startInstant = da.getStartTime().atZone(zoneId).toInstant();
+                            Instant endInstant = da.getEndTime().atZone(zoneId).toInstant();
+
+                            boolean matchStatus = (availabilityStatus == null || da.getStatus().equals(availabilityStatus));
+                            boolean matchTime = (finalSearchTime == null ||
+                                    (!startInstant.isAfter(finalSearchTime) && !endInstant.isBefore(finalSearchTime))
+                            );
+                            return matchStatus && matchTime;
+                        })
                         .findFirst()
                         .ifPresent(da -> {
                             dto.setAvailabilityStatus(da.getStatus());

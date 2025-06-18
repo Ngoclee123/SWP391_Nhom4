@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FaStar,
   FaGraduationCap,
@@ -13,6 +13,8 @@ import {
   FaUserMd,
   FaHeart,
 } from "react-icons/fa";
+import Schedule from '../doctor/Schedule';
+import DoctorService from '../../service/DoctorService';
 
 const doctorsData = {
   1: {
@@ -229,11 +231,30 @@ function DoctorDetail() {
     email: "",
     notes: "",
   });
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
-  const doctor = doctorsData[id] || {};
-  const reviews = Array.isArray(doctor.reviews) ? doctor.reviews : [];
+  useEffect(() => {
+    const fetchDoctorDetails = async () => {
+      try {
+        setLoading(true);
+        const data = await DoctorService.getDoctorById(id);
+        setDoctor(data);
+      } catch (error) {
+        console.error('Error fetching doctor details:', error);
+        setError('Không thể tải thông tin bác sĩ');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-  if (!doctor.id) {
+    fetchDoctorDetails();
+  }, [id]);
+
+  const reviews = Array.isArray(doctor?.reviews) ? doctor.reviews : [];
+
+  if (!doctor?.id) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
@@ -312,329 +333,345 @@ function DoctorDetail() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white pt-20">
       <div className="container mx-auto px-4 py-8">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-8">
-            <div className="flex flex-col md:flex-row items-center text-white">
-              <div className="relative mb-6 md:mb-0 md:mr-8">
-                <img
-                  src={doctor.avatar}
-                  alt={doctor.name}
-                  className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
-                  onError={(e) => {
-                    e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      doctor.name || "Unknown"
-                    )}&size=128&background=60a5fa&color=ffffff`;
-                  }}
-                />
-                <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center">
-                  <FaUserMd className="text-white text-sm" />
-                </div>
-              </div>
-
-              <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                  {doctor.name}
-                </h1>
-                <p className="text-blue-100 text-lg mb-3">{doctor.specialty}</p>
-
-                <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-4">
-                  <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
-                    <FaStar className="text-yellow-400 mr-1" />
-                    <span className="font-semibold">
-                      {doctor.rating || "N/A"}
-                    </span>
-                    <span className="text-blue-100 ml-1">
-                      ({doctor.reviews?.length || 0} đánh giá)
-                    </span>
-                  </div>
-                  <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
-                    <FaGraduationCap className="mr-2" />
-                    <span>{doctor.experience}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-center md:justify-start">
-                  <FaHospital className="mr-2" />
-                  <span className="text-blue-100">{doctor.hospital}</span>
-                </div>
-              </div>
-            </div>
+        {loading ? (
+          <div className="text-center">
+            <p className="text-gray-600">Đang tải thông tin...</p>
           </div>
-
-          <div className="border-b border-gray-200">
-            <nav className="flex space-x-8 px-8">
-              <a
-                href="#overview"
-                className="py-4 px-1 border-b-2 border-blue-600 font-medium text-blue-600"
-              >
-                Tổng quan
-              </a>
-              <a
-                href="#schedule"
-                className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700"
-              >
-                Lịch khám
-              </a>
-              <a
-                href="#reviews"
-                className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700"
-              >
-                Đánh giá
-              </a>
-              <a
-                href="#contact"
-                className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700"
-              >
-                Liên hệ
-              </a>
-            </nav>
+        ) : error ? (
+          <div className="text-center">
+            <p className="text-red-600">{error}</p>
           </div>
-        </div>
-
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div id="overview" className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <FaUserMd className="text-blue-600 mr-3" />
-                Giới thiệu
-              </h2>
-              <p className="text-gray-600 leading-relaxed mb-6">
-                {doctor.description}
-              </p>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                    <FaGraduationCap className="text-blue-600 mr-2" />
-                    Học vấn
-                  </h3>
-                  <p className="text-gray-600">{doctor.education}</p>
-                </div>
-                <div>
-                  <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
-                    <FaHospital className="text-blue-600 mr-2" />
-                    Nơi công tác
-                  </h3>
-                  <p className="text-gray-600">{doctor.hospital}</p>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <FaHeart className="text-red-500 mr-3" />
-                Chuyên môn
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {doctor.specializations?.map((spec, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center p-3 bg-blue-50 rounded-lg"
-                  >
-                    <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
-                    <span className="text-gray-700">{spec}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <FaAward className="text-yellow-500 mr-3" />
-                Thành tích & Chứng chỉ
-              </h2>
-              <div className="space-y-3">
-                {doctor.achievements?.map((achievement, index) => (
-                  <div
-                    key={index}
-                    className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
-                  >
-                    <FaAward className="text-yellow-500 mr-3 flex-shrink-0" />
-                    <span className="text-gray-700">{achievement}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div id="schedule" className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <FaClock className="text-green-600 mr-3" />
-                Giờ làm việc
-              </h2>
-              <div className="space-y-3">
-                {doctor.workingHours?.map((schedule, index) => (
-                  <div
-                    key={index}
-                    className="flex justify-between items-center p-3 border border-gray-200 rounded-lg"
-                  >
-                    <span className="font-medium text-gray-700">
-                      {schedule.day}
-                    </span>
-                    <span
-                      className={`px-3 py-1 rounded-full text-sm ${
-                        schedule.time === "Nghỉ"
-                          ? "bg-red-100 text-red-600"
-                          : "bg-green-100 text-green-600"
-                      }`}
-                    >
-                      {schedule.time}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div id="reviews" className="bg-white rounded-xl shadow-lg p-6">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
-                <FaStar className="text-yellow-400 mr-3" />
-                Đánh giá từ bệnh nhân
-              </h2>
-              {reviews.length > 0 ? (
-                <div className="space-y-4">
-                  {reviews.map((review, index) => {
-                    if (
-                      !review ||
-                      !review.patientName ||
-                      !review.rating ||
-                      !review.comment ||
-                      !review.date
-                    ) {
-                      return null;
-                    }
-                    return (
-                      <div
-                        key={index}
-                        className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                              <span className="text-blue-600 font-semibold">
-                                {review.patientName.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-800">
-                                {review.patientName}
-                              </p>
-                              <div className="flex items-center">
-                                {renderStars(review.rating)}
-                                <span className="ml-2 text-sm text-gray-600">
-                                  {review.rating}/5
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-500">
-                            {review.date &&
-                            !isNaN(new Date(review.date).getTime())
-                              ? new Date(review.date).toLocaleDateString(
-                                  "vi-VN"
-                                )
-                              : "Ngày không xác định"}
-                          </p>
-                        </div>
-                        <p className="text-gray-600">{review.comment}</p>
+        ) : doctor ? (
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="md:col-span-2 space-y-6">
+              <div className="bg-white rounded-2xl shadow-xl overflow-hidden mb-8">
+                <div className="bg-gradient-to-r from-blue-600 to-blue-800 p-8">
+                  <div className="flex flex-col md:flex-row items-center text-white">
+                    <div className="relative mb-6 md:mb-0 md:mr-8">
+                      <img
+                        src={doctor.avatar}
+                        alt={doctor.name}
+                        className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
+                        onError={(e) => {
+                          e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
+                            doctor.name || "Unknown"
+                          )}&size=128&background=60a5fa&color=ffffff`;
+                        }}
+                      />
+                      <div className="absolute -bottom-2 -right-2 bg-green-500 w-8 h-8 rounded-full flex items-center justify-center">
+                        <FaUserMd className="text-white text-sm" />
                       </div>
-                    );
-                  })}
+                    </div>
+
+                    <div className="flex-1 text-center md:text-left">
+                      <h1 className="text-3xl md:text-4xl font-bold mb-2">
+                        {doctor.name}
+                      </h1>
+                      <p className="text-blue-100 text-lg mb-3">{doctor.specialty}</p>
+
+                      <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-4">
+                        <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
+                          <FaStar className="text-yellow-400 mr-1" />
+                          <span className="font-semibold">
+                            {doctor.rating || "N/A"}
+                          </span>
+                          <span className="text-blue-100 ml-1">
+                            ({doctor.reviews?.length || 0} đánh giá)
+                          </span>
+                        </div>
+                        <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
+                          <FaGraduationCap className="mr-2" />
+                          <span>{doctor.experience}</span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-center md:justify-start">
+                        <FaHospital className="mr-2" />
+                        <span className="text-blue-100">{doctor.hospital}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
-              ) : (
-                <p className="text-gray-600">
-                  Chưa có đánh giá nào cho bác sĩ này.
+
+                <div className="border-b border-gray-200">
+                  <nav className="flex space-x-8 px-8">
+                    <a
+                      href="#overview"
+                      className="py-4 px-1 border-b-2 border-blue-600 font-medium text-blue-600"
+                    >
+                      Tổng quan
+                    </a>
+                    <a
+                      href="#schedule"
+                      className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      Lịch khám
+                    </a>
+                    <a
+                      href="#reviews"
+                      className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      Đánh giá
+                    </a>
+                    <a
+                      href="#contact"
+                      className="py-4 px-1 border-b-2 border-transparent font-medium text-gray-500 hover:text-gray-700"
+                    >
+                      Liên hệ
+                    </a>
+                  </nav>
+                </div>
+              </div>
+
+              <div id="overview" className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                  <FaUserMd className="text-blue-600 mr-3" />
+                  Giới thiệu
+                </h2>
+                <p className="text-gray-600 leading-relaxed mb-6">
+                  {doctor.description}
                 </p>
-              )}
-            </div>
-          </div>
 
-          <div className="space-y-6">
-            <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
-              <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
-                <FaCalendarAlt className="text-blue-600 mr-3" />
-                Đặt lịch khám
-              </h3>
-
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chọn ngày khám
-                  </label>
-                  <select
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="">Chọn ngày</option>
-                    {getAvailableDates().map((date) => (
-                      <option key={date} value={date}>
-                        {new Date(date).toLocaleDateString("vi-VN", {
-                          weekday: "long",
-                          year: "numeric",
-                          month: "long",
-                          day: "numeric",
-                        })}
-                      </option>
-                    ))}
-                  </select>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <FaGraduationCap className="text-blue-600 mr-2" />
+                      Học vấn
+                    </h3>
+                    <p className="text-gray-600">{doctor.education}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
+                      <FaHospital className="text-blue-600 mr-2" />
+                      Nơi công tác
+                    </h3>
+                    <p className="text-gray-600">{doctor.hospital}</p>
+                  </div>
                 </div>
+              </div>
 
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Chọn giờ khám
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {doctor.availableSlots?.map((slot) => (
-                      <button
-                        key={slot}
-                        onClick={() => setSelectedTime(slot)}
-                        className={`p-2 text-sm rounded-lg border transition duration-200 ${
-                          selectedTime === slot
-                            ? "bg-blue-600 text-white border-blue-600"
-                            : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                  <FaHeart className="text-red-500 mr-3" />
+                  Chuyên môn
+                </h2>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {doctor.specializations?.map((spec, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center p-3 bg-blue-50 rounded-lg"
+                    >
+                      <div className="w-2 h-2 bg-blue-600 rounded-full mr-3"></div>
+                      <span className="text-gray-700">{spec}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                  <FaAward className="text-yellow-500 mr-3" />
+                  Thành tích & Chứng chỉ
+                </h2>
+                <div className="space-y-3">
+                  {doctor.achievements?.map((achievement, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
+                    >
+                      <FaAward className="text-yellow-500 mr-3 flex-shrink-0" />
+                      <span className="text-gray-700">{achievement}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div id="schedule" className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                  <FaClock className="text-green-600 mr-3" />
+                  Giờ làm việc
+                </h2>
+                <div className="space-y-3">
+                  {doctor.workingHours?.map((schedule, index) => (
+                    <div
+                      key={index}
+                      className="flex justify-between items-center p-3 border border-gray-200 rounded-lg"
+                    >
+                      <span className="font-medium text-gray-700">
+                        {schedule.day}
+                      </span>
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm ${
+                          schedule.time === "Nghỉ"
+                            ? "bg-red-100 text-red-600"
+                            : "bg-green-100 text-green-600"
                         }`}
                       >
-                        {slot}
-                      </button>
-                    ))}
-                  </div>
+                        {schedule.time}
+                      </span>
+                    </div>
+                  ))}
                 </div>
-
-                <button
-                  onClick={handleBooking}
-                  className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:scale-105 shadow-lg"
-                >
-                  Đặt lịch ngay
-                </button>
               </div>
+
+              <div id="reviews" className="bg-white rounded-xl shadow-lg p-6">
+                <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center">
+                  <FaStar className="text-yellow-400 mr-3" />
+                  Đánh giá từ bệnh nhân
+                </h2>
+                {reviews.length > 0 ? (
+                  <div className="space-y-4">
+                    {reviews.map((review, index) => {
+                      if (
+                        !review ||
+                        !review.patientName ||
+                        !review.rating ||
+                        !review.comment ||
+                        !review.date
+                      ) {
+                        return null;
+                      }
+                      return (
+                        <div
+                          key={index}
+                          className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center">
+                              <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                                <span className="text-blue-600 font-semibold">
+                                  {review.patientName.charAt(0)}
+                                </span>
+                              </div>
+                              <div>
+                                <p className="font-semibold text-gray-800">
+                                  {review.patientName}
+                                </p>
+                                <div className="flex items-center">
+                                  {renderStars(review.rating)}
+                                  <span className="ml-2 text-sm text-gray-600">
+                                    {review.rating}/5
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                            <p className="text-sm text-gray-500">
+                              {review.date &&
+                              !isNaN(new Date(review.date).getTime())
+                                ? new Date(review.date).toLocaleDateString(
+                                    "vi-VN"
+                                  )
+                                : "Ngày không xác định"}
+                            </p>
+                          </div>
+                          <p className="text-gray-600">{review.comment}</p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-gray-600">
+                    Chưa có đánh giá nào cho bác sĩ này.
+                  </p>
+                )}
+              </div>
+
+              <Schedule doctorId={id} />
             </div>
 
-            <div id="contact" className="bg-white rounded-xl shadow-lg p-6">
-              <h3 className="text-xl font-bold text-gray-800 mb-4">
-                Thông tin liên hệ
-              </h3>
-              <div className="space-y-3">
-                <div className="flex items-center">
-                  <FaPhone className="text-blue-600 mr-3" />
-                  <span className="text-gray-700">
-                    {doctor.contact?.phone || "N/A"}
-                  </span>
+            <div className="md:col-span-1 space-y-6">
+              <div className="bg-white rounded-xl shadow-lg p-6 sticky top-24">
+                <h3 className="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                  <FaCalendarAlt className="text-blue-600 mr-3" />
+                  Đặt lịch khám
+                </h3>
+
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Chọn ngày khám
+                    </label>
+                    <select
+                      value={selectedDate}
+                      onChange={(e) => setSelectedDate(e.target.value)}
+                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    >
+                      <option value="">Chọn ngày</option>
+                      {getAvailableDates().map((date) => (
+                        <option key={date} value={date}>
+                          {new Date(date).toLocaleDateString("vi-VN", {
+                            weekday: "long",
+                            year: "numeric",
+                            month: "long",
+                            day: "numeric",
+                          })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Chọn giờ khám
+                    </label>
+                    <div className="grid grid-cols-3 gap-2">
+                      {doctor.availableSlots?.map((slot) => (
+                        <button
+                          key={slot}
+                          onClick={() => setSelectedTime(slot)}
+                          className={`p-2 text-sm rounded-lg border transition duration-200 ${
+                            selectedTime === slot
+                              ? "bg-blue-600 text-white border-blue-600"
+                              : "bg-white text-gray-700 border-gray-300 hover:border-blue-400"
+                          }`}
+                        >
+                          {slot}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={handleBooking}
+                    className="w-full bg-gradient-to-r from-blue-600 to-blue-700 text-white py-3 px-6 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition duration-300 transform hover:scale-105 shadow-lg"
+                  >
+                    Đặt lịch ngay
+                  </button>
                 </div>
-                <div className="flex items-center">
-                  <FaEnvelope className="text-blue-600 mr-3" />
-                  <span className="text-gray-700 text-sm">
-                    {doctor.contact?.email || "N/A"}
-                  </span>
-                </div>
-                <div className="flex items-start">
-                  <FaMapMarkerAlt className="text-blue-600 mr-3 mt-1" />
-                  <span className="text-gray-700">
-                    {doctor.contact?.address || "N/A"}
-                  </span>
+              </div>
+
+              <div id="contact" className="bg-white rounded-xl shadow-lg p-6">
+                <h3 className="text-xl font-bold text-gray-800 mb-4">
+                  Thông tin liên hệ
+                </h3>
+                <div className="space-y-3">
+                  <div className="flex items-center">
+                    <FaPhone className="text-blue-600 mr-3" />
+                    <span className="text-gray-700">
+                      {doctor.contact?.phone || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-center">
+                    <FaEnvelope className="text-blue-600 mr-3" />
+                    <span className="text-gray-700 text-sm">
+                      {doctor.contact?.email || "N/A"}
+                    </span>
+                  </div>
+                  <div className="flex items-start">
+                    <FaMapMarkerAlt className="text-blue-600 mr-3 mt-1" />
+                    <span className="text-gray-700">
+                      {doctor.contact?.address || "N/A"}
+                    </span>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
+        ) : (
+          <div className="text-center">
+            <p className="text-gray-600">Không tìm thấy thông tin bác sĩ</p>
+          </div>
+        )}
       </div>
 
       {showBookingForm && (
@@ -647,7 +684,7 @@ function DoctorDetail() {
 
               <div className="bg-blue-50 p-4 rounded-lg mb-6">
                 <p>
-                  <strong>Bác sĩ:</strong> {doctor.name}
+                  <strong>Bác sĩ:</strong> {doctor?.name}
                 </p>
                 <p>
                   <strong>Ngày:</strong>{" "}

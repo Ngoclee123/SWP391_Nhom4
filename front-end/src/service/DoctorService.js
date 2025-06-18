@@ -8,9 +8,9 @@ class DoctorService {
         try {
             const response = await axiosClient.get(url);
             console.log('Doctor profile response:', response);
-            return response;
+            return response.data;
         } catch (error) {
-            console.error('Error fetching doctor profile:', error);
+            console.error('Error fetching doctor details:', error);
             throw error;
         }
     }
@@ -27,7 +27,27 @@ class DoctorService {
             return [];
         }
     }
-
+    async getScheduleByDoctorId(doctorId) {
+        const url = '/api/doctor-availability/doctor/${doctorId}';
+        try {
+            const response = await axiosClient.get(url);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching doctor schedule:', error);
+            throw error;
+        }
+    }
+    async getAppointmentsByDoctorId(doctorId) {
+        const url = `/api/appointments/doctor/${doctorId}`;
+        try {
+            const response = await axiosClient.get(url);
+            return response;
+        } catch (error) {
+            console.error('Error fetching appointments:', error);
+            return [];
+        }
+    }
+    
     async searchDoctors(criteria) {
         const url = '/api/doctors/search';
         const config = {
