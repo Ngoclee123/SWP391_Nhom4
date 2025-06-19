@@ -20,4 +20,5 @@ public class EmailService {
                 "Liên kết này sẽ hết hạn vào " + java.time.LocalDateTime.now().plusHours(1) + " (giờ +07).");
         mailSender.send(message);
     }
+
 }

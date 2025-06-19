@@ -13,8 +13,7 @@ function ChangePassword() {
     });
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
-
-    console.log('ChangePassword rendered with accountId:', accountId);
+    const [passwordStrength, setPasswordStrength] = useState('');
 
     useEffect(() => {
         if (!accountId || accountId === 'undefined') {
@@ -23,18 +22,34 @@ function ChangePassword() {
         }
     }, [accountId, navigate]);
 
+    const checkPasswordStrength = (password) => {
+        const strongRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{8,}$/;
+        const mediumRegex = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d]{8,}$/;
+        if (strongRegex.test(password)) return 'Mạnh';
+        if (mediumRegex.test(password)) return 'Trung bình';
+        return 'Yếu';
+    };
+
     const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
+        const { name, value } = e.target;
+        setFormData({ ...formData, [name]: value });
+        if (name === 'newPassword') {
+            setPasswordStrength(checkPasswordStrength(value));
+        }
     };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         setError('');
         setSuccess('');
-        console.log('Form submitted');
 
         if (formData.newPassword !== formData.confirmPassword) {
             setError('Mật khẩu mới và xác nhận mật khẩu không khớp');
+            return;
+        }
+
+        if (passwordStrength === 'Yếu') {
+            setError('Mật khẩu mới quá yếu. Vui lòng sử dụng ít nhất 8 ký tự, bao gồm chữ hoa, chữ thường, số và ký tự đặc biệt.');
             return;
         }
 
@@ -49,9 +64,7 @@ function ChangePassword() {
                 newPassword: formData.newPassword,
             });
             setSuccess(response || 'Đổi mật khẩu thành công!');
-            setTimeout(() => {
-                navigate('/profile');
-            }, 2000);
+            setTimeout(() => navigate('/profile'), 2000);
         } catch (err) {
             console.error('API Error:', err);
             setError(err.response?.data || 'Lỗi khi đổi mật khẩu. Vui lòng kiểm tra lại mật khẩu hiện tại.');
@@ -93,6 +106,11 @@ function ChangePassword() {
                                 className="w-full px-5 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition duration-200"
                                 required
                             />
+                            {formData.newPassword && (
+                                <p className={`text-sm mt-1 ${passwordStrength === 'Mạnh' ? 'text-green-500' : passwordStrength === 'Trung bình' ? 'text-orange-500' : 'text-red-500'}`}>
+                                    Độ mạnh mật khẩu: {passwordStrength}
+                                </p>
+                            )}
                         </div>
                         <div className="mb-8">
                             <label className="block text-gray-700 font-semibold mb-2 text-lg">

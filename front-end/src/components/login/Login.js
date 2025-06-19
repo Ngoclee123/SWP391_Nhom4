@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserService from '../../service/userService';
-import { jwtDecode } from 'jwt-decode';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -19,11 +18,35 @@ function Login() {
                 password: password.trim(),
             });
             
-            UserService.setUser(response.token, response.username, response.fullName, response.accountId);
+            UserService.setUser(
+                response.token,
+                response.refreshToken,
+                response.username,
+                response.fullName,
+                response.accountId,
+                response.roleId,
+                response.roleName
+            );
             setError('');
-            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName, accountId: response.accountId });
-            const from = location.state?.from || '/';
-            navigate(from, { replace: true });
+            console.log('Đăng nhập thành công:', { 
+                username: response.username, 
+                fullName: response.fullName, 
+                accountId: response.accountId,
+                roleId: response.roleId,
+                roleName: response.roleName
+            });
+
+            // Debug logic chuyển hướng
+            const isDoctor = UserService.isDoctor();
+            console.log('Is Doctor:', isDoctor);
+            if (isDoctor) {
+                console.log('Chuyển hướng đến /doctor-dashboard');
+                navigate('/doctor-dashboard');
+            } else {
+                console.log('Chuyển hướng đến /home hoặc from:', location.state?.from || '/home');
+                const from = location.state?.from || '/home';
+                navigate(from, { replace: true });
+            }
         } catch (error) {
             console.error('Đăng nhập thất bại:', error);
             if (error.response && error.response.data) {

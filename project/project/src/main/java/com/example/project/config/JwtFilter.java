@@ -1,5 +1,7 @@
 package com.example.project.config;
 
+import com.example.project.model.Account;
+import com.example.project.service.AccountService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,15 +24,18 @@ public class JwtFilter extends OncePerRequestFilter {
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private AccountService accountService;
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
-        // Bỏ qua kiểm tra token cho các endpoint được phép
         if (path.startsWith("/api/login") || path.startsWith("/api/register") ||
                 path.startsWith("/api/vnpay") || path.startsWith("/api/appointments") ||
                 path.startsWith("/api/doctors") || path.startsWith("/api/parents") ||
-                path.equals("/api/accounts/")) {
+                path.equals("/api/accounts/") || path.startsWith("/api/forgot-password") ||
+                path.startsWith("/api/reset-password") || path.startsWith("/ws")) {
             chain.doFilter(request, response);
             return;
         }
@@ -46,15 +51,17 @@ public class JwtFilter extends OncePerRequestFilter {
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             if (jwtUtil.validateToken(jwt)) {
-                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
-                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                Account account = accountService.findByUsername(username);
+                if (account != null) {
+                    List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                    authorities.add(new SimpleGrantedAuthority(account.getRole().getRolename().toUpperCase())); // Đảm bảo khớp "DOCTOR"
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(username, null, authorities);
+                    authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                }
             } else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired JWT token");
+                response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Invalid or expired JWT token");
                 return;
             }
         }

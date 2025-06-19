@@ -1,5 +1,6 @@
 package com.example.project.service;
 
+import com.example.project.dto.DoctorDashboardDTO;
 import com.example.project.dto.DoctorSearchDTO;
 import com.example.project.model.Doctor;
 import com.example.project.model.Specialty;
@@ -68,6 +69,35 @@ public class DoctorService {
 
             return dto;
         }).collect(Collectors.toList());
+    }
+
+    public DoctorDashboardDTO getDoctorDashboard(Integer accountId) {
+        Doctor doctor = doctorRepository.findByAccountId(accountId)
+                .orElseThrow(() -> new RuntimeException("Doctor not found for accountId: " + accountId));
+
+        DoctorDashboardDTO dto = new DoctorDashboardDTO();
+        dto.setFullName(doctor.getFullName());
+        dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+
+        // Lấy lịch làm việc
+        List<DoctorDashboardDTO.AvailabilityDTO> availabilities = doctor.getAvailabilities().stream()
+                .map(da -> {
+                    DoctorDashboardDTO.AvailabilityDTO availabilityDTO = new DoctorDashboardDTO.AvailabilityDTO();
+                    availabilityDTO.setId(da.getId());
+                    availabilityDTO.setStartTime(da.getStartTime().toString());
+                    availabilityDTO.setEndTime(da.getEndTime().toString());
+                    availabilityDTO.setStatus(da.getStatus());
+                    return availabilityDTO;
+                })
+                .collect(Collectors.toList());
+        dto.setAvailabilities(availabilities);
+
+        // Lấy lịch hẹn sắp tới (giả sử lấy từ bảng Appointments, cần thêm logic thực tế)
+        // Đây là placeholder, cần cập nhật với truy vấn thực tế
+        List<DoctorDashboardDTO.AppointmentDTO> appointments = List.of(); // Cần thêm logic
+        dto.setUpcomingAppointments(appointments);
+
+        return dto;
     }
 
     public DoctorSearchDTO getDoctorById(Integer doctorId) {

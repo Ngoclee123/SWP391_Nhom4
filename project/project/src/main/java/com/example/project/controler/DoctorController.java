@@ -1,5 +1,6 @@
 package com.example.project.controler;
 
+import com.example.project.dto.DoctorDashboardDTO;
 import com.example.project.dto.DoctorSearchDTO;
 import com.example.project.model.Specialty;
 import com.example.project.service.DoctorService;
@@ -16,6 +17,12 @@ public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
+
+    @GetMapping("/dashboard/{accountId}")
+    public ResponseEntity<DoctorDashboardDTO> getDoctorDashboard(@PathVariable Integer accountId) {
+        DoctorDashboardDTO dashboard = doctorService.getDoctorDashboard(accountId);
+        return ResponseEntity.ok(dashboard);
+    }
 
     @GetMapping("/{doctorId}")
     public ResponseEntity<DoctorSearchDTO> getDoctorById(@PathVariable Integer doctorId) {

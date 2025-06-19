@@ -52,6 +52,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/login", "/api/register", "/api/vnpay/**", "/api/appointments/**",
                                 "/api/doctors/**", "/api/parents/**", "/api/accounts/", "/api/forgot-password", "/api/reset-password", "/ws/**")
                         .permitAll()
+                        .requestMatchers("api/doctors/dashboard/**").hasAuthority("DOCTOR") // security endpoint dashboard
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

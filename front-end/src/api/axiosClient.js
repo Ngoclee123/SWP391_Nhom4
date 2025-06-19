@@ -12,9 +12,12 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(async (req) => {
     const token = UserService.getToken();
-    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register") && !req.url.startsWith("/api/doctors")) {
+    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register")) {
         req.headers = req.headers || {};
         req.headers.Authorization = "Bearer " + token;
+        console.log('Request with token:', req.url, req.headers.Authorization); // Debug
+    } else {
+        console.log('Request without token:', req.url); // Debug
     }
     return req;
 });
@@ -33,6 +36,7 @@ axiosClient.interceptors.response.use(
             data: error.response?.data,
             message: error.message,
             url: error.config?.url,
+            headers: error.config?.headers,
         });
         throw error;
     }
