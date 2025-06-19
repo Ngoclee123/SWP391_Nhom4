@@ -22,6 +22,8 @@ import BookingConfirmation from './components/booking/BookingConfirmation';
 import Login from './components/login/Login';
 import ChangePassword from './components/ChangePassword';
 import ChatButton from './components/ChatButton';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -57,6 +59,8 @@ function App() {
                                   element={<BookingConfirmation />}
                                 />
                                 <Route path="/change-password/:accountId" element={<ChangePassword />} />
+                                 <Route path="/forgot-password" element={<ForgotPassword />} />
+                                 <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
                     
                 </Routes>

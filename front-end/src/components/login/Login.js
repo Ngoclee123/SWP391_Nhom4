@@ -19,9 +19,9 @@ function Login() {
                 password: password.trim(),
             });
             
-           UserService.setUser(response.token, response.username, response.fullName, response.accountId);
+            UserService.setUser(response.token, response.username, response.fullName, response.accountId);
             setError('');
-            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName ,accountId: response.accountId });
+            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName, accountId: response.accountId });
             const from = location.state?.from || '/';
             navigate(from, { replace: true });
         } catch (error) {
@@ -91,7 +91,9 @@ function Login() {
                         </button>
                     </form>
                     <div className="mt-6 text-center text-gray-700">
-                        <a href="#" className="text-blue-700 hover:underline font-semibold">Quên mật khẩu?</a>
+                        <Link to="/forgot-password" className="text-blue-700 hover:underline font-semibold">
+                            Quên mật khẩu?
+                        </Link>
                     </div>
                     <p className="mt-4 text-center text-gray-700">
                         Chưa có tài khoản?{' '}

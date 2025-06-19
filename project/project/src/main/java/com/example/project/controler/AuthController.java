@@ -1,7 +1,9 @@
 package com.example.project.controler;
 
 import com.example.project.config.JwtUtil;
+import com.example.project.dto.NewPasswordDTO;
 import com.example.project.dto.RegisterRequestDTO;
+import com.example.project.dto.ResetPasswordRequestDTO;
 import com.example.project.model.Account;
 import com.example.project.service.AccountService;
 import org.slf4j.Logger;
@@ -33,22 +35,22 @@ public class AuthController {
         Account account = accountService.findByUsername(loginRequest.getUsername());
         if (account == null) {
             logger.warn("Login failed: Username {} not found", loginRequest.getUsername());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Username not found");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Tên đăng nhập không tồn tại");
         }
 
         if (!account.getStatus()) {
             logger.warn("Login failed: Account {} is disabled", loginRequest.getUsername());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is disabled");
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Tài khoản đã bị vô hiệu hóa");
         }
 
         if (passwordEncoder.matches(loginRequest.getPassword(), account.getPasswordHash())) {
-            String token = jwtUtil.generateToken(account.getUsername(), account.getId()); // Tạo token với accountId
+            String token = jwtUtil.generateToken(account.getUsername(), account.getId());
             logger.info("Login successful for username: {}, token: {}", loginRequest.getUsername(), token);
             return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId()));
         } else {
             logger.warn("Login failed: Invalid password for username {}. Raw: {}, Stored: {}",
                     loginRequest.getUsername(), loginRequest.getPassword(), account.getPasswordHash());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Mật khẩu không đúng");
         }
     }
 
@@ -57,9 +59,8 @@ public class AuthController {
         logger.info("Registration attempt for username: {}", request.getUsername());
 
         try {
-            // Gọi phương thức registerAccount từ AccountService
             Account account = accountService.registerAccount(request);
-            String token = jwtUtil.generateToken(account.getUsername(), account.getId()); // Tạo token sau khi đăng ký
+            String token = jwtUtil.generateToken(account.getUsername(), account.getId());
             logger.info("Registration successful for username: {}, token: {}", account.getUsername(), token);
             return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId()));
         } catch (RuntimeException e) {
@@ -68,11 +69,38 @@ public class AuthController {
         }
     }
 
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ResetPasswordRequestDTO request) {
+        logger.info("Password reset request for username: {}", request.getUsername());
+        try {
+            accountService.requestPasswordReset(request);
+            return ResponseEntity.ok("Yêu cầu đặt lại mật khẩu đã được gửi đến email của bạn");
+        } catch (RuntimeException e) {
+            logger.warn("Password reset failed for username: {} - Error: {}", request.getUsername(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody NewPasswordDTO request) {
+        logger.info("Password reset attempt with token: {}", request.getToken());
+        try {
+            boolean success = accountService.resetPassword(request);
+            if (!success) {
+                logger.warn("Invalid or expired token: {}", request.getToken());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token không hợp lệ hoặc đã hết hạn");
+            }
+            return ResponseEntity.ok("Mật khẩu đã được đặt lại thành công");
+        } catch (RuntimeException e) {
+            logger.warn("Password reset failed: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
 
     @GetMapping("/login")
     public ResponseEntity<?> loginNotAllowed() {
         logger.warn("GET method not allowed on /login endpoint");
-        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("GET method not allowed on /login");
+        return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("Phương thức GET không được phép trên /login");
     }
 }
 
@@ -92,12 +120,13 @@ class AuthResponse {
     private String fullName;
     private Integer accountId;
 
-    public AuthResponse(String token, String username, String fullName , Integer accountId) {
+    public AuthResponse(String token, String username, String fullName, Integer accountId) {
         this.token = token;
         this.username = username;
         this.fullName = fullName;
-        this.accountId = accountId; // Gán accountId
+        this.accountId = accountId;
     }
+
     public Integer getAccountId() { return accountId; }
     public void setAccountId(Integer accountId) { this.accountId = accountId; }
     public String getToken() { return token; }
