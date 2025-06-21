@@ -15,7 +15,7 @@ public class Vaccine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vaccine_id", nullable = false)
-    private Integer vaccin_id;
+    private Integer id; // Changed from vaccin_id to id, keep column name for DB
 
     @Size(max = 100)
     @NotNull
@@ -25,7 +25,7 @@ public class Vaccine {
 
     @Nationalized
     @Size(max = 1000)
-    @Column(name = "description", length = 1000)
+    @Column(name = "description", columnDefinition = "nvarchar(max)")
     private String description;
 
     @Size(max = 50)

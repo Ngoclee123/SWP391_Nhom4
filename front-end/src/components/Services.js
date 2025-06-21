@@ -55,7 +55,8 @@ function Services() {
             title="Tiêm phòng"
             description="Lịch tiêm chủng đầy đủ, nhắc nhở thông minh cho bé."
             icon="💉"
-            image="/images/vacin.jpg"
+            image="https://medlatec.vn/media/2594/content/20230208_mui-tiem-phong-mo-rong-5.jpg"
+
             onClick={() => navigate('/vaccines')}
           />
         </div>

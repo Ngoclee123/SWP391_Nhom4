@@ -95,7 +95,8 @@ function ProfileForm() {
         }
     };
 
-    const handleCancel = () => navigate('/profile');
+
+    const handleCancel = () => navigate('/home');
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-200 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{ marginTop: '100px' }}>

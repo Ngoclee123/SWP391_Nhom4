@@ -4,17 +4,16 @@ import com.example.project.dto.PatientDTO;
 import com.example.project.model.Patient;
 import com.example.project.repository.PatientRepository;
 import com.example.project.service.ParentService;
+import com.example.project.service.PatientService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.stream.Collectors;
 
 @RestController
@@ -29,34 +28,69 @@ public class PatientController {
     @Autowired
     private ParentService parentService;
 
+    @Autowired
+    private PatientService patientService;
+
     @GetMapping("/patients")
-    public CompletableFuture<ResponseEntity<List<PatientDTO>>> getPatientsByParent() {
-        return CompletableFuture.supplyAsync(() -> {
-            try {
-                Integer parentId = null;
-                var authentication = SecurityContextHolder.getContext().getAuthentication();
-                if (authentication != null && authentication.isAuthenticated() && authentication.getPrincipal() instanceof org.springframework.security.core.userdetails.User) {
-                    String username = authentication.getName();
-                    parentId = parentService.getParentIdByUsername(username);
-                }
-
-                List<Patient> patients;
-                if (parentId != null) {
-                    patients = patientRepository.findByParentId(parentId);
-                } else {
-                    patients = patientRepository.findAll();
-                    logger.warn("No authenticated user found, returning all patients");
-                }
-
-                List<PatientDTO> patientDTOs = patients.stream()
-                        .map(PatientDTO::new)
-                        .collect(Collectors.toList());
-                return ResponseEntity.ok(patientDTOs);
-
-            } catch (Exception e) {
-                logger.error("Error fetching patients: {}", e.getMessage());
-                return ResponseEntity.status(500).build();
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<List<PatientDTO>> getPatientsByParent() {
+        logger.debug("Processing /api/parents/patients request");
+        try {
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(401).body(null);
             }
-        });
+
+            String username = authentication.getName();
+            logger.debug("Authenticated username: {}", username);
+
+            Integer parentId = parentService.getParentIdByUsername(username);
+            logger.debug("Parent ID for username {}: {}", username, parentId);
+            if (parentId == null) {
+                logger.error("No parentId found for username: {}", username);
+                return ResponseEntity.status(404).body(null);
+            }
+
+            List<Patient> patients = patientRepository.findByParentId(parentId);
+            if (patients.isEmpty()) {
+                logger.warn("No patients found for parentId: {}", parentId);
+                return ResponseEntity.noContent().build();
+            }
+            logger.debug("Found {} patients for parentId: {}", patients.size(), parentId);
+
+            List<PatientDTO> patientDTOs = patients.stream()
+                    .map(PatientDTO::new)
+                    .collect(Collectors.toList());
+            logger.debug("Returning {} patient DTOs: {}", patientDTOs.size(), patientDTOs);
+            return ResponseEntity.ok(patientDTOs);
+
+        } catch (Exception e) {
+            logger.error("Error fetching patients: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(null);
+        }
+    }
+
+    @PostMapping("/patients")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<PatientDTO> addPatient(@RequestBody PatientDTO patientDTO) {
+        logger.debug("Processing /api/parents/patients POST request with patientDTO: {}", patientDTO);
+        try {
+            var authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                logger.error("No authenticated user found");
+                return ResponseEntity.status(401).body(null);
+            }
+
+            String username = authentication.getName();
+            logger.debug("Authenticated username: {}", username);
+
+            PatientDTO savedPatientDTO = patientService.addPatient(patientDTO, username);
+            logger.debug("Patient added successfully with id: {}", savedPatientDTO.getId());
+            return ResponseEntity.status(201).body(savedPatientDTO);
+        } catch (Exception e) {
+            logger.error("Error adding patient: {}", e.getMessage(), e);
+            return ResponseEntity.status(500).body(null);
+        }
     }
 }

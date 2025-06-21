@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import userService from '../../service/userService';
+import UserService from '../../service/userService';
 import VaccineAppointmentService from '../../service/VaccineAppointmentService';
+
 const VaccinesList = () => {
     const navigate = useNavigate();
     const [vaccines, setVaccines] = useState([]);
@@ -9,18 +10,25 @@ const VaccinesList = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        if (!userService.isLoggedIn()) {
+        if (!UserService.isLoggedIn()) {
             navigate('/login');
             return;
         }
 
         const fetchVaccines = async () => {
             try {
-                const response = await VaccineAppointmentService.getVaccines();
-                setVaccines(response);
+                setLoading(true);
+                const response = await VaccineAppointmentService.getAllVaccines();
+                console.log('Fetched vaccines:', response);
+                if (Array.isArray(response)) {
+                    setVaccines(response);
+                } else {
+                    setVaccines(response.data || []);
+                }
                 setLoading(false);
             } catch (err) {
                 setError('Không thể tải danh sách vaccine. Vui lòng thử lại.');
+                console.error('Error fetching vaccines:', err);
                 setLoading(false);
             }
         };
@@ -28,7 +36,7 @@ const VaccinesList = () => {
     }, [navigate]);
 
     const handleVaccineClick = (vaccineId) => {
-        navigate(`/vaccines/${vaccineId}`); // Change to path parameter
+        navigate(`/vaccines/${vaccineId}`);
     };
 
     if (loading) {
@@ -66,34 +74,38 @@ const VaccinesList = () => {
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                    {vaccines.map((vaccine) => (
-                        <div
-                            key={vaccine.id}
-                            className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-6 hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer"
-                            onClick={() => handleVaccineClick(vaccine.id)}
-                            role="button"
-                            tabIndex={0}
-                            onKeyDown={(e) => {
-                                if (e.key === 'Enter' || e.key === 'Space') {
-                                    handleVaccineClick(vaccine.id);
-                                }
-                            }}
-                        >
-                            <div className="relative group mb-4">
-                                <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
-                                <img
-                                    src={vaccine.image || '/images/vaccines/default.jpg'}
-                                    alt={vaccine.name}
-                                    className="relative h-48 w-full object-cover rounded-2xl shadow-md"
-                                />
+                    {vaccines.length > 0 ? (
+                        vaccines.map((vaccine) => (
+                            <div
+                                key={vaccine.id}
+                                className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-2xl border border-white/20 p-6 hover:shadow-xl transform hover:scale-105 transition-all duration-300 cursor-pointer"
+                                onClick={() => handleVaccineClick(vaccine.id)}
+                                role="button"
+                                tabIndex={0}
+                                onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === 'Space') {
+                                        handleVaccineClick(vaccine.id);
+                                    }
+                                }}
+                            >
+                                <div className="relative group mb-4">
+                                    <div className="absolute -inset-1 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl blur opacity-25 group-hover:opacity-40 transition duration-1000"></div>
+                                    <img
+                                        src={vaccine.image || '/images/vaccines/default.jpg'}
+                                        alt={vaccine.name}
+                                        className="relative h-48 w-full object-cover rounded-2xl shadow-md"
+                                    />
+                                </div>
+                                <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
+                                    {vaccine.name}
+                                </h3>
+                                <p className="text-gray-600 mb-2">{vaccine.description}</p>
+                                <p className="text-sm text-gray-500">Độ tuổi khuyến nghị: {vaccine.recommendedAge}</p>
                             </div>
-                            <h3 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-2">
-                                {vaccine.name}
-                            </h3>
-                            <p className="text-gray-600 mb-2">{vaccine.description}</p>
-                            <p className="text-sm text-gray-500">Độ tuổi khuyến nghị: {vaccine.recommendedAge}</p>
-                        </div>
-                    ))}
+                        ))
+                    ) : (
+                        !error && <p className="text-center text-gray-500">Không có vaccine nào để hiển thị.</p>
+                    )}
                 </div>
             </div>
         </div>

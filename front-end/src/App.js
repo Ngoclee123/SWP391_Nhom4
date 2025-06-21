@@ -11,7 +11,6 @@ import WhyChooseUs from './components/WhyChooseUs';
 import Team from './components/Team';
 import Testimonials from './components/Testimonials';
 import Contact from './components/Contact';
-
 import Register from './components/regiters/Register';
 import HealthNewsWebsite, { ArticleDetail } from './components/new/NewHeath';
 import AdminDashboards from './components/admin/AdminDashboard';
@@ -23,6 +22,8 @@ import Login from './components/login/Login';
 import ChangePassword from './components/ChangePassword';
 import VaccineAppointment from './components/vacin/VaccineAppointment';
 import VaccinesList from './components/vacin/VaccinesList';
+import ForgotPassword from './components/ForgotPassword';
+import ResetPassword from './components/ResetPassword';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -32,10 +33,7 @@ function App() {
   return (
     <Router>
       <Routes>
-        <Route
-          path="/news/article/:id"
-          element={<ArticleDetail />}
-        />
+        <Route path="/news/article/:id" element={<ArticleDetail />} />
         <Route
           path="*"
           element={
@@ -53,16 +51,16 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/admin1" element={<AdminDashboards />} />
-                  <Route path="/doctor/:id" element={<DoctorDetail />} />{" "}
+                  <Route path="/doctor/:id" element={<DoctorDetail />} />
                   <Route path="/reception" element={<Reception />} />
-                  <Route
-                    path="/booking-confirmation"
-                    element={<BookingConfirmation />}
-                  />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route path="/booking-confirmation" element={<BookingConfirmation />} />
                   <Route path="/change-password/:accountId" element={<ChangePassword />} />
                   <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
                 </Routes>
               </main>
+
               {!isAdminRoute && <Footer />}
             </div>
           }
@@ -76,11 +74,10 @@ function Home({ onOpenModal }) {
   const location = useLocation();
 
   useEffect(() => {
-    // Cuộn về đầu trang khi vào /home hoặc /
     if (location.pathname === '/home' || location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-    // Cuộn đến section nếu có hash trong URL
+
     if (location.hash) {
       const sectionId = location.hash.replace('#', '');
       const element = document.getElementById(sectionId);

@@ -5,11 +5,15 @@ import com.example.project.model.Account;
 import com.example.project.model.Parent;
 import com.example.project.repository.AccountRepository;
 import com.example.project.repository.ParentRepository;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 @Service
 public class ParentService {
+
+    private static final Logger logger = LoggerFactory.getLogger(ParentService.class);
 
     @Autowired
     private ParentRepository parentRepository;
@@ -54,19 +58,30 @@ public class ParentService {
         parentRepository.save(parent);
         accountRepository.save(account);
     }
+
     public Integer getParentIdByUsername(String username) {
-        // Find the Account by username
+        if (username == null || username.trim().isEmpty()) {
+            logger.error("Username is null or empty");
+            return null;
+        }
+
+        logger.debug("Searching for account with username: {}", username);
         Account account = accountRepository.findByUsername(username);
         if (account == null) {
-            return null; // or throw an exception depending on your security requirements
+            logger.error("No account found for username: {}", username);
+            return null;
         }
 
-        // Find the Parent by accountId
-        Parent parent = parentRepository.findByAccountId(account.getId());
+        Integer accountId = account.getId();
+        logger.debug("Found account with ID: {}, searching for parent", accountId);
+        Parent parent = parentRepository.findByAccountId(accountId);
         if (parent == null) {
-            return null; // or throw an exception
+            logger.error("No parent found for account ID: {}", accountId);
+            return null;
         }
 
-        return parent.getId();
+        Integer parentId = parent.getId();
+        logger.debug("Found parent with ID: {}", parentId);
+        return parentId;
     }
 }

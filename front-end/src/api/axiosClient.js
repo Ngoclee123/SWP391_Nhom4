@@ -1,60 +1,65 @@
 import axios from "axios";
-import queryString from 'query-string';
-import UserService from "../service/userService";
+  import queryString from 'query-string';
+  import UserService from "../service/userService";
 
-const axiosClient = axios.create({
-    baseURL: "http://localhost:8080",
-    headers: {
-        'content-type': 'application/json',
-    },
-    paramsSerializer: params => queryString.stringify(params),  
-});
+  const axiosClient = axios.create({
+      baseURL: "http://localhost:8080",
+      headers: {
+          'content-type': 'application/json',
+      },
+      paramsSerializer: params => queryString.stringify(params),
+      withCredentials: true,
+  });
 
-axiosClient.interceptors.request.use(async (req) => {
-    const token = UserService.getToken();
-    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register") && 
-        !req.url.startsWith("/api/auth/google/callback") && !req.url.startsWith("/api/doctors") && 
-        !req.url.startsWith("/api/vaccines") && !req.url.startsWith("/api/parents/patients") && 
-        !req.url.startsWith("/api/vaccine-appointments/available")) {
-        req.headers = req.headers || {};
-        req.headers.Authorization = "Bearer " + token;
-    }
-    return req;
-});
+  axiosClient.interceptors.request.use(async (req) => {
+      const token = UserService.getToken();
+      console.log("Request to:", req.url, "Token:", token ? "Present" : "Absent");
 
-axiosClient.interceptors.response.use(
-    (response) => {
-        if (response && response.data) {
-            return response.data;
-        }
-        return [];
-    },
-    (error) => {
-        console.error('Axios error:', error);
-        throw error;
-    }
-);
+      if (token && !req.url.match(/\/api\/(login|register|auth\/google\/callback|oauth2\/authorization\/google|login\/oauth2\/code\/|login|oauth2\/redirect|vnpay|doctors|vaccine-appointments\/availability)/)) {
+          req.headers = req.headers || {};
+          req.headers.Authorization = `Bearer ${token}`;
+          console.log("Added Authorization header for:", req.url);
+      } else if (token) {
+          console.log("Token present but skipped for:", req.url);
+      }
 
-const handleOAuthRedirect = () => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const token = urlParams.get('token');
-    const role = urlParams.get('role');
-    const username = urlParams.get('username');
-    const fullName = urlParams.get('fullName');
-    const accountId = urlParams.get('accountId');
+      return req;
+  });
 
-    if (token && role) {
-        UserService.setUser(token, username, fullName, accountId);
-        if (role.toLowerCase() === "user") {
-            window.location.href = "/home";
-        } else {
-            window.location.href = "/login";
-        }
-    }
-};
+  axiosClient.interceptors.response.use(
+      (response) => {
+          console.log("Response from:", response.config.url, "Status:", response.status, "Raw Data:", response.data);
+          return response.data || [];
+      },
+      (error) => {
+          console.error('Axios error:', error.response ? error.response.data : error.message, "Status:", error.response?.status);
+          throw error;
+      }
+  );
 
-if (window.location.pathname === '/home' && window.location.search) {
-    handleOAuthRedirect();
-}
+  const handleOAuthRedirect = () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const token = urlParams.get('token');
+      const role = urlParams.get('role');
+      const username = urlParams.get('username');
+      const fullName = urlParams.get('fullName');
+      const accountId = urlParams.get('accountId');
 
-export default axiosClient;
+      if (token && role) {
+          UserService.setUser(token, username, fullName, accountId);
+          console.log("OAuth redirect: Token set, Role:", role, "Redirecting to:", role.toLowerCase() === "user" ? "/home" : "/login");
+          if (role.toLowerCase() === "user") {
+              window.location.href = "/home";
+          } else {
+              window.location.href = "/login";
+          }
+      } else {
+          console.warn("OAuth redirect: Missing token or role");
+      }
+  };
+
+  if (window.location.pathname === '/home' && window.location.search) {
+      handleOAuthRedirect();
+  }
+
+  export default axiosClient;

@@ -19,6 +19,7 @@ public class ProjectApplication implements CommandLineRunner {
 
 	public static void main(String[] args) {
 		SpringApplication.run(ProjectApplication.class, args);
+
 	}
 
 }

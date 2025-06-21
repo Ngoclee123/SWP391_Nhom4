@@ -5,10 +5,17 @@ import com.example.project.model.*;
 import com.example.project.repository.VaccineAppointmentRepository;
 import com.example.project.repository.PatientRepository;
 import com.example.project.repository.VaccineRepository;
+
+import com.example.project.repository.PaymentRepository;
+import com.example.project.repository.RefundRepository;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+
+
+import java.math.BigDecimal;
 
 import java.time.Instant;
 import java.util.List;
@@ -26,6 +33,14 @@ public class VaccineAppointmentService {
 
     @Autowired
     private VaccineRepository vaccineRepository;
+
+
+    @Autowired
+    private PaymentRepository paymentRepository;
+
+    @Autowired
+    private RefundRepository refundRepository;
+
 
     @Async
     public CompletableFuture<VaccineAppointment> createVaccineAppointment(VaccineAppointmentRequest request) {
@@ -49,7 +64,11 @@ public class VaccineAppointmentService {
             appointment.setVaccine(vaccine.get());
 
             appointment.setAppointmentDate(Instant.parse(request.getAppointmentDate()));
+
+            appointment.setDoseNumber(request.getDoseNumber() != null ? request.getDoseNumber() : 1);
+
             appointment.setDoseNumber(request.getDoseNumber());
+
             appointment.setLocation(request.getLocation());
             appointment.setNotes(request.getNotes());
             appointment.setStatus("Pending");
@@ -106,13 +125,90 @@ public class VaccineAppointmentService {
         return CompletableFuture.supplyAsync(() -> vaccineAppointmentRepository.findAll());
     }
 
+
+    @Async
+    public CompletableFuture<Payment> getPaymentByVaccineAppointmentId(Integer vaccineAppointmentId) {
+        return CompletableFuture.supplyAsync(() -> {
+            Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentRepository.findById(vaccineAppointmentId);
+            if (!appointmentOpt.isPresent()) {
+                throw new RuntimeException("Vaccine appointment not found");
+            }
+            return paymentRepository.findByVaccineAppointmentId(vaccineAppointmentId)
+                    .orElseThrow(() -> new RuntimeException("Payment not found"));
+        });
+    }
+
+    @Async
+    public CompletableFuture<Payment> createPayment(Integer vaccineAppointmentId, String paymentMethod) {
+        return CompletableFuture.supplyAsync(() -> {
+            Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentRepository.findById(vaccineAppointmentId);
+            if (!appointmentOpt.isPresent()) {
+                throw new RuntimeException("Vaccine appointment not found");
+            }
+            VaccineAppointment appointment = appointmentOpt.get();
+            Payment payment = new Payment();
+            payment.setPatient(appointment.getPatient());
+            payment.setVaccineAppointment(appointment);
+            payment.setAmount(new BigDecimal(calculateTotalFee(appointment)));
+            payment.setPaymentMethod(paymentMethod);
+            payment.setStatus("Pending");
+            payment.setPaymentDate(Instant.now());
+            return paymentRepository.save(payment);
+        });
+    }
+
+    @Async
+    public CompletableFuture<Void> requestRefund(Integer vaccineAppointmentId) {
+        return CompletableFuture.supplyAsync(() -> {
+            Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentRepository.findById(vaccineAppointmentId);
+            if (!appointmentOpt.isPresent()) {
+                throw new RuntimeException("Vaccine appointment not found");
+            }
+            Payment payment = paymentRepository.findByVaccineAppointmentId(vaccineAppointmentId)
+                    .orElseThrow(() -> new RuntimeException("Payment not found"));
+            if (!"Completed".equals(payment.getStatus())) {
+                throw new RuntimeException("Cannot request refund for non-completed payment");
+            }
+            Refund refund = new Refund();
+            refund.setPayment(payment);
+            refund.setAmount(payment.getAmount());
+            refund.setReason("Yêu cầu hoàn tiền từ khách hàng");
+            refund.setStatus("Pending");
+            refundRepository.save(refund);
+            return null;
+        });
+    }
+
+    @Async
+    public CompletableFuture<Void> updateAppointmentStatus(Integer vaccineAppointmentId, String status) {
+        return CompletableFuture.supplyAsync(() -> {
+            Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentRepository.findById(vaccineAppointmentId);
+            if (!appointmentOpt.isPresent()) {
+                throw new RuntimeException("Vaccine appointment not found");
+            }
+            VaccineAppointment appointment = appointmentOpt.get();
+            appointment.setStatus(status);
+            vaccineAppointmentRepository.save(appointment);
+            return null;
+        });
+    }
+
+    @Async
+    public CompletableFuture<Optional<VaccineAppointment>> getAppointmentById(Integer vaccineAppointmentId) {
+        return CompletableFuture.supplyAsync(() -> vaccineAppointmentRepository.findById(vaccineAppointmentId));
+    }
+
+
     private Integer getCurrentParentId() {
         String username = SecurityContextHolder.getContext().getAuthentication().getName();
         return Integer.parseInt(username);
     }
 
-    public Integer getParentIdByUsername(String username) {
-        // Implement logic to fetch parentId from username (e.g., via ParentService)
-        throw new UnsupportedOperationException("Implement parent ID retrieval");
+
+    private double calculateTotalFee(VaccineAppointment appointment) {
+        // Logic to calculate total fee (e.g., based on vaccine cost)
+        return 100000.0; // Placeholder, replace with actual logic
+
+
     }
 }

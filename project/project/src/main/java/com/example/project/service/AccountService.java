@@ -1,17 +1,33 @@
 package com.example.project.service;
 
+
+import com.example.project.dto.NewPasswordDTO;
+import com.example.project.dto.RegisterRequestDTO;
+import com.example.project.dto.ResetPasswordRequestDTO;
+import com.example.project.model.Account;
+import com.example.project.model.Parent;
+import com.example.project.model.PasswordReset;
+import com.example.project.model.Role;
+import com.example.project.repository.AccountRepository;
+import com.example.project.repository.ParentRepository;
+import com.example.project.repository.PasswordResetRepository;
+
 import com.example.project.dto.RegisterRequestDTO;
 import com.example.project.model.Account;
 import com.example.project.model.Parent;
 import com.example.project.model.Role;
 import com.example.project.repository.AccountRepository;
 import com.example.project.repository.ParentRepository;
+
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+
+import java.util.UUID;
+
 import java.util.regex.Pattern;
 
 @Service
@@ -24,7 +40,11 @@ public class AccountService {
     private ParentRepository parentRepository;
 
     @Autowired
+    private PasswordResetRepository passwordResetRepository;
+    @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private EmailService emailService;
 
     public Account findByUsername(String username) {
         return accountRepository.findByUsername(username);
@@ -188,4 +208,53 @@ public class AccountService {
         }
         return account;
     }
+
+    @Transactional
+    public String requestPasswordReset(ResetPasswordRequestDTO request) {
+        Account account = accountRepository.findByUsername(request.getUsername());
+        if (account == null) {
+            throw new RuntimeException("Tên đăng nhập không tồn tại");
+        }
+
+        String email = account.getEmail();
+        if (email == null || email.isEmpty()) {
+            throw new RuntimeException("Tài khoản này không có email liên kết");
+        }
+
+        String token = UUID.randomUUID().toString();
+        PasswordReset passwordReset = new PasswordReset();
+        passwordReset.setAccount(account);
+        passwordReset.setToken(token);
+        passwordReset.setExpiresAt(Instant.now().plusSeconds(3600)); // Token hết hạn sau 1 giờ
+        passwordReset.setCreatedAt(Instant.now());
+        passwordResetRepository.save(passwordReset);
+
+        // Gửi email với liên kết đặt lại mật khẩu
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(email, resetLink);
+
+        return token;
+    }
+
+    @Transactional
+    public boolean resetPassword(NewPasswordDTO request) {
+        PasswordReset passwordReset = passwordResetRepository.findByToken(request.getToken());
+        if (passwordReset == null || passwordReset.getExpiresAt().isBefore(Instant.now())) {
+            return false; // Token không hợp lệ hoặc đã hết hạn
+        }
+
+        Account account = passwordReset.getAccount();
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 8) {
+            throw new RuntimeException("Mật khẩu mới phải có ít nhất 8 ký tự");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        account.setUpdatedAt(Instant.now());
+        accountRepository.save(account);
+
+        // Xóa token sau khi sử dụng
+        passwordResetRepository.delete(passwordReset);
+        return true;
+    }
+
 }

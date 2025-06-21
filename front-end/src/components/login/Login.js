@@ -121,8 +121,10 @@ function Login() {
                             Đăng nhập với Google
                         </button>
                     </form>
-                    <div className="mt-6 text-center text-gray-700">
-                        <a href="#" className="text-blue-700 hover:underline font-semibold">Quên mật khẩu?</a>
+                        <div className="mt-6 text-center text-gray-700">
+                        <Link to="/forgot-password" className="text-blue-700 hover:underline font-semibold">
+                            Quên mật khẩu?
+                        </Link>
                     </div>
                     <p className="mt-4 text-center text-gray-700">
                         Chưa có tài khoản?{' '}

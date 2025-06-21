@@ -1,7 +1,9 @@
 package com.example.project.controler;
 
 import com.example.project.config.JwtUtil;
+import com.example.project.dto.NewPasswordDTO;
 import com.example.project.dto.RegisterRequestDTO;
+import com.example.project.dto.ResetPasswordRequestDTO;
 import com.example.project.model.Account;
 import com.example.project.service.AccountService;
 import org.slf4j.Logger;
@@ -84,6 +86,34 @@ public class AuthController {
             return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId(), role));
         } catch (RuntimeException e) {
             logger.warn("Registration failed for username: {} - Error: {}", request.getUsername(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<?> forgotPassword(@RequestBody ResetPasswordRequestDTO request) {
+        logger.info("Password reset request for username: {}", request.getUsername());
+        try {
+            accountService.requestPasswordReset(request);
+            return ResponseEntity.ok("Yêu cầu đặt lại mật khẩu đã được gửi đến email của bạn");
+        } catch (RuntimeException e) {
+            logger.warn("Password reset failed for username: {} - Error: {}", request.getUsername(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
+        }
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody NewPasswordDTO request) {
+        logger.info("Password reset attempt with token: {}", request.getToken());
+        try {
+            boolean success = accountService.resetPassword(request);
+            if (!success) {
+                logger.warn("Invalid or expired token: {}", request.getToken());
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Token không hợp lệ hoặc đã hết hạn");
+            }
+            return ResponseEntity.ok("Mật khẩu đã được đặt lại thành công");
+        } catch (RuntimeException e) {
+            logger.warn("Password reset failed: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
         }
     }
