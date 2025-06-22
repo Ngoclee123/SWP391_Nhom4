@@ -1,65 +1,63 @@
 package com.example.project.model;
 
-import jakarta.persistence.*;
-import lombok.Getter;
-import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Nationalized;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+    import jakarta.persistence.*;
+    import lombok.Getter;
+    import lombok.Setter;
+    import org.hibernate.annotations.Fetch;
+    import org.hibernate.annotations.FetchMode;
+    import org.hibernate.annotations.JdbcTypeCode;
+    import org.hibernate.annotations.Type;
+    import org.hibernate.type.SqlTypes;
 
-import java.time.Instant;
+    import java.time.Instant;
+    import java.time.LocalDate;
+    import java.util.ArrayList;
+    import java.util.List;
 
-@Getter
+    @Getter
 @Setter
 @Entity
 @Table(name = "Doctors")
 public class Doctor {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "doctor_id", nullable = false)
+    @Column(name = "doctor_id")
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", nullable = true)
+    private Account account; // Thay thế accountId bằng quan hệ
 
-
-
-    @Nationalized
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "full_name", nullable = false, columnDefinition = "NVARCHAR(100)")
+    @JdbcTypeCode(SqlTypes.NVARCHAR)
     private String fullName;
 
-    @Nationalized
-    @Column(name = "phone_number", length = 15)
+    @ManyToOne
+    @JoinColumn(name = "specialty_id", nullable = false)
+    private Specialty specialty;
+
+    @Column(name = "phone_number")
     private String phoneNumber;
 
-    @Nationalized
-    @Lob
     @Column(name = "bio")
     private String bio;
 
-    @Nationalized
-    @Column(name = "certificate")
-    private String certificate;
+    @Column(name = "imgs")
+    private String imgs;
 
-    @Nationalized
-    @Column(name = "availability")
-    private String availability;
-
-    @ColumnDefault("sysdatetime()")
-    @Column(name = "created_at")
-    private Instant createdAt;
-
-
-    @Column(name = "specialty_id", nullable = false)
-    private Integer specialty;
+    @Column(name = "date_of_birth")
+    private LocalDate dateOfBirth;
 
     @Column(name = "locational")
     private String locational;
 
-    @Column(name = "availability_time")
-    private Instant availabilityTime;
+    @Column(name = "created_at")
+    private Instant createdAt;
 
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.JOIN)
+    private List<DoctorAvailability> availabilities = new ArrayList<>();
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<Certificate> certificates = new ArrayList<>();
 }

@@ -1,20 +1,26 @@
 package com.example.project.repository;
 
-
 import com.example.project.model.Doctor;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.Optional;
+@Repository
+public interface DoctorRepository extends JpaRepository<Doctor, Integer>, JpaSpecificationExecutor<Doctor> {
+    @Query("SELECT d FROM Doctor d LEFT JOIN FETCH d.availabilities")
+    List<Doctor> findAllWithAvailabilities();
 
-public interface DoctorRepository extends JpaRepository<Doctor, Integer> {
-    @Query("SELECT d FROM Doctor d WHERE (:specialtyId IS NULL OR d.specialty = :specialtyId) " +
-            "AND (:fullName IS NULL OR d.fullName LIKE %:fullName%) " +
-            "AND (:availabilityStatus IS NULL OR EXISTS (" +
-            "    SELECT 1 FROM DoctorAvailability da WHERE da.id = d.id AND da.status = :availabilityStatus))"
-    )
-    List<Doctor> searchDoctors(@Param("specialtyId") Integer specialtyId,
-                               @Param("fullName") String fullName,
-                               @Param("availabilityStatus") String availabilityStatus);
+    @Query("SELECT d FROM Doctor d LEFT JOIN FETCH d.availabilities WHERE d.id = :id")
+    Optional<Doctor> findByIdWithAvailabilities(@Param("id") Integer id);
+
+    @Query("SELECT d FROM Doctor d LEFT JOIN FETCH d.availabilities da WHERE d.id = :id " +
+            "AND (:searchTime IS NULL OR (da.startTime <= :searchTime AND da.endTime >= :searchTime))")
+    Optional<Doctor> findByIdWithAvailabilities(@Param("id") Integer id, @Param("searchTime") Instant searchTime);
+
+    Optional<Doctor> findByAccountId(Integer accountId);
 }

@@ -7,9 +7,11 @@ import DoctorManagement from './DoctorManagement';
 import { Settings } from 'lucide-react';
 import useNotifications from './useNotifications';
 import PatientManagement from './PatientManagement';
+import AccountManagement from './AccountManagement';
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan' },
+  { id: 'accounts', label: 'Tài khoản' },
   { id: 'appointments', label: 'Lịch hẹn' },
   { id: 'doctors', label: 'Bác sĩ' },
   { id: 'patients', label: 'Bệnh nhân' },
@@ -26,11 +28,13 @@ const AdminDashboards = () => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardOverview />;
+      case 'accounts':
+        return <AccountManagement />;
       case 'appointments':
         return <AppointmentManagement />;
       case 'doctors':
         return <DoctorManagement />;
-     case 'patients':
+      case 'patients':
         return <PatientManagement />;
       case 'consultations':
       case 'reports':

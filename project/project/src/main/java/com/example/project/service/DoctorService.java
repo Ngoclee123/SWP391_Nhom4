@@ -3,21 +3,27 @@ package com.example.project.service;
 import com.example.project.dto.DoctorSearchDTO;
 import com.example.project.model.Doctor;
 import com.example.project.model.Specialty;
+import com.example.project.model.Certificate;
 import com.example.project.repository.DoctorRepository;
+import com.example.project.repository.DoctorSpecification;
 import com.example.project.repository.SpecialtyRepository;
+import com.example.project.repository.CertificateRepository;
+import jakarta.transaction.Transactional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
 
-
-
 @Service
-public abstract class DoctorService {
+public class DoctorService {
+
+    private static final Logger logger = LoggerFactory.getLogger(DoctorService.class);
 
     @Autowired
     private DoctorRepository doctorRepository;
@@ -25,48 +31,158 @@ public abstract class DoctorService {
     @Autowired
     private SpecialtyRepository specialtyRepository;
 
-    public List<Specialty> getSpecialties() {
+    @Autowired
+    private CertificateRepository certificateRepository;
+
+    public List<Specialty> getAllSpecialties() {
+        logger.info("Fetching all specialties");
         return specialtyRepository.findAll();
     }
 
-    public List<Doctor> searchDoctors(Integer specialtyId, String fullName, String availabilityStatus, String location, String availabilityTime) {
-        List<Doctor> doctors = doctorRepository.findAll();
+    public Page<DoctorSearchDTO> searchDoctors(
+            Integer specialtyId,
+            String fullName,
+            String availabilityStatus,
+            String location,
+            String availabilityTime,
+            Pageable pageable) {
+        logger.info("Searching doctors with criteria: specialtyId={}, fullName={}, availabilityStatus={}, location={}, availabilityTime={}",
+                specialtyId, fullName, availabilityStatus, location, availabilityTime);
 
-        if (specialtyId != null) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getSpecialty() == specialtyId)
-                    .collect(Collectors.toList());
+        Instant searchTime = null;
+        if (availabilityTime != null && !availabilityTime.trim().isEmpty()) {
+            try {
+                // Parse the UTC ISO string sent from the frontend
+                searchTime = Instant.parse(availabilityTime);
+                logger.debug("Parsed availabilityTime: {}", searchTime);
+            } catch (Exception e) {
+                logger.error("Invalid availabilityTime format: {}", availabilityTime, e);
+                throw new IllegalArgumentException("Invalid availabilityTime format");
+            }
         }
 
-        if (fullName != null && !fullName.isEmpty()) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getFullName().toLowerCase().contains(fullName.toLowerCase()))
-                    .collect(Collectors.toList());
-        }
+        Page<Doctor> doctors = doctorRepository.findAll(
+                DoctorSpecification.searchDoctors(specialtyId, fullName, availabilityStatus, location, searchTime),
+                pageable
+        );
 
-        if (availabilityStatus != null && !availabilityStatus.isEmpty()) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getAvailability().equalsIgnoreCase(availabilityStatus))
-                    .collect(Collectors.toList());
-        }
+        return doctors.map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
 
-        if (location != null && !location.isEmpty()) {
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getLocational() != null && doctor.getLocational().toLowerCase().contains(location.toLowerCase()))
-                    .collect(Collectors.toList());
-        }
+            // Map the first available slot (filtered by query)
+            doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+                dto.setAvailabilityStatus(da.getStatus());
+                dto.setStartTime(da.getStartTime().toString());
+                dto.setEndTime(da.getEndTime().toString());
+            });
+//A
+            if (doctor.getAccount() != null) {
+                dto.setAccountId(doctor.getAccount().getId());
+                dto.setAccountUsername(doctor.getAccount().getUsername());
+                dto.setAccountEmail(doctor.getAccount().getEmail());
+                dto.setAccountRole(doctor.getAccount().getRole() != null ? doctor.getAccount().getRole().getRolename() : null);
+                dto.setAccountPhoneNumber(doctor.getAccount().getPhoneNumber());
+                dto.setAccountAddress(doctor.getAccount().getAddress());
+                dto.setAccountStatus(doctor.getAccount().getStatus());
+            }
 
-        if (availabilityTime != null && !availabilityTime.isEmpty()) {
-            LocalDateTime searchTime = LocalDateTime.parse(availabilityTime, DateTimeFormatter.ISO_LOCAL_DATE_TIME);
-            doctors = doctors.stream()
-                    .filter(doctor -> doctor.getAvailabilityTime() != null && doctor.getAvailabilityTime().isAfter(Instant.from(searchTime)))
-                    .collect(Collectors.toList());
-        }
-
-        return doctors;
+            return dto;
+        });
     }
 
-    public abstract List<Doctor> searchDoctors(DoctorSearchDTO searchDTO);
+    public DoctorSearchDTO getDoctorById(Integer doctorId) {
+        logger.info("Fetching doctor with ID: {}", doctorId);
+        Doctor doctor = doctorRepository.findByIdWithAvailabilities(doctorId)
+                .orElseThrow(() -> {
+                    logger.error("Doctor not found with ID: {}", doctorId);
+                    return new RuntimeException("Doctor not found with ID: " + doctorId);
+                });
 
-    public abstract List<Specialty> getAllSpecialties();
+        DoctorSearchDTO dto = new DoctorSearchDTO();
+        dto.setId(doctor.getId());
+        dto.setFullName(doctor.getFullName());
+        dto.setBio(doctor.getBio());
+        dto.setPhoneNumber(doctor.getPhoneNumber());
+        dto.setImgs(doctor.getImgs());
+        dto.setLocational(doctor.getLocational());
+        dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+        dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+
+        doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+            dto.setAvailabilityStatus(da.getStatus());
+            dto.setStartTime(da.getStartTime().toString());
+            dto.setEndTime(da.getEndTime().toString());
+        });
+
+        if (doctor.getAccount() != null) {
+            dto.setAccountId(doctor.getAccount().getId());
+            dto.setAccountUsername(doctor.getAccount().getUsername());
+            dto.setAccountEmail(doctor.getAccount().getEmail());
+            dto.setAccountRole(doctor.getAccount().getRole() != null ? doctor.getAccount().getRole().getRolename() : null);
+            dto.setAccountPhoneNumber(doctor.getAccount().getPhoneNumber());
+            dto.setAccountAddress(doctor.getAccount().getAddress());
+            dto.setAccountStatus(doctor.getAccount().getStatus());
+        }
+
+        return dto;
+    }
+    // New method to fetch Doctor entity
+    public Doctor getDoctorEntityById(Integer doctorId) {
+        logger.info("Fetching doctor entity with ID: {}", doctorId);
+        return doctorRepository.findById(doctorId)
+                .orElseThrow(() -> {
+                    logger.error("Doctor not found with ID: {}", doctorId);
+                    return new RuntimeException("Doctor not found with ID: " + doctorId);
+                });
+    }
+
+    public Doctor findDoctorByAccountId(Integer accountId) {
+        logger.info("Fetching doctor by account ID: {}", accountId);
+        return doctorRepository.findByAccountId(accountId).orElse(null);
+    }
+
+    // ADMIN: Lưu (tạo/cập nhật) bác sĩ và certificates
+    @Transactional
+    public Doctor saveDoctor(Doctor doctor) {
+        // if (doctor.getAccount() == null) {
+        //     throw new IllegalArgumentException("Account is required for doctor");
+        // }
+        // Đảm bảo specialty không null và là object thực
+    if (doctor.getSpecialty() == null || doctor.getSpecialty().getId() == null) {
+        throw new IllegalArgumentException("Specialty is required");
+    }
+    // Lấy Specialty từ DB dựa vào id
+    Specialty specialty = specialtyRepository.findById(doctor.getSpecialty().getId())
+        .orElseThrow(() -> new IllegalArgumentException("Specialty not found"));
+    doctor.setSpecialty(specialty);
+
+    Doctor savedDoctor = doctorRepository.save(doctor);
+    if (doctor.getCertificates() != null) {
+        certificateRepository.findByDoctor_Id(savedDoctor.getId()).forEach(certificateRepository::delete);
+        for (Certificate cert : doctor.getCertificates()) {
+            cert.setDoctor(savedDoctor);
+            certificateRepository.save(cert);
+        }
+    }
+    return savedDoctor;
+    }
+
+    // ADMIN: Xóa bác sĩ
+    public boolean deleteDoctor(Integer id) {
+        if (!doctorRepository.existsById(id)) {
+            return false;
+        }
+        doctorRepository.deleteById(id);
+        return true;
+    }
 }
+
+

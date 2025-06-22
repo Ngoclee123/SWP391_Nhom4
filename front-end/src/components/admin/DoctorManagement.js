@@ -1,19 +1,11 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { Plus, Edit, Eye, X } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import ActionButton from './ActionButton';
-
-const MOCK_DATA = {
-  doctors: [
-    { id: 1, name: 'BS. Trần Hương', specialty: 'Nhi khoa', status: 'online', patients: 15, rating: 4.8, experience: 8 },
-    { id: 2, name: 'BS. Nguyễn Đức', specialty: 'Dinh dưỡng', status: 'offline', patients: 12, rating: 4.9, experience: 12 },
-    { id: 3, name: 'BS. Mai Lan', specialty: 'Tiêm chủng', status: 'online', patients: 8, rating: 4.7, experience: 6 },
-    { id: 4, name: 'BS. Lê Minh', specialty: 'Tim mạch', status: 'busy', patients: 20, rating: 4.6, experience: 15 }
-  ]
-};
+import DoctorService from '../../service/DoctorService';
 
 const DoctorManagement = React.memo(() => {
-  const [doctors, setDoctors] = useState(MOCK_DATA.doctors);
+  const [doctors, setDoctors] = useState([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
   const [selectedDoctor, setSelectedDoctor] = useState(null);
@@ -23,22 +15,100 @@ const DoctorManagement = React.memo(() => {
     status: 'online',
     patients: 0,
     rating: 0,
-    experience: 0
+    experience: 0,
+    certificates: [],
   });
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [specialties, setSpecialties] = useState([]);
+  const [allCertificates, setAllCertificates] = useState([]);
+
+  // Fetch doctors from API
+  const fetchDoctors = useCallback(async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const res = await DoctorService.searchDoctors({});
+      const apiDoctors = Array.isArray(res.content) ? res.content : (Array.isArray(res) ? res : []);
+      setDoctors(apiDoctors.map(d => ({
+        id: d.id,
+        name: d.fullName || d.name || '',
+        specialty: d.specialtyName || d.specialty || '',
+        status: d.availabilityStatus || 'online',
+        patients: d.patients || 0,
+        rating: d.rating || 0,
+        experience: d.experience || 0
+      })));
+    } catch (err) {
+      setError('Không thể tải danh sách bác sĩ');
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fetch specialties from API
+  const fetchSpecialties = useCallback(async () => {
+    try {
+      const res = await DoctorService.getAllSpecialties();
+      setSpecialties(Array.isArray(res) ? res : []);
+    } catch (err) {
+      setSpecialties([]);
+    }
+  }, []);
+
+  // Fetch all certificates from API
+  const fetchCertificates = useCallback(async () => {
+    if (DoctorService.getAllCertificates) {
+      try {
+        const res = await DoctorService.getAllCertificates();
+        setAllCertificates(Array.isArray(res) ? res : []);
+      } catch (err) {
+        setAllCertificates([]);
+      }
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchDoctors();
+    fetchSpecialties();
+    fetchCertificates();
+  }, [fetchDoctors, fetchSpecialties, fetchCertificates]);
 
   const handleDoctorAction = useCallback((action, doctorId) => {
     if (action === 'view') {
       console.log('View doctor:', doctorId);
     } else if (action === 'edit') {
-      const doctor = doctors.find(d => d.id === doctorId);
-      setSelectedDoctor(doctor);
-      setFormData({ ...doctor });
-      setModalMode('edit');
-      setIsModalOpen(true);
+      setLoading(true);
+      DoctorService.getDoctorEntityById(doctorId)
+        .then(res => {
+          const doctor = res;
+          setSelectedDoctor(doctor);
+          setFormData({
+            name: doctor.fullName || '',
+            specialty: doctor.specialty?.id || '',
+            status: 'online',
+            patients: 0,
+            rating: 0,
+            experience: 0,
+            certificates: (doctor.certificates || []).map(c => c.id),
+          });
+          fetchSpecialties();
+          fetchCertificates();
+          setModalMode('edit');
+          setIsModalOpen(true);
+        })
+        .finally(() => setLoading(false));
     } else if (action === 'delete') {
-      setDoctors(doctors.filter(d => d.id !== doctorId));
+      if (window.confirm('Bạn có chắc muốn xóa bác sĩ này?')) {
+        setLoading(true);
+        setError('');
+        DoctorService.deleteDoctor(doctorId)
+          .then(() => fetchDoctors())
+          .catch(() => setError('Xóa bác sĩ thất bại'))
+          .finally(() => setLoading(false));
+      }
     }
-  }, [doctors]);
+  }, [fetchDoctors, fetchSpecialties, fetchCertificates]);
 
   const handleAddDoctor = useCallback(() => {
     setModalMode('create');
@@ -48,29 +118,64 @@ const DoctorManagement = React.memo(() => {
       status: 'online',
       patients: 0,
       rating: 0,
-      experience: 0
+      experience: 0,
+      certificates: [],
     });
+    fetchSpecialties();
+    fetchCertificates();
     setIsModalOpen(true);
-  }, []);
+  }, [fetchSpecialties, fetchCertificates]);
 
-  const handleSubmit = useCallback((e) => {
+  const handleCertificateChange = (index, value) => {
+    setFormData(prev => {
+      const newCerts = [...(prev.certificates || [])];
+      newCerts[index] = value;
+      return { ...prev, certificates: newCerts };
+    });
+  };
+
+  const handleAddCertificate = () => {
+    setFormData(prev => ({ ...prev, certificates: [...(prev.certificates || []), ''] }));
+  };
+
+  const handleRemoveCertificate = (index) => {
+    setFormData(prev => {
+      const newCerts = [...(prev.certificates || [])];
+      newCerts.splice(index, 1);
+      return { ...prev, certificates: newCerts };
+    });
+  };
+
+  const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    if (modalMode === 'create') {
-      const newDoctor = {
-        ...formData,
-        id: doctors.length + 1,
-        patients: Number(formData.patients),
-        rating: Number(formData.rating),
-        experience: Number(formData.experience)
-      };
-      setDoctors([...doctors, newDoctor]);
-    } else if (modalMode === 'edit') {
-      setDoctors(doctors.map(d =>
-        d.id === selectedDoctor.id ? { ...formData, id: d.id, patients: Number(formData.patients), rating: Number(formData.rating), experience: Number(formData.experience) } : d
-      ));
+    setLoading(true);
+    setError('');
+    try {
+      // Map certificates về dạng object
+      const certObjs = (formData.certificates || []).filter(c => c && c.trim()).map(c => ({ certificateName: c }));
+      if (modalMode === 'create') {
+        const payload = {
+          fullName: formData.name,
+          specialty: { id: Number(formData.specialty) },
+          certificates: certObjs,
+        };
+        await DoctorService.createDoctor(payload);
+      } else if (modalMode === 'edit') {
+        const payload = {
+          fullName: formData.name,
+          specialty: { id: Number(formData.specialty) },
+          certificates: certObjs,
+        };
+        await DoctorService.updateDoctor(selectedDoctor.id, payload);
+      }
+      setIsModalOpen(false);
+      fetchDoctors();
+    } catch (err) {
+      setError('Lưu bác sĩ thất bại');
+    } finally {
+      setLoading(false);
     }
-    setIsModalOpen(false);
-  }, [formData, modalMode, doctors, selectedDoctor]);
+  }, [formData, modalMode, selectedDoctor, fetchDoctors]);
 
   const handleInputChange = useCallback((e) => {
     const { name, value } = e.target;
@@ -174,14 +279,18 @@ const DoctorManagement = React.memo(() => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Chuyên khoa</label>
-                  <input
-                    type="text"
+                  <select
                     name="specialty"
                     value={formData.specialty}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
-                  />
+                  >
+                    <option value="">Chọn chuyên khoa</option>
+                    {specialties.map(s => (
+                      <option key={s.id} value={s.id}>{s.name}</option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
@@ -233,6 +342,25 @@ const DoctorManagement = React.memo(() => {
                     required
                     min="0"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Chứng chỉ</label>
+                  {(formData.certificates || []).map((cert, idx) => (
+                    <div key={idx} className="flex items-center mb-2">
+                      <select
+                        value={cert}
+                        onChange={e => handleCertificateChange(idx, e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                      >
+                        <option value="">Chọn chứng chỉ</option>
+                        {allCertificates.map(c => (
+                          <option key={c.id} value={c.id}>{c.certificateName}</option>
+                        ))}
+                      </select>
+                      <button type="button" onClick={() => handleRemoveCertificate(idx)} className="ml-2 text-red-500 hover:text-red-700">X</button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={handleAddCertificate} className="mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">+ Thêm chứng chỉ</button>
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
