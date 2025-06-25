@@ -1,4 +1,4 @@
-package com.example.project.controller;
+package com.example.project.controler.vacin;
 
 import com.example.project.model.Vaccine;
 import com.example.project.repository.VaccineRepository;

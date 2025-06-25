@@ -1,18 +1,32 @@
 import { jwtDecode } from 'jwt-decode';
+
 class UserService {
     setUser(token, username, fullName, accountId) {
         localStorage.setItem('token', token);
         localStorage.setItem('username', username);
         localStorage.setItem('fullName', fullName);
         localStorage.setItem('accountId', accountId);
-        // Lưu vai trò từ token
         const decodedToken = jwtDecode(token);
-        const role = decodedToken.role || 'USER'; // Giả sử role được nhúng trong token
+        const role = decodedToken.role || 'USER';
         localStorage.setItem('role', role);
     }
 
     getToken() {
-        return localStorage.getItem('token');
+        const token = localStorage.getItem('token');
+        if (token) {
+            try {
+                const decoded = jwtDecode(token);
+                if (decoded.exp * 1000 > Date.now()) {
+                    return token; // Token còn hiệu lực
+                }
+                console.warn('Token expired');
+                return null; // Yêu cầu làm mới
+            } catch (e) {
+                console.error('Invalid token:', e);
+                return null;
+            }
+        }
+        return null;
     }
 
     getUsername() {
@@ -44,4 +58,4 @@ class UserService {
     }
 }
 
-export default new UserService();
+export default new UserService(); // Giữ nguyên export instance

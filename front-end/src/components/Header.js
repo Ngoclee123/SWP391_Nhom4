@@ -173,6 +173,12 @@ function Header() {
                                         Thay Đổi Mật Khẩu
                                     </button>
                                     <button
+                                        onClick={() => { setIsDropdownOpen(false); window.location.href = '/vaccine-history'; }}
+                                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
+                                    >
+                                        Lịch sử đặt vaccin
+                                    </button>
+                                    <button
                                         onClick={handleLogout}
                                         className="block w-full text-left px-4 py-2 text-red-600 hover:bg-red-50 hover:text-red-700 transition duration-200"
                                     >

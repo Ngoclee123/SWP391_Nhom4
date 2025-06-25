@@ -60,4 +60,7 @@ public class Payment {
     @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @Column(name = "vaccine_id")
+    private Integer vaccineId;
 }

@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.Setter;
 import org.hibernate.annotations.Nationalized;
 
+import java.math.BigDecimal;
+
 @Getter
 @Setter
 @Entity
@@ -15,7 +17,7 @@ public class Vaccine {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vaccine_id", nullable = false)
-    private Integer id; // Changed from vaccin_id to id, keep column name for DB
+    private Integer id;
 
     @Size(max = 100)
     @NotNull
@@ -36,4 +38,7 @@ public class Vaccine {
     @Size(max = 255)
     @Column(name = "image")
     private String image;
+
+    @Column(name = "price", columnDefinition = "DECIMAL(10, 2)")
+    private BigDecimal price; // Thêm trường price
 }

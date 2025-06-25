@@ -24,11 +24,22 @@ import VaccineAppointment from './components/vacin/VaccineAppointment';
 import VaccinesList from './components/vacin/VaccinesList';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
-
+import AddPatientPage from './components/vacin/AddPatientPage';
+import { handleOAuthRedirect } from './api/axiosClient'; // Import hàm từ axiosClient
+import ConfirmationPage from './components/vacin/ConfirmationPage';
+import VaccineHistory from './components/vacin/VaccineHistory';
+import PaymentPage from './components/vnpVaccin/PaymentPage';
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const isAdminRoute = window.location.pathname.startsWith('/admin');
   const isRecepRoute = window.location.pathname.startsWith('/reception');
+
+  useEffect(() => {
+   
+    if ((window.location.pathname === '/home' || window.location.pathname === '/') && window.location.search) {
+      handleOAuthRedirect();
+    }
+  }, []); 
 
   return (
     <Router>
@@ -44,6 +55,7 @@ function App() {
                 <Routes>
                   <Route path="/vaccines" element={<VaccinesList />} />
                   <Route path="/vaccines/:vaccineId" element={<VaccineAppointment />} />
+                  <Route path="/add-patient" element={<AddPatientPage />} />
                   <Route path="/home" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
                   <Route path="/search-doctors" element={<DoctorSearch />} />
                   <Route path="/book-appointment" element={<AppointmentForm />} />
@@ -57,6 +69,9 @@ function App() {
                   <Route path="/reset-password" element={<ResetPassword />} />
                   <Route path="/booking-confirmation" element={<BookingConfirmation />} />
                   <Route path="/change-password/:accountId" element={<ChangePassword />} />
+                  <Route path="/confirmation" element={<ConfirmationPage />} />
+                  <Route path="/vaccine-history" element={<VaccineHistory />} />
+                  <Route path="/payment/:vaccineAppointmentId" element={<PaymentPage />} />
                   <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
                 </Routes>
               </main>

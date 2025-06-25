@@ -79,7 +79,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
                         .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")
                         .requestMatchers("/api/vaccine-appointments/confirm/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/vaccine-appointments/availability/**").permitAll() // Đồng bộ với controller
+                        .requestMatchers("/api/vaccine-appointments/availability/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parent/**").hasRole("USER")
                         .requestMatchers("/api/doctor/**").hasRole("DOCTOR")

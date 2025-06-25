@@ -2,6 +2,8 @@ package com.example.project.repository;
 
 import com.example.project.model.VaccineAppointment;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
@@ -18,4 +20,7 @@ public interface VaccineAppointmentRepository extends JpaRepository<VaccineAppoi
 
     // Tìm lịch hẹn theo vaccineId và ngày hẹn
     List<VaccineAppointment> findByVaccineIdAndAppointmentDate(Integer vaccineId, Instant appointmentDate);
+
+    @Query("SELECT va FROM VaccineAppointment va WHERE va.patient.parent.account.id = :accountId")
+    List<VaccineAppointment> findByAccountId(@Param("accountId") Integer accountId);
 }
