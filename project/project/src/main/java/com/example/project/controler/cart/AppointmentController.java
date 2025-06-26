@@ -8,6 +8,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/appointments")
@@ -21,7 +23,9 @@ public class AppointmentController {
     public ResponseEntity<?> bookAppointment(@RequestBody AppointmentRequestDTO requestDTO) {
         try {
             Appointment appointment = appointmentService.createAppointment(requestDTO);
-            return ResponseEntity.ok(appointment);
+            Map<String, Object> response = new HashMap<>();
+            response.put("appointmentId", appointment.getAppointmentId());
+            return ResponseEntity.ok(response);
         } catch (Exception e) {
             return ResponseEntity.badRequest().body(e.getMessage());
         }

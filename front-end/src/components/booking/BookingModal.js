@@ -9,10 +9,16 @@ console.log(
   new Date().toISOString()
 );
 
+function combineDateTime(dateStr, timeStr) {
+  // dateStr: '2025-06-27', timeStr: '08:00'
+  return `${dateStr}T${timeStr}:00`; // => '2025-06-27T08:00:00'
+}
+
 const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
+  console.log("BookingModal props -> doctorId:", doctorId);
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    doctorId: doctorId,
+    doctorId: Number(doctorId),
     appointmentDate: selectedDate || "",
     timeSlot: selectedTime || "",
     patientId: "",
@@ -62,7 +68,7 @@ const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!formData.patientId) {
-      setError("Vui lòng chọn bệnh nhân..............");
+      setError("Vui lòng chọn bệnh nhân.");
       return;
     }
     if (!formData.appointmentDate || !formData.timeSlot) {
@@ -73,21 +79,48 @@ const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
 
     try {
       setLoading(true);
-      const response = await AppointmentService.createAppointment(formData);
+      const combinedDateTime = combineDateTime(
+        formData.appointmentDate,
+        formData.timeSlot
+      );
+      const submitData = {
+        doctorId: Number(formData.doctorId),
+        patientId: Number(formData.patientId),
+        appointmentDate: combinedDateTime,
+        duration: 60,
+        symptoms: formData.symptoms,
+        notes: formData.notes,
+        paymentMethod: formData.paymentMethod,
+        bankCode: formData.bankCode,
+        consultationType: "InPerson",
+        priority: "Normal",
+        status: "Pending",
+      };
+      console.log("Dữ liệu gửi lên backend:", submitData);
+      const response = await AppointmentService.createAppointment(submitData);
       setMessage("Đặt lịch thành công!");
       setError("");
 
+      const appointmentId = response.appointmentId || response.id;
+
       if (formData.paymentMethod === "vnpay") {
-        navigate(`/payment/${response.appointmentId}`);
+        if (appointmentId) {
+          navigate(`/payment/${appointmentId}`);
+        } else {
+          setError("Không lấy được mã lịch hẹn để thanh toán.");
+        }
       } else {
         setTimeout(() => onClose(), 2000);
       }
 
-      if (response.data.token) {
+      if (response.data && response.data.token) {
         localStorage.setItem("token", response.data.token);
       }
     } catch (error) {
-      setError("Đặt lịch thất bại. Vui lòng thử lại.");
+      if (error.response) {
+        console.error("Lỗi trả về từ backend:", error.response.data);
+      }
+      setError(error.message || "Đặt lịch thất bại. Vui lòng thử lại.");
       setMessage("");
       console.error("Error creating appointment:", error);
     } finally {
@@ -115,7 +148,10 @@ const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
               className="w-full p-2 border rounded"
               value={formData.patientId}
               onChange={(e) =>
-                setFormData((prev) => ({ ...prev, patientId: e.target.value }))
+                setFormData((prev) => ({
+                  ...prev,
+                  patientId: Number(e.target.value),
+                }))
               }
               required
             >
@@ -198,8 +234,22 @@ const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
             </select>
           </div>
 
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          {message && <p className="text-green-500 mb-4">{message}</p>}
+          {message && (
+            <div className="mb-4 p-3 rounded bg-green-100 text-green-700 flex items-center gap-2">
+              <span role="img" aria-label="success">
+                ✅
+              </span>{" "}
+              {message}
+            </div>
+          )}
+          {error && (
+            <div className="mb-4 p-3 rounded bg-red-100 text-red-700 flex items-center gap-2">
+              <span role="img" aria-label="error">
+                ❌
+              </span>{" "}
+              {error}
+            </div>
+          )}
 
           <div className="flex justify-end gap-2">
             <button

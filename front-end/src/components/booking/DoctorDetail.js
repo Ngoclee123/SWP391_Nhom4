@@ -55,6 +55,7 @@ function DoctorDetail() {
         setLoading(true);
         try {
           const response = await DoctorService.getDoctorById(id);
+          console.log("DoctorDetail fetched doctor:", response);
           setDoctor(response);
         } catch (err) {
           setError("Không thể tải thông tin bác sĩ. Vui lòng thử lại sau.");

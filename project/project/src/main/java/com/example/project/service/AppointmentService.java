@@ -9,6 +9,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.time.ZoneOffset;
+import java.time.LocalDateTime;
 
 @Service
 public class AppointmentService {
@@ -33,10 +36,13 @@ public class AppointmentService {
 
         Doctor doctor = doctorRepository.findById(requestDTO.getDoctorId())
                 .orElseThrow(() -> new EntityNotFoundException("Doctor not found with ID: " + requestDTO.getDoctorId()));
-
-        Specialty specialty = specialtyRepository.findById(requestDTO.getSpecialtyId())
-                .orElseThrow(() -> new EntityNotFoundException("Specialty not found with ID: " + requestDTO.getSpecialtyId()));
-
+        Specialty specialty = null;
+        if (requestDTO.getSpecialtyId() != null) {
+            specialty = specialtyRepository.findById(requestDTO.getSpecialtyId())
+                    .orElseThrow(() -> new EntityNotFoundException("Specialty not found with ID: " + requestDTO.getSpecialtyId()));
+        }
+        // Bỏ xử lý service nếu serviceId null hoặc repository chưa được inject
+        
         // 2. Tạo đối tượng Appointment mới
         Appointment appointment = new Appointment();
 
@@ -48,16 +54,26 @@ public class AppointmentService {
         // 4. Gán các thông tin còn lại từ DTO và giá trị mặc định
         appointment.setAppointmentDate(requestDTO.getAppointmentDate());
         appointment.setDuration(requestDTO.getDuration() != null ? requestDTO.getDuration() : 60); // Mặc định 60 phút
-        appointment.setNotes(requestDTO.getNotes());
+        String notes = (requestDTO.getNotes()!=null && !requestDTO.getNotes().isBlank())
+                ? requestDTO.getNotes()
+                : (requestDTO.getSymptoms()!=null ? requestDTO.getSymptoms() : null);
+        appointment.setNotes(notes);
         appointment.setStatus(requestDTO.getStatus() != null ? requestDTO.getStatus() : "Pending");
         appointment.setPriority(requestDTO.getPriority() != null ? requestDTO.getPriority() : "Normal");
         appointment.setConsultationType(requestDTO.getConsultationType() != null ? requestDTO.getConsultationType() : "InPerson");
 
-        // Logic cho service (nếu có)
-        // if (requestDTO.getServiceId() != null) {
-        //     Service service = serviceRepository.findById(requestDTO.getServiceId()).orElse(null);
-        //     appointment.setService(service);
-        // }
+        // Thêm paymentMethod (NOT NULL) và optional bankCode
+        appointment.setPaymentMethod(requestDTO.getPaymentMethod() != null ? requestDTO.getPaymentMethod() : "later");
+        appointment.setTotalFee(null); // hoặc tính phí nếu có logic
+
+        // Lưu thêm appointmentTime (OffsetDateTime) dựa trên appointmentDate
+        if (requestDTO.getAppointmentDate() != null) {
+            // appointmentTime = slot start time with system default offset
+            appointment.setAppointmentTime(requestDTO.getAppointmentDate().atOffset(ZoneOffset.ofHours(7)));
+        }
+        
+        // Thời gian tạo bản ghi
+        appointment.setCreatedAt(LocalDateTime.now());
         
         // 5. Lưu vào database và trả về
         return appointmentRepository.save(appointment);

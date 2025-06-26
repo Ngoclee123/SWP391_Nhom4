@@ -1,15 +1,18 @@
 import axiosClient from "../api/axiosClient";
+import UserService from "./userService";
 
 class AppointmentService {
   async createAppointment(appointmentData) {
     try {
       console.log("Sending appointment data:", appointmentData);
+      const userId = UserService.getAccountId();
       const response = await axiosClient.post(
         "/api/appointments/book",
-        appointmentData
+        appointmentData,
+        userId ? { headers: { userId } } : undefined
       );
-      console.log("Appointment response:", response.data);
-      return response.data;
+      console.log("Appointment response:", response.data || response);
+      return response.data || response;
     } catch (error) {
       console.error("Error in createAppointment:", error);
       if (error.response?.data?.message) {

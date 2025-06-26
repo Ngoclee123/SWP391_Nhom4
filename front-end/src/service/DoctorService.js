@@ -45,7 +45,7 @@ const DoctorService = {
         return { error: response.error };
       }
 
-      return response;
+      return response.data || response;
     } catch (error) {
       console.error(`Error fetching doctor ${id}:`, error);
       return {
@@ -73,7 +73,7 @@ const DoctorService = {
         return { error: response.error };
       }
 
-      return response;
+      return response.data || response;
     } catch (error) {
       console.error(`Error fetching slots for doctor ${doctorId}:`, error);
       return {
@@ -98,7 +98,7 @@ const DoctorService = {
         return { error: response.error };
       }
 
-      return response;
+      return response.data || response;
     } catch (error) {
       console.error("Error searching doctors:", error);
       return {
@@ -121,7 +121,7 @@ const DoctorService = {
         return { error: response.error };
       }
 
-      return response;
+      return response.data || response;
     } catch (error) {
       console.error("Error fetching specialties:", error);
       return {
