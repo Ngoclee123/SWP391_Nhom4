@@ -14,7 +14,7 @@ const DoctorDashboard = () => {
 
   useEffect(() => {
     // Hardcode doctorId để test
-    const fetchedDoctorId = 1; // Giá trị cố định
+    const fetchedDoctorId = 1; // Giá trị cố định, đảm bảo có dữ liệu
     setDoctorId(fetchedDoctorId);
     setLoading(false);
   }, []);

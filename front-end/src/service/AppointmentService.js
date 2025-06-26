@@ -16,6 +16,27 @@ class AppointmentService {
             headers: { userId }
         });
     }
+
+    // Lấy danh sách lịch hẹn dạng DTO theo doctorId
+    getAppointmentsByDoctorId(doctorId, token) {
+        const url = `/api/appointments/doctor/${doctorId}/dtos`;
+        return axiosClient.get(url, {
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+    }
+
+    // Cập nhật trạng thái lịch hẹn
+    updateAppointmentStatus(appointmentId, status, token) {
+        const url = `/api/appointments/${appointmentId}/status`;
+        return axiosClient.put(url, null, {
+            params: { status }, // Gửi status qua query param
+            headers: {
+                Authorization: `Bearer ${token}`
+            }
+        });
+    }
 }
 
-export default AppointmentService;
+export default new AppointmentService();

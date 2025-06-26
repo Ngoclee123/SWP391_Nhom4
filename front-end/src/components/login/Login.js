@@ -1,8 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import axiosClient from '../../api/axiosClient';
 import UserService from '../../service/userService';
-import { jwtDecode } from 'jwt-decode';
 
 function Login() {
     const [username, setUsername] = useState('');
@@ -11,19 +10,55 @@ function Login() {
     const navigate = useNavigate();
     const location = useLocation();
 
+    useEffect(() => {
+        // Kiểm tra nếu quay lại từ Google OAuth
+        const urlParams = new URLSearchParams(location.search);
+        const token = urlParams.get('token');
+        if (token) {
+            const role = urlParams.get('role');
+            const username = urlParams.get('username');
+            const fullName = urlParams.get('fullName');
+            const accountId = urlParams.get('accountId');
+            UserService.setUser(token, username, fullName, accountId);
+            if (role && role.toLowerCase() === "user") {
+                navigate('/home', { replace: true });
+            } else if (role && role.toLowerCase() === "doctor") {
+                navigate('/doctor-dashboard', { replace: true });
+            } else if (role && role.toLowerCase() === "admin") {
+                navigate('/admin-dashboard', { replace: true });
+            } else {
+                navigate('/login', { replace: true });
+            }
+        }
+    }, [location.search, navigate]);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        console.log("Current pathname:", location.pathname); // Debug
+        const endpoint = '/api/login'; // Sử dụng endpoint duy nhất
+
         try {
-            const response = await axiosClient.post('/api/login', {
+            const response = await axiosClient.post(endpoint, {
                 username: username.trim(),
                 password: password.trim(),
             });
-            
-           UserService.setUser(response.token, response.username, response.fullName, response.accountId);
+            UserService.setUser(response.token, response.username, response.fullName, response.accountId);
             setError('');
-            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName ,accountId: response.accountId });
-            const from = location.state?.from || '/';
-            navigate(from, { replace: true });
+            console.log('Đăng nhập thành công:', { 
+                username: response.username, 
+                fullName: response.fullName, 
+                accountId: response.accountId, 
+                role: response.role 
+            });
+
+            // Chuyển hướng dựa trên vai trò, không phụ thuộc location.state
+            if (response.role.toLowerCase() === 'doctor') {
+                navigate('/doctor-dashboard', { replace: true });
+            } else if (response.role.toLowerCase() === 'admin') {
+                navigate('/admin-dashboard', { replace: true }); // Đảm bảo chuyển đến admin-dashboard
+            } else {
+                navigate('/home', { replace: true }); // Mặc định là home cho user
+            }
         } catch (error) {
             console.error('Đăng nhập thất bại:', error);
             if (error.response && error.response.data) {
@@ -32,6 +67,10 @@ function Login() {
                 setError('Đã có lỗi xảy ra, vui lòng thử lại!');
             }
         }
+    };
+
+    const handleGoogleLogin = () => {
+        window.location.href = 'http://localhost:8080/oauth2/authorization/google';
     };
 
     const isFormValid = username.trim() !== '' && password.trim() !== '';
@@ -82,16 +121,24 @@ function Login() {
                         </div>
                         <button
                             type="submit"
-                            className={`w-full py-3 rounded-lg font-semibold text-white transition duration-300 ${
-                                isFormValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
-                            }`}
+                            className={`w-full py-3 rounded-lg font-semibold text-white transition duration-300 ${isFormValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
+                                }`}
                             disabled={!isFormValid}
                         >
                             Đăng nhập
                         </button>
+                        <button
+                            type="button"
+                            onClick={handleGoogleLogin}
+                            className={`w-full py-3 rounded-lg font-semibold text-white transition duration-300 bg-red-600 hover:bg-red-700`}
+                        >
+                            Đăng nhập với Google
+                        </button>
                     </form>
                     <div className="mt-6 text-center text-gray-700">
-                        <a href="#" className="text-blue-700 hover:underline font-semibold">Quên mật khẩu?</a>
+                        <Link to="/forgot-password" className="text-blue-700 hover:underline font-semibold">
+                            Quên mật khẩu?
+                        </Link>
                     </div>
                     <p className="mt-4 text-center text-gray-700">
                         Chưa có tài khoản?{' '}

@@ -1,63 +1,77 @@
 package com.example.project.config;
 
+import com.example.project.service.AccountService;
+import io.jsonwebtoken.ExpiredJwtException;
+import io.jsonwebtoken.MalformedJwtException;
+import io.jsonwebtoken.UnsupportedJwtException;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
 
 @Component
 public class JwtFilter extends OncePerRequestFilter {
+    private static final Logger logger = LoggerFactory.getLogger(JwtFilter.class);
 
     @Autowired
     private JwtUtil jwtUtil;
 
+    @Autowired
+    private AccountService accountService;
+
     @Override
-    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
+    protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
             throws ServletException, IOException {
-        String path = request.getRequestURI();
-        // Bỏ qua kiểm tra token cho các endpoint được phép
-        if (path.startsWith("/api/login") || path.startsWith("/api/register") ||
-                path.startsWith("/api/vnpay") || path.startsWith("/api/appointments") ||
-                path.startsWith("/api/doctors") || path.startsWith("/api/parents") ||
-                path.equals("/api/accounts/")) {
-            chain.doFilter(request, response);
+        final String authHeader = request.getHeader("Authorization");
+
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            filterChain.doFilter(request, response);
             return;
         }
 
-        String authorizationHeader = request.getHeader("Authorization");
+        String token = authHeader.substring(7);
         String username = null;
-        String jwt = null;
 
-        if (authorizationHeader != null && authorizationHeader.startsWith("Bearer ")) {
-            jwt = authorizationHeader.substring(7);
-            username = jwtUtil.extractUsername(jwt);
+        try {
+            username = jwtUtil.extractUsername(token);
+        } catch (IllegalArgumentException e) {
+            logger.error("Unable to get JWT Token", e);
+        } catch (ExpiredJwtException e) {
+            logger.error("JWT Token has expired", e);
+        } catch (SignatureException e) {
+            logger.error("Invalid JWT signature", e);
+        } catch (MalformedJwtException e) {
+            logger.error("Invalid JWT token", e);
+        } catch (UnsupportedJwtException e) {
+            logger.error("Unsupported JWT token", e);
+        } catch (Exception e) {
+            logger.error("An error occurred during JWT token parsing", e);
         }
+
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
-            if (jwtUtil.validateToken(jwt)) {
-                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
-                authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(username, null, authorities);
-                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+            UserDetails userDetails = this.accountService.loadUserByUsername(username);
+            if (jwtUtil.validateToken(token)) {
+                UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
+                        userDetails, null, userDetails.getAuthorities()
+                );
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                logger.info("Authenticated user: " + username + ", setting security context");
             } else {
-                response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-                response.getWriter().write("Invalid or expired JWT token");
-                return;
+                logger.warn("JWT token validation failed for user: " + username);
             }
         }
-        chain.doFilter(request, response);
+        filterChain.doFilter(request, response);
     }
 }

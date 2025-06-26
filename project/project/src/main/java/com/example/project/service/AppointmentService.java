@@ -9,6 +9,7 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 import java.time.LocalDateTime;
+import com.example.project.dto.AppointmentDTO;
 
 @Service
 public class AppointmentService {
@@ -39,6 +40,25 @@ public class AppointmentService {
             appointment.setStatus(status);
             appointmentRepository.save(appointment);
         }
+    }
+
+    // Lấy tất cả lịch hẹn của một bác sĩ (trả về DTO)
+    public List<AppointmentDTO> getAppointmentDTOsByDoctorId(int doctorId) {
+        List<Appointment> appointments = appointmentRepository.findByDoctorId(doctorId);
+        return appointments.stream().map(appt -> new AppointmentDTO(
+                appt.getId(),
+                appt.getPatientId(),
+                appt.getDoctorId(),
+                appt.getSpecialtyId(),
+                appt.getServiceId(),
+                appt.getAppointmentDate(),
+                appt.getDuration(),
+                appt.getPriority(),
+                appt.getConsultationType(),
+                appt.getStatus(),
+                appt.getNotes(),
+                appt.getCreatedAt()
+        )).toList();
     }
 
     @Service

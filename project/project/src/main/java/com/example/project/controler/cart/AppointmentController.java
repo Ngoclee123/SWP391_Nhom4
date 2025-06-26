@@ -1,6 +1,7 @@
 package com.example.project.controler.cart;
 
 import com.example.project.dto.AppointmentRequestDTO;
+import com.example.project.dto.AppointmentDTO;
 import com.example.project.model.Appointment;
 import com.example.project.service.AppointmentService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,6 +39,12 @@ public class AppointmentController {
     @PutMapping("/{id}/status")
     public void updateStatus(@PathVariable int id, @RequestParam String status) {
         appointmentService.updateAppointmentStatus(id, status);
+    }
+
+    // Lấy tất cả lịch hẹn của bác sĩ (trả về DTO)
+    @GetMapping("/doctor/{doctorId}/dtos")
+    public List<AppointmentDTO> getAppointmentDTOsByDoctorId(@PathVariable int doctorId) {
+        return appointmentService.getAppointmentDTOsByDoctorId(doctorId);
     }
 }
 

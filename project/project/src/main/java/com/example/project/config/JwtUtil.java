@@ -7,20 +7,23 @@ import io.jsonwebtoken.security.Keys;
 import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets; // THÊM IMPORT NÀY
 import java.util.Date;
 
 @Component
 public class JwtUtil {
 
-    // Tạo khóa bí mật 512 bits (64 bytes)
-    private final SecretKey SECRET_KEY = Keys.secretKeyFor(SignatureAlgorithm.HS512);
+    // SỬA LẠI ĐÚNG 2 DÒNG NÀY
+    private final String secretString = "DayLaChuoiBiMatSieuDaiVaAnToanCuaToiDeMaHoaJWTChoDuAnBabyHealthHubCuaNhom4";
+    private final SecretKey SECRET_KEY = Keys.hmacShaKeyFor(secretString.getBytes(StandardCharsets.UTF_8));
+
+    // GIỮ NGUYÊN CÁC HÀM CŨ CỦA BẠN
     private final long EXPIRATION_TIME = 1000 * 60 * 60 * 10; // 10 giờ
 
-    // Cập nhật generateToken để thêm accountId
     public String generateToken(String username, Integer accountId) {
         return Jwts.builder()
                 .setSubject(username)
-                .claim("accountId", accountId) // Thêm accountId vào token
+                .claim("accountId", accountId)
                 .setIssuedAt(new Date())
                 .setExpiration(new Date(System.currentTimeMillis() + EXPIRATION_TIME))
                 .signWith(SECRET_KEY, SignatureAlgorithm.HS512)
@@ -28,6 +31,7 @@ public class JwtUtil {
     }
 
     public String extractUsername(String token) {
+        // Lưu ý: Nếu phiên bản thư viện jjwt của bạn mới, có thể cần đổi thành .parserBuilder()...
         Claims claims = Jwts.parser()
                 .setSigningKey(SECRET_KEY)
                 .parseClaimsJws(token)
@@ -35,7 +39,6 @@ public class JwtUtil {
         return claims.getSubject();
     }
 
-    // Thêm phương thức để lấy accountId từ token
     public Integer extractAccountId(String token) {
         Claims claims = Jwts.parser()
                 .setSigningKey(SECRET_KEY)
@@ -51,6 +54,7 @@ public class JwtUtil {
                     .parseClaimsJws(token);
             return true;
         } catch (Exception e) {
+            // Dòng này sẽ không còn bị gọi nữa sau khi bạn đăng nhập lại
             System.out.println("JWT validation failed: " + e.getMessage());
             return false;
         }

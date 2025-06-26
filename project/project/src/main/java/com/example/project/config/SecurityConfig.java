@@ -3,6 +3,7 @@ package com.example.project.config;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod; // THÊM IMPORT NÀY
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
@@ -34,7 +35,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001"));
-        configuration.setAllowedMethods(Arrays.asList("*"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // SỬA DÒNG NÀY
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -49,9 +50,14 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login", "/api/register", "/api/vnpay/**", "/api/appointments/**",
-                                "/api/doctors/**", "/api/parents/**", "/api/accounts/", "/ws/**", "/api/doctor-availability/**")
-                        .permitAll()
+                        // CÁC ENDPOINT CÔNG KHAI
+                        .requestMatchers("/api/login", "/api/register", "/api/vnpay/**", "/ws/**").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/doctors/**", "/api/parents/**", "/api/accounts/**", "/api/doctor-availability/**", "/api/appointments/doctor/**").permitAll()
+
+                        // CÁC ENDPOINT CẦN XÁC THỰC
+                        .requestMatchers(HttpMethod.PUT, "/api/appointments/{id}/status").hasAnyRole("DOCTOR", "ADMIN") // YÊU CẦU VAI TRÒ
+
+                        // TẤT CẢ CÁC REQUEST CÒN LẠI CẦN XÁC THỰC
                         .anyRequest().authenticated()
                 )
                 .exceptionHandling(exception -> exception

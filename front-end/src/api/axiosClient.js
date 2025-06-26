@@ -12,10 +12,17 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(async (req) => {
     const token = UserService.getToken();
-    if (token && !req.url.includes("/api/login") && !req.url.includes("/api/register") && !req.url.startsWith("/api/doctor-availability/doctor/1/available") && !req.url.startsWith("/api/doctors")) {
+    if (
+        token &&
+        !req.url.includes("/api/login") &&
+        !req.url.includes("/api/register") &&
+        !req.url.startsWith("/api/doctor-availability/doctor/1/available") &&
+        !req.url.startsWith("/api/doctors") &&
+        !req.url.includes("/api/appointments/doctor/1/dtos")
+      ) {
         req.headers = req.headers || {};
         req.headers.Authorization = "Bearer " + token;
-    }
+      }
     return req; 
 });
 
