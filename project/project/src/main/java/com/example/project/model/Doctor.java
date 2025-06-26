@@ -1,18 +1,21 @@
     package com.example.project.model;
 
+    import com.example.project.dto.DoctorSearchDTO;
     import jakarta.persistence.*;
+    import jakarta.persistence.CascadeType;
+    import jakarta.persistence.Table;
+    import jakarta.validation.constraints.Size;
     import lombok.Getter;
     import lombok.Setter;
-    import org.hibernate.annotations.Fetch;
-    import org.hibernate.annotations.FetchMode;
-    import org.hibernate.annotations.JdbcTypeCode;
-    import org.hibernate.annotations.Type;
+    import org.hibernate.annotations.*;
     import org.hibernate.type.SqlTypes;
 
     import java.time.Instant;
     import java.time.LocalDate;
     import java.util.ArrayList;
+    import java.util.HashSet;
     import java.util.List;
+    import java.util.Set;
 
     @Getter
     @Setter
@@ -25,8 +28,9 @@
         @Column(name = "doctor_id")
         private Integer id;
 
-        @Column(name = "account_id", nullable = false)
-        private Integer accountId;
+        @OneToOne(fetch = FetchType.LAZY)
+        @JoinColumn(name = "account_id", referencedColumnName = "account_id")
+        private Account account;
 
         @Column(name = "full_name", nullable = false, columnDefinition = "NVARCHAR(100) COLLATE Vietnamese_CI_AS")
         @JdbcTypeCode(SqlTypes.NVARCHAR)
@@ -42,9 +46,6 @@
         @Column(name = "bio")
         private String bio;
 
-        @Column(name = "certificate")
-        private String certificate;
-
         @Column(name = "imgs")
         private String imgs;
 
@@ -54,10 +55,31 @@
         @Column(name = "locational")
         private String locational;
 
+        @Column(name = "education")
+        private String education;
+
+        @Column(name = "hospital")
+        private String hospital;
+
+        @Column(name = "morning_hours")
+        private String morningHours;
+
+        @Column(name = "afternoon_hours")
+        private String afternoonHours;
+
         @Column(name = "created_at")
-        private Instant createdAt;
+        private LocalDate createdAt;
 
         @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         @Fetch(FetchMode.JOIN)
-        private List<DoctorAvailability> availabilities = new ArrayList<>();
+        private Set<DoctorAvailability> availabilities = new HashSet<>();
+
+        @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        private Set<Certificate> certificates = new HashSet<>();
+
+        public Integer getId() {
+            return id;
+        }
+
+
     }

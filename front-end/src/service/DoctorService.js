@@ -1,56 +1,134 @@
 import axiosClient from "../api/axiosClient";
 
-class DoctorService {
-    async getDoctorById(doctorId) {
-        const url = `/api/doctors/${doctorId}`;
-        console.log(`Fetching doctor profile from: ${url}`);
-        try {
-            const response = await axiosClient.get(url);
-            console.log('Doctor profile response:', response);
-            return response;
-        } catch (error) {
-            console.error('Error fetching doctor profile:', error);
-            throw new Error(error.response?.data?.error || 'Không thể tải thông tin bác sĩ');
-        }
-    }
+const DoctorService = {
+  getAllDoctors: async () => {
+    try {
+      console.log("Fetching all doctors");
+      const response = await axiosClient.get("/api/doctors");
+      console.log("Doctors response:", response);
 
-    async getAllSpecialties() {
-        const url = '/api/doctors/specialties';
-        console.log(`Fetching specialties from: ${url}`);
-        try {
-            const response = await axiosClient.get(url);
-            console.log('Specialties response:', response);
-            return response;
-        } catch (error) {
-            console.error('Error fetching specialties:', error);
-            throw new Error('Không thể tải danh sách chuyên khoa');
-        }
-    }
+      if (!response) {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
 
-    async searchDoctors(criteria) {
-        const url = '/api/doctors/search';
-        const config = {
-            params: {
-                ...criteria,
-                specialtyId: criteria.specialtyId ? parseInt(criteria.specialtyId) : undefined
-            }
-        };
-        console.log('Searching doctors with criteria:', criteria, 'and config:', config);
-        try {
-            const response = await axiosClient.get(url, config);
-            console.log('Search response:', response);
-            return response; // Expect { content: [], totalPages: number, ... }
-        } catch (error) {
-            console.error('Error fetching doctors:', error);
-            if (error.response?.status === 401) {
-                throw new Error('Unauthorized access - Please log in');
-            } else if (error.response?.status === 400) {
-                throw new Error(error.response.data.error || 'Dữ liệu tìm kiếm không hợp lệ');
-            } else {
-                throw new Error(error.response?.data?.error || 'Không thể tìm kiếm bác sĩ');
-            }
-        }
-    }
-}
+      if (response.error) {
+        return { error: response.error };
+      }
 
-export default new DoctorService();
+      if (!response.data) {
+        return { error: "Định dạng dữ liệu không hợp lệ" };
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Error fetching doctors:", error);
+      return {
+        error:
+          error.response?.data?.error ||
+          error.message ||
+          "Không thể tải danh sách bác sĩ",
+      };
+    }
+  },
+
+  getDoctorById: async (id) => {
+    try {
+      console.log(`Fetching doctor with ID: ${id}`);
+      const response = await axiosClient.get(`/api/doctors/${id}`);
+      console.log("Doctor response:", response);
+
+      if (!response) {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
+
+      if (response.error) {
+        return { error: response.error };
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`Error fetching doctor ${id}:`, error);
+      return {
+        error: error.error || "Không thể tải thông tin bác sĩ",
+      };
+    }
+  },
+
+  getAvailableSlots: async (doctorId, date) => {
+    try {
+      console.log(`Fetching available slots for doctor ${doctorId} on ${date}`);
+      const response = await axiosClient.get(
+        `/api/doctors/${doctorId}/available-slots`,
+        {
+          params: { date },
+        }
+      );
+      console.log("Available slots response:", response);
+
+      if (!response) {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
+
+      if (response.error) {
+        return { error: response.error };
+      }
+
+      return response;
+    } catch (error) {
+      console.error(`Error fetching slots for doctor ${doctorId}:`, error);
+      return {
+        error: error.error || "Không thể tải lịch trống",
+      };
+    }
+  },
+
+  searchDoctors: async (searchParams) => {
+    try {
+      console.log("Searching doctors with params:", searchParams);
+      const response = await axiosClient.get("/api/doctors/search", {
+        params: searchParams,
+      });
+      console.log("Search response:", response);
+
+      if (!response) {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
+
+      if (response.error) {
+        return { error: response.error };
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Error searching doctors:", error);
+      return {
+        error: error.error || "Không thể tìm kiếm bác sĩ",
+      };
+    }
+  },
+
+  getAllSpecialties: async () => {
+    try {
+      console.log("Fetching all specialties");
+      const response = await axiosClient.get("/api/doctors/specialties");
+      console.log("Specialties response:", response);
+
+      if (!response) {
+        throw new Error("Không nhận được phản hồi từ server");
+      }
+
+      if (response.error) {
+        return { error: response.error };
+      }
+
+      return response;
+    } catch (error) {
+      console.error("Error fetching specialties:", error);
+      return {
+        error: error.error || "Không thể tải danh sách chuyên khoa",
+      };
+    }
+  },
+};
+
+export default DoctorService;

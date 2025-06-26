@@ -47,30 +47,39 @@ public class AuthController {
     }
 
     private ResponseEntity<?> handleLogin(LoginRequest loginRequest, String expectedRole) {
-        Account account = accountService.findByUsername(loginRequest.getUsername());
-        if (account == null) {
-            logger.warn("Login failed: Username {} not found", loginRequest.getUsername());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Username not found");
-        }
+        try {
+            Account account = accountService.findByUsername(loginRequest.getUsername());
+            if (account == null) {
+                logger.warn("Login failed: Username {} not found", loginRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Tên đăng nhập không tồn tại"));
+            }
 
-        if (!account.getStatus()) {
-            logger.warn("Login failed: Account {} is disabled", loginRequest.getUsername());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is disabled");
-        }
+            if (!account.getStatus()) {
+                logger.warn("Login failed: Account {} is disabled", loginRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse("Tài khoản đã bị vô hiệu hóa"));
+            }
 
-        if (!account.getRole().getRolename().equals(expectedRole)) {
-            logger.warn("Login failed: Role mismatch for username {}", loginRequest.getUsername());
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Access denied: Invalid role");
-        }
+            if (!account.getRole().getRolename().equals(expectedRole)) {
+                logger.warn("Login failed: Role mismatch for username {}", loginRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(new ErrorResponse("Quyền truy cập không hợp lệ"));
+            }
 
-        if (passwordEncoder.matches(loginRequest.getPassword(), account.getPasswordHash())) {
-            String token = jwtUtil.generateToken(account.getUsername(), account.getId(), expectedRole);
-            logger.info("Login successful for username: {}, token: {}", loginRequest.getUsername(), token);
-            return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId(), expectedRole));
-        } else {
-            logger.warn("Login failed: Invalid password for username {}. Raw: {}, Stored: {}",
-                    loginRequest.getUsername(), loginRequest.getPassword(), account.getPasswordHash());
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
+            if (passwordEncoder.matches(loginRequest.getPassword(), account.getPasswordHash())) {
+                String token = jwtUtil.generateToken(account.getUsername(), account.getId(), expectedRole);
+                logger.info("Login successful for username: {}", loginRequest.getUsername());
+                return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId(), expectedRole));
+            } else {
+                logger.warn("Login failed: Invalid password for username {}", loginRequest.getUsername());
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(new ErrorResponse("Mật khẩu không đúng"));
+            }
+        } catch (Exception e) {
+            logger.error("Login error for username {}: {}", loginRequest.getUsername(), e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(new ErrorResponse("Đã có lỗi xảy ra, vui lòng thử lại sau"));
         }
     }
 
@@ -160,4 +169,20 @@ class AuthResponse {
     public void setFullName(String fullName) { this.fullName = fullName; }
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+}
+
+class ErrorResponse {
+    private String message;
+
+    public ErrorResponse(String message) {
+        this.message = message;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
 }

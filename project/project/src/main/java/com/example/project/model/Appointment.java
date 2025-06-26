@@ -1,99 +1,59 @@
 package com.example.project.model;
 
 import jakarta.persistence.*;
+import lombok.Getter;
+import lombok.Setter;
 import java.time.LocalDateTime;
+import com.example.project.model.Service;
 
+@Getter
+@Setter
 @Entity
 @Table(name = "Appointments")
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "appointment_id")
-    private int appointmentId;
+    private Integer appointmentId;
 
-    @Column(name = "patient_id", nullable = false)
-    private int patientId;
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
 
-    @Column(name = "doctor_id", nullable = false)
-    private int doctorId;
+    @ManyToOne
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private Doctor doctor;
 
-    @Column(name = "appointment_time", nullable = false)
-    private LocalDateTime appointmentTime;
+    @ManyToOne
+    @JoinColumn(name = "specialty_id", nullable = false)
+    private Specialty specialty;
 
-    @Column(name = "total_fee", nullable = false)
-    private double totalFee;
+    @ManyToOne
+    @JoinColumn(name = "service_id")
+    private Service service;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "appointment_date", nullable = false)
+    private LocalDateTime appointmentDate;
+
+    @Column(name = "duration", nullable = false)
+    private Integer duration;
+
+    @Column(name = "priority")
+    private String priority;
+
+    @Column(name = "consultation_type")
+    private String consultationType;
+
+    @Column(name = "status")
     private String status;
 
-    @Column(name = "payment_method", nullable = false)
-    private String paymentMethod;
+    @Column(name = "notes")
+    private String notes;
 
     @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt;
 
-    // Getters and Setters
-    public int getAppointmentId() {
-        return appointmentId;
-    }
-
-    public void setAppointmentId(int appointmentId) {
-        this.appointmentId = appointmentId;
-    }
-
-    public int getPatientId() {
-        return patientId;
-    }
-
-    public void setPatientId(int patientId) {
-        this.patientId = patientId;
-    }
-
-    public int getDoctorId() {
-        return doctorId;
-    }
-
-    public void setDoctorId(int doctorId) {
-        this.doctorId = doctorId;
-    }
-
-    public LocalDateTime getAppointmentTime() {
-        return appointmentTime;
-    }
-
-    public void setAppointmentTime(LocalDateTime appointmentTime) {
-        this.appointmentTime = appointmentTime;
-    }
-
-    public double getTotalFee() {
-        return totalFee;
-    }
-
-    public void setTotalFee(double totalFee) {
-        this.totalFee = totalFee;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(String paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+    public LocalDateTime getAppointmentDate() {
+        return this.appointmentDate;
     }
 }

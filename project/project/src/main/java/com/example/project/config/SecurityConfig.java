@@ -23,8 +23,8 @@ import java.util.Arrays;
 @EnableWebSecurity
 public class SecurityConfig {
 
-    @Autowired
-    private GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
+//    @Autowired
+//    private GoogleOAuth2SuccessHandler googleOAuth2SuccessHandler;
 
     @Autowired
     private JwtFilter jwtFilter;
@@ -73,28 +73,40 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login/**", "/api/register", "/oauth2/authorization/google",
-                                "/login/oauth2/code/*", "/login", "/oauth2/redirect",
-                                "/api/vnpay/**", "/api/doctors/**").permitAll()
+                        .requestMatchers(
+                            "/api/login/**", 
+                            "/api/register", 
+                            "/oauth2/authorization/google",
+                            "/login/oauth2/code/*", 
+                            "/login", 
+                            "/oauth2/redirect",
+                            "/api/vnpay/**", 
+                            "/api/doctors/**", 
+                            "/api/doctors/*/available-slots",
+                            "/api/appointments/book"
+                        ).permitAll()
+                        .requestMatchers("/api/appointments/**").authenticated()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
-                        .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")
-                        .requestMatchers("/api/vaccine-appointments/confirm/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/vaccine-appointments/availability/**").permitAll() // Đồng bộ với controller
+                        .requestMatchers("/api/vaccine-appointments/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parent/**").hasRole("USER")
                         .requestMatchers("/api/doctor/**").hasRole("DOCTOR")
                         .anyRequest().authenticated()
                 )
-                .oauth2Login(oauth2 -> oauth2
-                        .loginPage("/login")
-                        .successHandler(googleOAuth2SuccessHandler)
-                        .failureUrl("/login?error"))
-                .exceptionHandling(exception -> exception
+//                .oauth2Login(oauth2 -> oauth2
+//                        .loginPage("/login")
+//                        .successHandler(googleOAuth2SuccessHandler)
+//                        .failureUrl("/login?error"))
+                .exceptionHandling(exceptionHandling -> exceptionHandling
                         .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + authException.getMessage() + "\"}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"" + accessDeniedException.getMessage() + "\"}");
                         })
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);

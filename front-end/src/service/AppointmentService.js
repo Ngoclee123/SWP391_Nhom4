@@ -1,21 +1,94 @@
 import axiosClient from "../api/axiosClient";
 
-
 class AppointmentService {
-
-    bookAppointment(userId, appointmentData) {
-        const url = '/api/appointments/book';
-        return axiosClient.post(url, appointmentData, {
-            headers: { userId }
-        });
+  async createAppointment(appointmentData) {
+    try {
+      console.log("Sending appointment data:", appointmentData);
+      const response = await axiosClient.post(
+        "/api/appointments/book",
+        appointmentData
+      );
+      console.log("Appointment response:", response.data);
+      return response.data;
+    } catch (error) {
+      console.error("Error in createAppointment:", error);
+      if (error.response?.data?.message) {
+        throw new Error(error.response.data.message);
+      }
+      throw error;
     }
+  }
 
-    createPayment(userId, paymentData) {
-        const url = '/api/vnpay/create-payment';
-        return axiosClient.post(url, paymentData, {
-            headers: { userId }
-        });
+  async getAppointmentsByPatient(patientId) {
+    try {
+      const response = await axiosClient.get(
+        `/api/appointments/patient/${patientId}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in getAppointmentsByPatient:", error);
+      throw error;
     }
+  }
+
+  async cancelAppointment(appointmentId) {
+    try {
+      const response = await axiosClient.put(
+        `/api/appointments/${appointmentId}/cancel`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in cancelAppointment:", error);
+      throw error;
+    }
+  }
+
+  async getDoctorAvailability(doctorId, date) {
+    try {
+      const response = await axiosClient.get(
+        `/api/appointments/availability/${doctorId}?date=${date}`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in getDoctorAvailability:", error);
+      throw error;
+    }
+  }
+
+  async getDoctor(doctorId) {
+    try {
+      const response = await axiosClient.get(`/api/doctors/${doctorId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Error in getDoctor:", error);
+      throw error;
+    }
+  }
+
+  async createPayment(paymentData) {
+    try {
+      const response = await axiosClient.post(
+        "/api/vnpay/create-payment",
+        paymentData
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in createPayment:", error);
+      throw error;
+    }
+  }
+
+  async getPaymentByAppointmentId(appointmentId) {
+    try {
+      const response = await axiosClient.get(
+        `/api/appointments/${appointmentId}/payment`
+      );
+      return response.data;
+    } catch (error) {
+      console.error("Error in getPaymentByAppointmentId:", error);
+      throw error;
+    }
+  }
 }
 
-export default AppointmentService;
+export default new AppointmentService();
