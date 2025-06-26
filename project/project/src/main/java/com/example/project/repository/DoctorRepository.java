@@ -22,5 +22,7 @@ public interface DoctorRepository extends JpaRepository<Doctor, Integer>, JpaSpe
             "AND (:searchTime IS NULL OR (da.startTime <= :searchTime AND da.endTime >= :searchTime))")
     Optional<Doctor> findByIdWithAvailabilities(@Param("id") Integer id, @Param("searchTime") Instant searchTime);
 
+
+
     Optional<Doctor> findByAccountId(Integer accountId);
 }

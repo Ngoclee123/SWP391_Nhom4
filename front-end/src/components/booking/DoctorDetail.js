@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   FaStar,
   FaGraduationCap,
@@ -13,213 +13,15 @@ import {
   FaUserMd,
   FaHeart,
 } from "react-icons/fa";
-
-const doctorsData = {
-  1: {
-    id: 1,
-    name: "BS. Nguyễn Văn An",
-    specialty: "Chuyên khoa Nhi",
-    avatar: "/images/doctor1.jpg",
-    rating: 4.9,
-    reviews: [
-      {
-        patientName: "Nguyễn Thị Mai",
-        rating: 5,
-        comment:
-          "Bác sĩ rất tận tâm, giải thích rõ ràng và điều trị hiệu quả cho con tôi. Rất hài lòng!",
-        date: "2025-04-15",
-      },
-      {
-        patientName: "Trần Văn Hùng",
-        rating: 4.8,
-        comment:
-          "Bác sĩ An rất chuyên nghiệp, con tôi được khám và tư vấn kỹ lưỡng. Chỉ hơi đông bệnh nhân.",
-        date: "2025-03-20",
-      },
-      {
-        patientName: "Lê Thị Hồng",
-        rating: 4.9,
-        comment:
-          "Dịch vụ tốt, bác sĩ thân thiện, môi trường bệnh viện sạch sẽ. Sẽ quay lại!",
-        date: "2025-02-10",
-      },
-    ],
-    experience: "15 năm kinh nghiệm",
-    hospital: "Bệnh viện Nhi Đồng TP.HCM",
-    education: "Tiến sĩ Y khoa - Đại học Y Dược TP.HCM",
-    description:
-      "Bác sĩ Nguyễn Văn An là chuyên gia hàng đầu trong lĩnh vực nhi khoa với hơn 15 năm kinh nghiệm. Ông đã điều trị thành công hàng nghìn ca bệnh nhi phức tạp và được nhiều gia đình tin tưởng.",
-    specializations: [
-      "Nhi tim mạch",
-      "Nhi hô hấp",
-      "Nhi tiêu hóa",
-      "Khám sức khỏe định kỳ",
-    ],
-    achievements: [
-      "Giải thưởng Thầy thuốc Ưu tú 2020",
-      "Bằng khen Bộ Y tế 2019",
-      "Chứng chỉ chuyên khoa I Nhi khoa",
-    ],
-    workingHours: [
-      { day: "Thứ 2 - Thứ 6", time: "8:00 - 17:00" },
-      { day: "Thứ 7", time: "8:00 - 12:00" },
-      { day: "Chủ nhật", time: "Nghỉ" },
-    ],
-    availableSlots: [
-      "08:00",
-      "08:30",
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-      "16:00",
-      "16:30",
-    ],
-    contact: {
-      phone: "0901234567",
-      email: "bs.nguyenvanan@hospital.com",
-      address: "123 Đường ABC, Quận 1, TP.HCM",
-    },
-    fee: 300000,
-    service: "Khám tổng quát",
-  },
-  2: {
-    id: 2,
-    name: "BS. Trần Thị Bình",
-    specialty: "Chuyên gia Dinh dưỡng Nhi",
-    avatar: "/images/doctor2.jpg",
-    rating: 4.8,
-    reviews: [
-      {
-        patientName: "Phạm Minh Tuấn",
-        rating: 4.7,
-        comment:
-          "Bác sĩ Bình tư vấn rất chi tiết về chế độ dinh dưỡng cho con tôi. Rất hữu ích!",
-        date: "2025-04-01",
-      },
-      {
-        patientName: "Hoàng Thị Lan",
-        rating: 4.9,
-        comment:
-          "Chị Bình rất nhiệt tình, giúp con tôi cải thiện cân nặng đáng kể. Cảm ơn bác sĩ!",
-        date: "2025-03-15",
-      },
-    ],
-    experience: "12 năm kinh nghiệm",
-    hospital: "Bệnh viện Đa khoa Medic",
-    education: "Thạc sĩ Dinh dưỡng - Đại học Y tế Công cộng",
-    description:
-      "Bác sĩ Trần Thị Bình chuyên về dinh dưỡng trẻ em, giúp hàng nghìn gia đình xây dựng chế độ ăn uống khoa học cho con em mình.",
-    specializations: [
-      "Dinh dưỡng trẻ em",
-      "Tư vấn thực đơn",
-      "Điều trị suy dinh dưỡng",
-      "Béo phì ở trẻ em",
-    ],
-    achievements: [
-      "Chuyên gia dinh dưỡng hàng đầu VN",
-      "Tác giả 50+ bài báo khoa học",
-      "Giảng viên Đại học Y Dược",
-    ],
-    workingHours: [
-      { day: "Thứ 2 - Thứ 6", time: "9:00 - 16:00" },
-      { day: "Thứ 7", time: "9:00 - 12:00" },
-      { day: "Chủ nhật", time: "Nghỉ" },
-    ],
-    availableSlots: [
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "11:00",
-      "11:30",
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-    ],
-    contact: {
-      phone: "0907654321",
-      email: "bs.tranthibinh@medic.com",
-      address: "456 Đường XYZ, Quận 3, TP.HCM",
-    },
-    fee: 250000,
-    service: "Tư vấn dinh dưỡng",
-  },
-  3: {
-    id: 3,
-    name: "BS. Lê Văn Cường",
-    specialty: "Chuyên gia Tiêm chủng",
-    avatar: "/images/doctor3.jpg",
-    rating: 4.7,
-    reviews: [
-      {
-        patientName: "Vũ Văn Nam",
-        rating: 4.6,
-        comment:
-          "Bác sĩ Cường rất cẩn thận khi tiêm vaccine cho con tôi, cảm thấy rất an tâm.",
-        date: "2025-04-10",
-      },
-      {
-        patientName: "Đỗ Thị Thanh",
-        rating: 4.8,
-        comment:
-          "Dịch vụ tiêm chủng nhanh gọn, bác sĩ tư vấn lịch tiêm rất rõ ràng.",
-        date: "2025-03-05",
-      },
-    ],
-    experience: "10 năm kinh nghiệm",
-    hospital: "Trung tâm Y tế Dự phòng",
-    education: "Bác sĩ Y khoa - Đại học Y Hà Nội",
-    description:
-      "Bác sĩ Lê Văn Cường là chuyên gia về tiêm chủng và y tế dự phòng, cam kết mang đến dịch vụ tiêm chủng an toàn và hiệu quả nhất.",
-    specializations: [
-      "Tiêm chủng trẻ em",
-      "Y tế dự phòng",
-      "Tư vấn vaccine",
-      "Lịch tiêm chuẩn WHO",
-    ],
-    achievements: [
-      "Chứng chỉ WHO về tiêm chủng",
-      "Chuyên gia tư vấn Bộ Y tế",
-      "10 năm không tai biến tiêm chủng",
-    ],
-    workingHours: [
-      { day: "Thứ 2 - Thứ 6", time: "7:30 - 16:30" },
-      { day: "Thứ 7", time: "7:30 - 11:30" },
-      { day: "Chủ nhật", time: "Nghỉ" },
-    ],
-    availableSlots: [
-      "08:00",
-      "08:30",
-      "09:00",
-      "09:30",
-      "10:00",
-      "10:30",
-      "13:30",
-      "14:00",
-      "14:30",
-      "15:00",
-      "15:30",
-      "16:00",
-    ],
-    contact: {
-      phone: "0912345678",
-      email: "bs.levancuong@prevention.gov.vn",
-      address: "789 Đường DEF, Quận 7, TP.HCM",
-    },
-    fee: 200000,
-    service: "Tiêm chủng",
-  },
-};
+import DoctorService from "../../service/DoctorService";
+ // Import DoctorService
 
 function DoctorDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [doctor, setDoctor] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
   const [selectedDate, setSelectedDate] = useState("");
   const [selectedTime, setSelectedTime] = useState("");
   const [showBookingForm, setShowBookingForm] = useState(false);
@@ -230,16 +32,42 @@ function DoctorDetail() {
     notes: "",
   });
 
-  const doctor = doctorsData[id] || {};
-  const reviews = Array.isArray(doctor.reviews) ? doctor.reviews : [];
+  // Lấy dữ liệu bác sĩ từ backend khi component được mount
+  useEffect(() => {
+    const fetchDoctor = async () => {
+      try {
+        setLoading(true);
+        const response = await DoctorService.getDoctorById(id);
+        setDoctor(response); // Lưu dữ liệu bác sĩ vào state
+        setLoading(false);
+      } catch (err) {
+        setError("Không thể tải thông tin bác sĩ. Vui lòng thử lại sau.");
+        setLoading(false);
+      }
+    };
 
-  if (!doctor.id) {
+    fetchDoctor();
+  }, [id]);
+
+  // Xử lý khi đang tải
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-700">Đang tải...</h2>
+        </div>
+      </div>
+    );
+  }
+
+  // Xử lý khi có lỗi hoặc không tìm thấy bác sĩ
+  if (error || !doctor) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50">
         <div className="text-center">
           <div className="text-6xl text-gray-400 mb-4">😔</div>
           <h2 className="text-2xl font-bold text-gray-700 mb-4">
-            Không tìm thấy bác sĩ
+            {error || "Không tìm thấy bác sĩ"}
           </h2>
           <button
             onClick={() => navigate("/")}
@@ -252,6 +80,18 @@ function DoctorDetail() {
     );
   }
 
+  // Lấy danh sách ngày khả dụng (tạm thời giữ nguyên logic cũ, có thể cập nhật sau)
+  const getAvailableDates = () => {
+    const dates = [];
+    for (let i = 1; i <= 7; i++) {
+      const date = new Date();
+      date.setDate(date.getDate() + i);
+      dates.push(date.toISOString().split("T")[0]);
+    }
+    return dates;
+  };
+
+  // Xử lý đặt lịch
   const handleBooking = () => {
     if (!selectedDate || !selectedTime) {
       alert("Vui lòng chọn ngày và giờ khám!");
@@ -266,15 +106,15 @@ function DoctorDetail() {
       return;
     }
     const bookingData = {
-      doctorName: doctor.name,
-      specialty: doctor.specialty,
+      doctorName: doctor.fullName,
+      specialty: doctor.specialtyName,
       date: selectedDate,
       time: selectedTime,
       patientName: bookingInfo.patientName,
       phone: bookingInfo.phone,
       email: bookingInfo.email,
-      service: doctor.service,
-      fee: doctor.fee,
+      service: "Khám tổng quát", // Có thể lấy từ API Services
+      fee: 300000, // Cần lấy từ bảng Services trong DB
     };
     navigate("/booking-confirmation", { state: { bookingInfo: bookingData } });
     setShowBookingForm(false);
@@ -285,16 +125,7 @@ function DoctorDetail() {
     setBookingInfo((prev) => ({ ...prev, [name]: value }));
   };
 
-  const getAvailableDates = () => {
-    const dates = [];
-    for (let i = 1; i <= 7; i++) {
-      const date = new Date();
-      date.setDate(date.getDate() + i);
-      dates.push(date.toISOString().split("T")[0]);
-    }
-    return dates;
-  };
-
+  // Hiển thị sao đánh giá
   const renderStars = (rating) => {
     const stars = [];
     const validRating = isNaN(rating) || rating < 0 ? 0 : Math.floor(rating);
@@ -309,6 +140,28 @@ function DoctorDetail() {
     return stars;
   };
 
+  // Tạm thời giả lập dữ liệu đánh giá và lịch làm việc (cần thay bằng API thực)
+  const reviews = []; // Thay bằng API Feedback
+  const workingHours = [
+    { day: "Thứ 2 - Thứ 6", time: doctor.morning_hours || "08:00 - 17:00" },
+    { day: "Thứ 7", time: doctor.morning_hours || "08:00 - 12:00" },
+    { day: "Chủ nhật", time: "Nghỉ" },
+  ];
+  const availableSlots = [
+    "08:00",
+    "08:30",
+    "09:00",
+    "09:30",
+    "10:00",
+    "10:30",
+    "14:00",
+    "14:30",
+    "15:00",
+    "15:30",
+    "16:00",
+    "16:30",
+  ]; // Thay bằng API DoctorAvailability
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-white pt-20">
       <div className="container mx-auto px-4 py-8">
@@ -317,12 +170,12 @@ function DoctorDetail() {
             <div className="flex flex-col md:flex-row items-center text-white">
               <div className="relative mb-6 md:mb-0 md:mr-8">
                 <img
-                  src={doctor.avatar}
-                  alt={doctor.name}
+                  src={doctor.imgs || "/images/default-doctor.jpg"}
+                  alt={doctor.fullName}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
                   onError={(e) => {
                     e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                      doctor.name || "Unknown"
+                      doctor.fullName || "Unknown"
                     )}&size=128&background=60a5fa&color=ffffff`;
                   }}
                 />
@@ -333,29 +186,27 @@ function DoctorDetail() {
 
               <div className="flex-1 text-center md:text-left">
                 <h1 className="text-3xl md:text-4xl font-bold mb-2">
-                  {doctor.name}
+                  {doctor.fullName}
                 </h1>
-                <p className="text-blue-100 text-lg mb-3">{doctor.specialty}</p>
+                <p className="text-blue-100 text-lg mb-3">
+                  {doctor.specialtyName}
+                </p>
 
                 <div className="flex flex-wrap items-center justify-center md:justify-start gap-4 mb-4">
                   <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
                     <FaStar className="text-yellow-400 mr-1" />
-                    <span className="font-semibold">
-                      {doctor.rating || "N/A"}
-                    </span>
-                    <span className="text-blue-100 ml-1">
-                      ({doctor.reviews?.length || 0} đánh giá)
-                    </span>
+                    <span className="font-semibold">N/A</span>
+                    <span className="text-blue-100 ml-1">(0 đánh giá)</span>
                   </div>
                   <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
                     <FaGraduationCap className="mr-2" />
-                    <span>{doctor.experience}</span>
+                    <span>{doctor.education || "Chưa có thông tin"}</span>
                   </div>
                 </div>
 
                 <div className="flex items-center justify-center md:justify-start">
                   <FaHospital className="mr-2" />
-                  <span className="text-blue-100">{doctor.hospital}</span>
+                  <span className="text-blue-100">{doctor.hospital || "Chưa có thông tin"}</span>
                 </div>
               </div>
             </div>
@@ -399,7 +250,7 @@ function DoctorDetail() {
                 Giới thiệu
               </h2>
               <p className="text-gray-600 leading-relaxed mb-6">
-                {doctor.description}
+                {doctor.bio || "Chưa có thông tin giới thiệu."}
               </p>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -408,14 +259,14 @@ function DoctorDetail() {
                     <FaGraduationCap className="text-blue-600 mr-2" />
                     Học vấn
                   </h3>
-                  <p className="text-gray-600">{doctor.education}</p>
+                  <p className="text-gray-600">{doctor.education || "Chưa có thông tin"}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-800 mb-3 flex items-center">
                     <FaHospital className="text-blue-600 mr-2" />
                     Nơi công tác
                   </h3>
-                  <p className="text-gray-600">{doctor.hospital}</p>
+                  <p className="text-gray-600">{doctor.hospital || "Chưa có thông tin"}</p>
                 </div>
               </div>
             </div>
@@ -426,7 +277,7 @@ function DoctorDetail() {
                 Chuyên môn
               </h2>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {doctor.specializations?.map((spec, index) => (
+                {[doctor.specialtyName].map((spec, index) => (
                   <div
                     key={index}
                     className="flex items-center p-3 bg-blue-50 rounded-lg"
@@ -444,15 +295,18 @@ function DoctorDetail() {
                 Thành tích & Chứng chỉ
               </h2>
               <div className="space-y-3">
-                {doctor.achievements?.map((achievement, index) => (
+                {/* Lấy từ bảng Certificates */}
+                {doctor.certificates?.map((certificate, index) => (
                   <div
                     key={index}
                     className="flex items-center p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
                   >
                     <FaAward className="text-yellow-500 mr-3 flex-shrink-0" />
-                    <span className="text-gray-700">{achievement}</span>
+                    <span className="text-gray-700">{certificate.certificate_name}</span>
                   </div>
-                ))}
+                )) || (
+                  <p className="text-gray-600">Chưa có thông tin chứng chỉ.</p>
+                )}
               </div>
             </div>
 
@@ -462,7 +316,7 @@ function DoctorDetail() {
                 Giờ làm việc
               </h2>
               <div className="space-y-3">
-                {doctor.workingHours?.map((schedule, index) => (
+                {workingHours.map((schedule, index) => (
                   <div
                     key={index}
                     className="flex justify-between items-center p-3 border border-gray-200 rounded-lg"
@@ -491,53 +345,37 @@ function DoctorDetail() {
               </h2>
               {reviews.length > 0 ? (
                 <div className="space-y-4">
-                  {reviews.map((review, index) => {
-                    if (
-                      !review ||
-                      !review.patientName ||
-                      !review.rating ||
-                      !review.comment ||
-                      !review.date
-                    ) {
-                      return null;
-                    }
-                    return (
-                      <div
-                        key={index}
-                        className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                              <span className="text-blue-600 font-semibold">
-                                {review.patientName.charAt(0)}
+                  {reviews.map((review, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <div className="flex items-center">
+                          <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
+                            <span className="text-blue-600 font-semibold">
+                              {review.patientName.charAt(0)}
+                            </span>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-gray-800">
+                              {review.patientName}
+                            </p>
+                            <div className="flex items-center">
+                              {renderStars(review.rating)}
+                              <span className="ml-2 text-sm text-gray-600">
+                                {review.rating}/5
                               </span>
                             </div>
-                            <div>
-                              <p className="font-semibold text-gray-800">
-                                {review.patientName}
-                              </p>
-                              <div className="flex items-center">
-                                {renderStars(review.rating)}
-                                <span className="ml-2 text-sm text-gray-600">
-                                  {review.rating}/5
-                                </span>
-                              </div>
-                            </div>
                           </div>
-                          <p className="text-sm text-gray-500">
-                            {review.date &&
-                            !isNaN(new Date(review.date).getTime())
-                              ? new Date(review.date).toLocaleDateString(
-                                  "vi-VN"
-                                )
-                              : "Ngày không xác định"}
-                          </p>
                         </div>
-                        <p className="text-gray-600">{review.comment}</p>
+                        <p className="text-sm text-gray-500">
+                          {new Date(review.date).toLocaleDateString("vi-VN")}
+                        </p>
                       </div>
-                    );
-                  })}
+                      <p className="text-gray-600">{review.comment}</p>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="text-gray-600">
@@ -583,7 +421,7 @@ function DoctorDetail() {
                     Chọn giờ khám
                   </label>
                   <div className="grid grid-cols-3 gap-2">
-                    {doctor.availableSlots?.map((slot) => (
+                    {availableSlots.map((slot) => (
                       <button
                         key={slot}
                         onClick={() => setSelectedTime(slot)}
@@ -615,21 +453,17 @@ function DoctorDetail() {
               <div className="space-y-3">
                 <div className="flex items-center">
                   <FaPhone className="text-blue-600 mr-3" />
-                  <span className="text-gray-700">
-                    {doctor.contact?.phone || "N/A"}
-                  </span>
+                  <span className="text-gray-700">{doctor.phoneNumber || "N/A"}</span>
                 </div>
                 <div className="flex items-center">
                   <FaEnvelope className="text-blue-600 mr-3" />
                   <span className="text-gray-700 text-sm">
-                    {doctor.contact?.email || "N/A"}
+                    {doctor.email || "N/A"}
                   </span>
                 </div>
                 <div className="flex items-start">
                   <FaMapMarkerAlt className="text-blue-600 mr-3 mt-1" />
-                  <span className="text-gray-700">
-                    {doctor.contact?.address || "N/A"}
-                  </span>
+                  <span className="text-gray-700">{doctor.locational || "N/A"}</span>
                 </div>
               </div>
             </div>
@@ -647,7 +481,7 @@ function DoctorDetail() {
 
               <div className="bg-blue-50 p-4 rounded-lg mb-6">
                 <p>
-                  <strong>Bác sĩ:</strong> {doctor.name}
+                  <strong>Bác sĩ:</strong> {doctor.fullName}
                 </p>
                 <p>
                   <strong>Ngày:</strong>{" "}

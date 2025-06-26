@@ -34,6 +34,29 @@ public class DoctorService {
         return specialtyRepository.findAll();
     }
 
+    public List<DoctorSearchDTO> getAllDoctors() {
+        logger.info("Fetching all doctors");
+        List<Doctor> doctors = doctorRepository.findAllWithAvailabilities();
+        return doctors.stream().map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+            // Lấy thông tin lịch làm việc đầu tiên (nếu có)
+            doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+                dto.setAvailabilityStatus(da.getStatus());
+                dto.setStartTime(da.getStartTime().toString());
+                dto.setEndTime(da.getEndTime().toString());
+            });
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
     public Page<DoctorSearchDTO> searchDoctors(
             Integer specialtyId,
             String fullName,

@@ -1,4 +1,5 @@
 import { jwtDecode } from 'jwt-decode';
+
 class UserService {
     setUser(token, username, fullName, accountId) {
         localStorage.setItem('token', token);
@@ -41,6 +42,16 @@ class UserService {
 
     isLoggedIn() {
         return !!this.getToken();
+    }
+
+    // Thêm phương thức decodeToken
+    decodeToken(token) {
+        try {
+            return jwtDecode(token);
+        } catch (error) {
+            console.error('Error decoding token:', error);
+            return null;
+        }
     }
 }
 

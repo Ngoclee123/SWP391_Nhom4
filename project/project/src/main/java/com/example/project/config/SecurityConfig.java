@@ -75,7 +75,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/login/**", "/api/register", "/oauth2/authorization/google",
                                 "/login/oauth2/code/*", "/login", "/oauth2/redirect",
-                                "/api/vnpay/**", "/api/doctors/**","/api/reset-password","/api/forgot-password").permitAll()
+                                "/api/vnpay/**", "/api/doctors", "/api/doctors/**", "/api/reset-password", "/api/forgot-password").permitAll()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
                         // phan theo vai tro 
                         .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")

@@ -10,21 +10,17 @@ import axios from "axios";
       paramsSerializer: params => queryString.stringify(params),
       withCredentials: true,
   });
-
-  axiosClient.interceptors.request.use(async (req) => {
-      const token = UserService.getToken();
-      console.log("Request to:", req.url, "Token:", token ? "Present" : "Absent");
-
-      if (token && !req.url.match(/\/api\/(login|register|auth\/google\/callback|oauth2\/authorization\/google|login\/oauth2\/code\/|login|oauth2\/redirect|vnpay|doctors|vaccine-appointments\/availability)/)) {
-          req.headers = req.headers || {};
-          req.headers.Authorization = `Bearer ${token}`;
-          console.log("Added Authorization header for:", req.url);
-      } else if (token) {
-          console.log("Token present but skipped for:", req.url);
-      }
-
-      return req;
-  });
+axiosClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('token'); // Giả sử token được lưu trong localStorage
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+      console.log('Token added to request:', token);
+    }
+    return config;
+  },
+  (error) => Promise.reject(error)
+);
 
   axiosClient.interceptors.response.use(
       (response) => {

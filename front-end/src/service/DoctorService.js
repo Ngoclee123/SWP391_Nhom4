@@ -1,7 +1,28 @@
 // src/service/DoctorService.js
 import axiosClient from "../api/axiosClient";
 
-class DoctorService {
+class DoctorService {async getAllDoctors() {
+    const url = '/api/doctors';
+    console.log(`Fetching all doctors from: ${url}`);
+    try {
+      const response = await axiosClient.get(url);
+      console.log('Doctors response (raw):', response);
+      // Đảm bảo response là mảng
+      const data = Array.isArray(response) ? response : (response.data || []);
+      return {
+        data: data,
+        message: data.length > 0 ? 'Danh sách bác sĩ đã được tải' : 'Không có bác sĩ nào'
+      };
+    } catch (error) {
+      console.error('Error fetching doctors:', error.response ? error.response.data : error.message);
+      return {
+        data: [],
+        message: 'Lỗi khi lấy danh sách bác sĩ: ' + (error.message || 'Không xác định')
+      };
+    }
+  }
+    
+    
     async getDoctorById(doctorId) {
         const url = `/api/doctors/${doctorId}`;
         console.log(`Fetching doctor profile from: ${url}`);

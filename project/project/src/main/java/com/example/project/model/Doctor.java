@@ -57,6 +57,8 @@
         @Column(name = "created_at")
         private Instant createdAt;
 
+
+
         @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         @Fetch(FetchMode.JOIN)
         private List<DoctorAvailability> availabilities = new ArrayList<>();

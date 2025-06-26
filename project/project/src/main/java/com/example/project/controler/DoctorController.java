@@ -26,6 +26,13 @@ public class DoctorController {
     @Autowired
     private DoctorService doctorService;
 
+    @GetMapping
+    public ResponseEntity<List<DoctorSearchDTO>> getAllDoctors() {
+        logger.info("Fetching all doctors");
+        List<DoctorSearchDTO> doctors = doctorService.getAllDoctors();
+        return ResponseEntity.ok(doctors);
+    }
+
     @GetMapping("/{doctorId}")
     public ResponseEntity<DoctorSearchDTO> getDoctorById(@PathVariable Integer doctorId) {
         logger.info("Fetching doctor with ID: {}", doctorId);
