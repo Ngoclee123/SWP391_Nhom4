@@ -23,6 +23,7 @@ class DoctorService {async getAllDoctors() {
   }
     
     
+
     async getDoctorById(doctorId) {
         const url = `/api/doctors/${doctorId}`;
         console.log(`Fetching doctor profile from: ${url}`);
@@ -90,6 +91,28 @@ class DoctorService {async getAllDoctors() {
             return [];
         }
     }
+
+    async getCertificatesByDoctorId(doctorId) {
+    const url = `/api/doctors/${doctorId}/certificates`; // Cần tạo API này
+    try {
+      const response = await axiosClient.get(url);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching certificates:", error);
+      return [];
+    }
+  }
+
+  async getFeedbackByDoctorId(doctorId) {
+    const url = `/api/feedback/doctor/${doctorId}`; // Cần tạo API này
+    try {
+      const response = await axiosClient.get(url);
+      return response.data;
+    } catch (error) {
+      console.error("Error fetching feedback:", error);
+      return [];
+    }
+  }
 }
 
 export default new DoctorService();

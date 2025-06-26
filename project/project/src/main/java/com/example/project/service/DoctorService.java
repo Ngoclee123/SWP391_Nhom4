@@ -6,7 +6,6 @@ import com.example.project.model.Specialty;
 import com.example.project.repository.DoctorRepository;
 import com.example.project.repository.DoctorSpecification;
 import com.example.project.repository.SpecialtyRepository;
-import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -124,6 +123,29 @@ public class DoctorService {
         dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
         dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
 
+
+        return dto;
+    }
+
+
+    public DoctorSearchDTO getDoctorByAccountId(Integer accountId) {
+        logger.info("Fetching doctor by account ID: {}", accountId);
+        Doctor doctor = doctorRepository.findByAccountId(accountId)
+                .orElseThrow(() -> {
+                    logger.error("Doctor not found with account ID: {}", accountId);
+                    return new RuntimeException("Doctor not found with account ID: " + accountId);
+                });
+
+        DoctorSearchDTO dto = new DoctorSearchDTO();
+        dto.setId(doctor.getId());
+        dto.setFullName(doctor.getFullName());
+        dto.setBio(doctor.getBio());
+        dto.setPhoneNumber(doctor.getPhoneNumber());
+        dto.setImgs(doctor.getImgs());
+        dto.setLocational(doctor.getLocational());
+        dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+        dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+        // Lấy thông tin lịch làm việc đầu tiên (nếu có)
         doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
             dto.setAvailabilityStatus(da.getStatus());
             dto.setStartTime(da.getStartTime().toString());
@@ -132,20 +154,7 @@ public class DoctorService {
 
         return dto;
     }
-    // New method to fetch Doctor entity
-    public Doctor getDoctorEntityById(Integer doctorId) {
-        logger.info("Fetching doctor entity with ID: {}", doctorId);
-        return doctorRepository.findById(doctorId)
-                .orElseThrow(() -> {
-                    logger.error("Doctor not found with ID: {}", doctorId);
-                    return new RuntimeException("Doctor not found with ID: " + doctorId);
-                });
-    }
 
-    public Doctor findDoctorByAccountId(Integer accountId) {
-        logger.info("Fetching doctor by account ID: {}", accountId);
-        return doctorRepository.findByAccountId(accountId).orElse(null);
-    }
 }
 
 

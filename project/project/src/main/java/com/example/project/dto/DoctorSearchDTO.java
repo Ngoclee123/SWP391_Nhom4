@@ -1,7 +1,8 @@
 package com.example.project.dto;
 
-public class DoctorSearchDTO {
+import java.util.List;
 
+public class DoctorSearchDTO {
     private Integer id;
     private String fullName;
     private String bio;
@@ -10,11 +11,14 @@ public class DoctorSearchDTO {
     private String locational;
     private Integer specialtyId;
     private String specialtyName;
-    private String availabilityStatus; // Từ DoctorAvailability.status
-    private String startTime; // Từ DoctorAvailability.start_time
-    private String endTime;   // Từ DoctorAvailability.end_time
+    private String availabilityStatus;
+    private String startTime;
+    private String endTime;
+    private String education;
+    private String hospital;
 
-    // Getters và setters
+
+    // Getters và Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
@@ -47,4 +51,12 @@ public class DoctorSearchDTO {
 
     public String getEndTime() { return endTime; }
     public void setEndTime(String endTime) { this.endTime = endTime; }
+
+    public String getEducation() { return education; }
+    public void setEducation(String education) { this.education = education; }
+
+    public String getHospital() { return hospital; }
+    public void setHospital(String hospital) { this.hospital = hospital; }
+
+
 }

@@ -14,7 +14,7 @@ import {
   FaHeart,
 } from "react-icons/fa";
 import DoctorService from "../../service/DoctorService";
- // Import DoctorService
+
 
 function DoctorDetail() {
   const { id } = useParams();
