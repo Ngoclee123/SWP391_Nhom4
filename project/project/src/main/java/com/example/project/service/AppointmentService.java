@@ -56,7 +56,7 @@ public class AppointmentService {
         appointment.setDuration(requestDTO.getDuration() != null ? requestDTO.getDuration() : 60); // Mặc định 60 phút
         String notes = (requestDTO.getNotes()!=null && !requestDTO.getNotes().isBlank())
                 ? requestDTO.getNotes()
-                : (requestDTO.getSymptoms()!=null ? requestDTO.getSymptoms() : null);
+                : null;
         appointment.setNotes(notes);
         appointment.setStatus(requestDTO.getStatus() != null ? requestDTO.getStatus() : "Pending");
         appointment.setPriority(requestDTO.getPriority() != null ? requestDTO.getPriority() : "Normal");
@@ -75,6 +75,9 @@ public class AppointmentService {
         // Thời gian tạo bản ghi
         appointment.setCreatedAt(LocalDateTime.now());
         
+        // ❶ Lấy dữ liệu từ DTO
+        appointment.setSymptoms(requestDTO.getSymptoms());   // <─ thêm
+
         // 5. Lưu vào database và trả về
         return appointmentRepository.save(appointment);
     }
