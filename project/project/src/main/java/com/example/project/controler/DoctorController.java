@@ -59,6 +59,11 @@ public class DoctorController {
         Page<DoctorSearchDTO> doctors = doctorService.searchDoctors(specialtyId, fullName, availabilityStatus, location, availabilityTime, pageable);
         return ResponseEntity.ok(doctors);
     }
-
+    @GetMapping("/by-account/{accountId}")
+    public ResponseEntity<DoctorSearchDTO> getDoctorByAccountId(@PathVariable Integer accountId) {
+        logger.info("Fetching doctor by account ID: {}", accountId);
+        DoctorSearchDTO doctor = doctorService.getDoctorByAccountId(accountId);
+        return ResponseEntity.ok(doctor);
+    }
 
 }
