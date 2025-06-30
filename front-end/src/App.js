@@ -25,6 +25,7 @@ import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import DoctorDashboard from './components/doctor/DoctorDashboard';
 import AdminDashboard from './components/admin/AdminDashboard';
+import ChatButton from './components/ChatButton';
 
 
 
@@ -67,7 +68,8 @@ function App() {
                 </Routes>
               </main>
 
-              {!isAdminRoute && !isRecepRoute && !isDoctorRoute && <Footer />} {/* Exclude Footer for doctor route */}
+              {!isAdminRoute && !isRecepRoute && !isDoctorRoute && <Footer />} 
+               {!isAdminRoute && !isRecepRoute && !isDoctorRoute && <ChatButton />} {/* Exclude Footer for doctor route */}
             </div>
           }
         />
