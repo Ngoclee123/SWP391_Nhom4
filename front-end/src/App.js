@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
 import ProfileForm from './components/ProfileForm';
 import DoctorSearch from './components/search/DoctorSearch';
@@ -29,6 +29,7 @@ import { handleOAuthRedirect } from './api/axiosClient'; // Import hàm từ axi
 import ConfirmationPage from './components/vacin/ConfirmationPage';
 import VaccineHistory from './components/vacin/VaccineHistory';
 import PaymentPage from './components/vnpVaccin/PaymentPage';
+import UserService from './service/userService';
 
 function App() {
   return (
@@ -41,6 +42,21 @@ function App() {
 function AppRoutes() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const location = useLocation();
+  const navigate = useNavigate();
+
+  // Auto-redirect nếu là admin và không ở trang admin-dashboard
+  useEffect(() => {
+    const isAdmin = UserService.isLoggedIn() && UserService.getRole().toUpperCase() === 'ADMIN';
+    const adminPath = '/admin-dashboard';
+    const publicPaths = ['/login', '/register', '/forgot-password', '/reset-password'];
+    if (
+      isAdmin &&
+      location.pathname !== adminPath &&
+      !publicPaths.includes(location.pathname)
+    ) {
+      navigate(adminPath, { replace: true });
+    }
+  }, [location, navigate]);
 
   useEffect(() => {
     if ((location.pathname === '/home' || location.pathname === '/') && location.search) {

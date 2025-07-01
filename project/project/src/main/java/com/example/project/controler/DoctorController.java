@@ -4,6 +4,7 @@ import com.example.project.dto.DoctorSearchDTO;
 import com.example.project.model.Doctor;
 import com.example.project.model.Specialty;
 import com.example.project.service.DoctorService;
+import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,6 +15,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.Instant;
 import java.util.List;
 
 @RestController
@@ -51,6 +53,65 @@ public class DoctorController {
                 specialtyId, fullName, availabilityStatus, location, availabilityTime);
         Page<DoctorSearchDTO> doctors = doctorService.searchDoctors(specialtyId, fullName, availabilityStatus, location, availabilityTime, pageable);
         return ResponseEntity.ok(doctors);
+    }
+
+
+
+    // ADMIN: Thêm mới bác sĩ (trả về kèm certificates)
+    @PostMapping("")
+    public ResponseEntity<?> createDoctor(@RequestBody @Valid Doctor doctor) {
+        try {
+            // if (doctor.getAccount() == null || doctor.getAccount().getId() == null) {
+            //     return ResponseEntity.badRequest().body("Account is required");
+            // }
+            if (doctor.getCreatedAt() == null) {
+                doctor.setCreatedAt(Instant.now());
+            }
+            System.out.println("Doctor imgs: " + doctor.getImgs());
+            Doctor created = doctorService.saveDoctor(doctor);
+            return ResponseEntity.status(201).body(created);
+        } catch (Exception e) {
+            logger.error("Error creating doctor: {}", e.getMessage());
+            return ResponseEntity.status(500).body("Error creating doctor: " + e.getMessage());
+        }
+    }
+
+    // ADMIN: Cập nhật bác sĩ (trả về kèm certificates)
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateDoctor(@PathVariable Integer id, @RequestBody Doctor doctor) {
+        try {
+            doctor.setId(id);
+            System.out.println("Doctor imgs: " + doctor.getImgs());
+            Doctor updated = doctorService.saveDoctor(doctor);
+            return ResponseEntity.ok(updated);
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error updating doctor: " + e.getMessage());
+        }
+    }
+
+    // ADMIN: Lấy chi tiết bác sĩ kèm certificates
+    @GetMapping("/entity/{id}")
+    public ResponseEntity<?> getDoctorEntity(@PathVariable Integer id) {
+        try {
+            Doctor doctor = doctorService.getDoctorEntityById(id);
+            return ResponseEntity.ok(doctor);
+        } catch (Exception e) {
+            return ResponseEntity.status(404).body("Doctor not found");
+        }
+    }
+
+    // ADMIN: Xóa bác sĩ
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteDoctor(@PathVariable Integer id) {
+        try {
+            boolean deleted = doctorService.deleteDoctor(id);
+            if (!deleted) {
+                return ResponseEntity.status(404).body("Doctor not found");
+            }
+            return ResponseEntity.ok("Doctor deleted successfully");
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body("Error deleting doctor: " + e.getMessage());
+        }
     }
 
 }

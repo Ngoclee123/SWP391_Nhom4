@@ -123,6 +123,7 @@ public class DoctorService {
 
         return dto;
     }
+
     // New method to fetch Doctor entity
     public Doctor getDoctorEntityById(Integer doctorId) {
         logger.info("Fetching doctor entity with ID: {}", doctorId);
@@ -137,6 +138,34 @@ public class DoctorService {
         logger.info("Fetching doctor by account ID: {}", accountId);
         return doctorRepository.findByAccountId(accountId).orElse(null);
     }
+
+    // ADMIN: Lưu (tạo/cập nhật) bác sĩ và certificates
+    @Transactional
+    public Doctor saveDoctor(Doctor doctor) {
+        if (doctor.getSpecialty() == null || doctor.getSpecialty().getId() == null) {
+            throw new IllegalArgumentException("Specialty is required");
+        }
+        Specialty specialty = specialtyRepository.findById(doctor.getSpecialty().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Specialty not found"));
+        doctor.setSpecialty(specialty);
+        // Lưu các trường mới
+        // imgs, bio, dateOfBirth, locational, education, hospital, phoneNumber, status đã có trong entity
+        // Không cần xử lý certificates ở đây nữa
+        Doctor savedDoctor = doctorRepository.save(doctor);
+        return savedDoctor;
+    }
+
+    // ADMIN: Xóa bác sĩ
+    public boolean deleteDoctor(Integer id) {
+        if (!doctorRepository.existsById(id)) {
+            return false;
+        }
+        doctorRepository.deleteById(id);
+        return true;
+    }
+
+
+
 }
 
 
