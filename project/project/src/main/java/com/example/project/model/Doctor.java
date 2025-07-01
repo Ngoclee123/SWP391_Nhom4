@@ -1,12 +1,12 @@
     package com.example.project.model;
 
     import jakarta.persistence.*;
+    import jakarta.persistence.CascadeType;
+    import jakarta.persistence.Table;
+    import jakarta.validation.constraints.Size;
     import lombok.Getter;
     import lombok.Setter;
-    import org.hibernate.annotations.Fetch;
-    import org.hibernate.annotations.FetchMode;
-    import org.hibernate.annotations.JdbcTypeCode;
-    import org.hibernate.annotations.Type;
+    import org.hibernate.annotations.*;
     import org.hibernate.type.SqlTypes;
 
     import java.time.Instant;
@@ -42,9 +42,6 @@
         @Column(name = "bio")
         private String bio;
 
-        @Column(name = "certificate")
-        private String certificate;
-
         @Column(name = "imgs")
         private String imgs;
 
@@ -60,4 +57,20 @@
         @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         @Fetch(FetchMode.JOIN)
         private List<DoctorAvailability> availabilities = new ArrayList<>();
+
+        @Size(max = 255)
+        @Nationalized
+        @Column(name = "education")
+        private String education;
+
+        @Size(max = 255)
+        @Nationalized
+        @Column(name = "hospital")
+        private String hospital;
+
+        @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+        private List<Certificate> certificates = new ArrayList<>();
+
+        @Column(name = "status", length = 20)
+        private String status = "offline";
     }

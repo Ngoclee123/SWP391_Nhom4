@@ -1,7 +1,7 @@
 import axiosClient from '../api/axiosClient';
 
 const VaccineAppointmentService = {
-    getAllVaccines: () => axiosClient.get('/api/vaccines'),
+    getAllVaccines: (page = 0, size = 6) => axiosClient.get(`/api/vaccines?page=${page}&size=${size}`),
     getVaccine: (vaccineId) => axiosClient.get(`/api/vaccines/${vaccineId}`),
     getPatients: () => axiosClient.get('/api/parents/patients'),
     getVaccineAvailability: (vaccineId) => axiosClient.get(`/api/vaccine-appointments/availability/${vaccineId}`),
@@ -67,7 +67,7 @@ const VaccineAppointmentService = {
             }
         ),
     requestRefund: (vaccineAppointmentId) => axiosClient.post(`/api/vaccine-appointments/${vaccineAppointmentId}/refund`),
-    getHistory: () => axiosClient.get('/api/vaccine-appointments/history')
+    getHistory: (page = 0, size = 5) => axiosClient.get(`/api/vaccine-appointments/history?page=${page}&size=${size}`)
 };
 
 export default VaccineAppointmentService;

@@ -46,7 +46,7 @@ public class VNPayController {
     private RefundService refundService;
 
     @Autowired
-    private Email emailService;
+    private Email emailUtil;
 
     @PostMapping("/create-payment")
     public ResponseEntity<?> createPayment(HttpServletRequest request, @RequestParam Integer vaccineAppointmentId, @RequestParam String paymentMethod, @RequestParam(required = false) String bankCode, @RequestHeader("userId") int userId) {
@@ -69,6 +69,7 @@ public class VNPayController {
                     payment.setStatus("Pending");
                     payment.setPaymentDate(Instant.now());
                     payment.setVaccineId(appointment.getVaccine().getId());
+                    payment.setParent(appointment.getParent());
                     paymentService.savePayment(payment);
                 }
                 Map<String, Object> response = new HashMap<>();
@@ -80,6 +81,20 @@ public class VNPayController {
                 ));
                 return ResponseEntity.ok(response);
             } else if ("BankCard".equalsIgnoreCase(paymentMethod)) {
+                // Tạo payment với status Pending nếu chưa có
+                Optional<Payment> existingPayment = paymentService.getPaymentByVaccineAppointmentIdAndPaymentMethod(vaccineAppointmentId, "BankCard");
+                if (!existingPayment.isPresent()) {
+                    Payment payment = new Payment();
+                    payment.setPatient(appointment.getPatient());
+                    payment.setVaccineAppointment(appointment);
+                    payment.setAmount(vaccineAppointmentService.calculateTotalFee(appointment));
+                    payment.setPaymentMethod("BankCard");
+                    payment.setStatus("Pending");
+                    payment.setPaymentDate(Instant.now());
+                    payment.setVaccineId(appointment.getVaccine().getId());
+                    payment.setParent(appointment.getParent());
+                    paymentService.savePayment(payment);
+                }
                 String vnp_Version = "2.1.0";
                 String vnp_Command = "pay";
                 String orderType = "appointment";
@@ -196,40 +211,66 @@ public class VNPayController {
             VaccineAppointment appointment = appointmentOpt.get();
 
             String transactionStatus = request.getParameter("vnp_TransactionStatus");
+            String redirectUrl;
             if ("00".equals(transactionStatus)) {
-                vaccineAppointmentService.updateAppointmentStatus(vaccineAppointmentId, "Paid");
+                vaccineAppointmentService.updateAppointmentStatus(vaccineAppointmentId, "Completed");
                 Optional<Payment> paymentOpt = paymentService.getPaymentByVaccineAppointmentId(vaccineAppointmentId);
-                if (!paymentOpt.isPresent()) {
-                    logger.error("Payment not found for vaccineAppointmentId: {}", vaccineAppointmentId);
-                    return ResponseEntity.badRequest().body("Payment not found");
+                Payment payment;
+                if (paymentOpt.isPresent()) {
+                    payment = paymentOpt.get();
+                    payment.setStatus("Completed");
+                    payment.setPaymentDate(Instant.now());
+                    payment.setVaccineId(appointment.getVaccine().getId());
+                    payment.setParent(appointment.getParent());
+                } else {
+                    // Nếu chưa có payment, tạo mới
+                    payment = new Payment();
+                    payment.setPatient(appointment.getPatient());
+                    payment.setVaccineAppointment(appointment);
+                    payment.setAmount(vaccineAppointmentService.calculateTotalFee(appointment));
+                    payment.setPaymentMethod("BankCard");
+                    payment.setStatus("Completed");
+                    payment.setPaymentDate(Instant.now());
+                    payment.setVaccineId(appointment.getVaccine().getId());
+                    payment.setParent(appointment.getParent());
                 }
-                Payment payment = paymentOpt.get();
-                payment.setStatus("Completed");
-                payment.setPaymentDate(Instant.now());
-                payment.setVaccineId(appointment.getVaccine().getId());
                 paymentService.savePayment(payment);
 
-                Account patient = accountService.getAccountById(appointment.getPatient().getId());
-                if (patient == null || patient.getEmail() == null) {
-                    logger.error("Patient or email not found for id: {}", appointment.getPatient().getId());
-                    return ResponseEntity.badRequest().body("Thông tin bệnh nhân không hợp lệ");
+                // Gửi email xác nhận
+                Patient patient = appointment.getPatient();
+                if (patient != null && patient.getParent() != null) {
+                    Parent parent = patient.getParent();
+                    Account account = parent.getAccount();
+                    if (account != null && account.getEmail() != null) {
+                        String email = account.getEmail();
+                        String subject = "Xác nhận thanh toán lịch hẹn thành công qua VNPay";
+                        String content = "Chào " + (account.getFullName() != null ? account.getFullName() : "Khách hàng") + ",\n\n"
+                                + "Cảm ơn bạn đã đặt lịch hẹn tại HealthCare Portal!\n"
+                                + "Mã lịch hẹn: " + vaccineAppointmentId + "\n"
+                                + "Mã giao dịch VNPay: " + paymentCode + "\n"
+                                + "Tổng phí: " + (payment.getAmount() != null ? payment.getAmount() : "Chưa xác định") + " VNĐ\n\n"
+                                + "Lịch hẹn của bạn đã được thanh toán thành công và sẽ sớm được xử lý.\n\n"
+                                + "Trân trọng,\nHealthCare Team";
+                        
+                        logger.info("🔄 Đang gửi email xác nhận thanh toán đến: {}", email);
+                        emailUtil.sendEmail(email, subject, content);
+                        logger.info("✅ Email xác nhận thanh toán đã gửi thành công đến: {}", email);
+                    } else {
+                        logger.warn("❌ Không tìm thấy email cho patient ID: {}", patient.getId());
+                    }
+                } else {
+                    logger.warn("❌ Không tìm thấy parent hoặc patient cho appointment ID: {}", vaccineAppointmentId);
                 }
-                String email = patient.getEmail();
-
-                String subject = "Xác nhận thanh toán lịch hẹn thành công qua VNPay";
-                String content = "Chào " + (patient.getFullName() != null ? patient.getFullName() : "Khách hàng") + ",\n\n"
-                        + "Cảm ơn bạn đã đặt lịch hẹn tại HealthCare Portal!\n"
-                        + "Mã lịch hẹn: " + vaccineAppointmentId + "\n"
-                        + "Mã giao dịch VNPay: " + paymentCode + "\n"
-                        + "Tổng phí: " + (payment.getAmount() != null ? payment.getAmount() : "Chưa xác định") + " VNĐ\n\n"
-                        + "Lịch hẹn của bạn đã được thanh toán thành công và sẽ sớm được xử lý.\n\n"
-                        + "Trân trọng,\nHealthCare Team";
-                emailService.sendEmail(email, subject, content);
-                return ResponseEntity.ok("Thanh toán thành công!");
+                redirectUrl = "http://localhost:3000/paymentpage?vaccineAppointmentId=" + vaccineAppointmentId + "&result=success";
             } else {
                 vaccineAppointmentService.updateAppointmentStatus(vaccineAppointmentId, "Pending");
-                return ResponseEntity.ok("Thanh toán thất bại!");
+                redirectUrl = "http://localhost:3000/paymentpage?vaccineAppointmentId=" + vaccineAppointmentId + "&result=fail";
             }
+            String html = "<html><head>"
+                + "<meta http-equiv='refresh' content='0; URL=" + redirectUrl + "' />"
+                + "<script>window.location.href='" + redirectUrl + "';</script>"
+                + "</head><body>If you are not redirected, <a href='" + redirectUrl + "'>click here</a>.</body></html>";
+            return ResponseEntity.ok().body(html);
         } catch (NumberFormatException e) {
             logger.error("Invalid number format in vnp_TxnRef: {}", e.getMessage());
             return ResponseEntity.badRequest().body("Mã giao dịch không hợp lệ!");

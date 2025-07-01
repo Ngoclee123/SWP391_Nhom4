@@ -29,59 +29,65 @@ import { handleOAuthRedirect } from './api/axiosClient'; // Import hàm từ axi
 import ConfirmationPage from './components/vacin/ConfirmationPage';
 import VaccineHistory from './components/vacin/VaccineHistory';
 import PaymentPage from './components/vnpVaccin/PaymentPage';
+
 function App() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const isAdminRoute = window.location.pathname.startsWith('/admin');
-  const isRecepRoute = window.location.pathname.startsWith('/reception');
-
-  useEffect(() => {
-   
-    if ((window.location.pathname === '/home' || window.location.pathname === '/') && window.location.search) {
-      handleOAuthRedirect();
-    }
-  }, []); 
-
   return (
     <Router>
-      <Routes>
-        <Route path="/news/article/:id" element={<ArticleDetail />} />
-        <Route
-          path="*"
-          element={
-            <div className="min-h-screen flex flex-col bg-gray-100">
-              {!isAdminRoute && <Header />}
-
-              <main className="flex-grow">
-                <Routes>
-                  <Route path="/vaccines" element={<VaccinesList />} />
-                  <Route path="/vaccines/:vaccineId" element={<VaccineAppointment />} />
-                  <Route path="/add-patient" element={<AddPatientPage />} />
-                  <Route path="/home" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
-                  <Route path="/search-doctors" element={<DoctorSearch />} />
-                  <Route path="/book-appointment" element={<AppointmentForm />} />
-                  <Route path="/profile" element={<ProfileForm />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
-                  <Route path="/admin1" element={<AdminDashboards />} />
-                  <Route path="/doctor/:id" element={<DoctorDetail />} />
-                  <Route path="/reception" element={<Reception />} />
-                  <Route path="/forgot-password" element={<ForgotPassword />} />
-                  <Route path="/reset-password" element={<ResetPassword />} />
-                  <Route path="/booking-confirmation" element={<BookingConfirmation />} />
-                  <Route path="/change-password/:accountId" element={<ChangePassword />} />
-                  <Route path="/confirmation" element={<ConfirmationPage />} />
-                  <Route path="/vaccine-history" element={<VaccineHistory />} />
-                  <Route path="/payment/:vaccineAppointmentId" element={<PaymentPage />} />
-                  <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
-                </Routes>
-              </main>
-
-              {!isAdminRoute && <Footer />}
-            </div>
-          }
-        />
-      </Routes>
+      <AppRoutes />
     </Router>
+  );
+}
+
+function AppRoutes() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const location = useLocation();
+
+  useEffect(() => {
+    if ((location.pathname === '/home' || location.pathname === '/') && location.search) {
+      handleOAuthRedirect();
+    }
+  }, [location]);
+
+  return (
+    <Routes>
+      {/* Route riêng cho admin-dashboard, không bọc layout chung */}
+      <Route path="/admin-dashboard" element={<AdminDashboards />} />
+      {/* Các route còn lại dùng layout chung */}
+      <Route
+        path="*"
+        element={
+          <div className="min-h-screen flex flex-col bg-gray-100">
+            <Header />
+            <main className="flex-grow">
+              <Routes>
+                <Route path="/news/article/:id" element={<ArticleDetail />} />
+                <Route path="/vaccines" element={<VaccinesList />} />
+                <Route path="/vaccines/:vaccineId" element={<VaccineAppointment />} />
+                <Route path="/add-patient" element={<AddPatientPage />} />
+                <Route path="/home" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
+                <Route path="/search-doctors" element={<DoctorSearch />} />
+                <Route path="/book-appointment" element={<AppointmentForm />} />
+                <Route path="/profile" element={<ProfileForm />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
+                <Route path="/doctor/:id" element={<DoctorDetail />} />
+                <Route path="/reception" element={<Reception />} />
+                <Route path="/forgot-password" element={<ForgotPassword />} />
+                <Route path="/reset-password" element={<ResetPassword />} />
+                <Route path="/booking-confirmation" element={<BookingConfirmation />} />
+                <Route path="/change-password/:accountId" element={<ChangePassword />} />
+                <Route path="/confirmation" element={<ConfirmationPage />} />
+                <Route path="/vaccine-history" element={<VaccineHistory />} />
+                <Route path="/payment/:vaccineAppointmentId" element={<PaymentPage />} />
+                <Route path="/paymentpage" element={<PaymentPage />} />
+                <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
+              </Routes>
+            </main>
+            <Footer />
+          </div>
+        }
+      />
+    </Routes>
   );
 }
 

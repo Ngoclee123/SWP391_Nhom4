@@ -1,14 +1,14 @@
 import { jwtDecode } from 'jwt-decode';
-
+import axiosClient from '../api/axiosClient';
 class UserService {
-    setUser(token, username, fullName, accountId) {
+    setUser(token, username, fullName, accountId, role) {
+        console.log('setUser called with:', { token, username, fullName, accountId, role });
+
         localStorage.setItem('token', token);
         localStorage.setItem('username', username);
         localStorage.setItem('fullName', fullName);
         localStorage.setItem('accountId', accountId);
-        const decodedToken = jwtDecode(token);
-        const role = decodedToken.role || 'USER';
-        localStorage.setItem('role', role);
+        localStorage.setItem('role', role || 'USER');
     }
 
     getToken() {
@@ -56,6 +56,34 @@ class UserService {
     isLoggedIn() {
         return !!this.getToken();
     }
+
+  // CRUD Account APIs
+    async getAllAccounts() {
+        return axiosClient.get('/api/accounts');
+    }
+    async getAccountById(id) {
+        return axiosClient.get(`/api/accounts/${id}`);
+    }
+    async createAccount(data) {
+        const { role, ...accountData } = data;
+        return axiosClient.post(`/api/accounts?role=${role}`, accountData);
+    }
+    async updateAccount(id, data) {
+        // Đảm bảo truyền role là object nếu backend yêu cầu
+        let payload = { ...data };
+        if (typeof payload.role === 'string') {
+            payload.role = { rolename: payload.role };
+        }
+        return axiosClient.put(`/api/accounts/${id}`, payload);
+    }
+    async deleteAccount(id) {
+        return axiosClient.delete(`/api/accounts/${id}`);
+    }
+
+    async getAccountStats() {
+        return axiosClient.get('/api/accounts/stats');
+    }
+
 }
 
 export default new UserService(); // Giữ nguyên export instance

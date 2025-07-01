@@ -49,6 +49,36 @@ public class AuthController {
         return handleLogin(loginRequest, "DOCTOR");
     }
 
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        logger.info("General login attempt for username: {}", loginRequest.getUsername());
+        return handleGeneralLogin(loginRequest);
+    }
+
+    private ResponseEntity<?> handleGeneralLogin(LoginRequest loginRequest) {
+        Account account = accountService.findByUsername(loginRequest.getUsername());
+        if (account == null) {
+            logger.warn("Login failed: Username {} not found", loginRequest.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Username not found");
+        }
+
+        if (!account.getStatus()) {
+            logger.warn("Login failed: Account {} is disabled", loginRequest.getUsername());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is disabled");
+        }
+
+        if (passwordEncoder.matches(loginRequest.getPassword(), account.getPasswordHash())) {
+            String role = account.getRole().getRolename();
+            String token = jwtUtil.generateToken(account.getUsername(), account.getId(), role);
+            logger.info("Login successful for username: {}, role: {}, token: {}", loginRequest.getUsername(), role, token);
+            return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId(), role));
+        } else {
+            logger.warn("Login failed: Invalid password for username {}. Raw: {}, Stored: {}",
+                    loginRequest.getUsername(), loginRequest.getPassword(), account.getPasswordHash());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
+        }
+    }
+
     private ResponseEntity<?> handleLogin(LoginRequest loginRequest, String expectedRole) {
         Account account = accountService.findByUsername(loginRequest.getUsername());
         if (account == null) {

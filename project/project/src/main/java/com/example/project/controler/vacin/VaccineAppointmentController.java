@@ -10,6 +10,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Map;
@@ -49,9 +51,13 @@ public class VaccineAppointmentController {
 
     @GetMapping("/history")
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<List<VaccineAppointmentHistoryDTO>> getHistory(Authentication authentication) {
+    public ResponseEntity<Page<VaccineAppointmentHistoryDTO>> getHistory(
+            Authentication authentication,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "5") int size
+    ) {
         String username = authentication.getName();
-        List<VaccineAppointmentHistoryDTO> history = vaccineAppointmentService.getHistoryByUsername(username);
-        return ResponseEntity.ok(history);
+        Page<VaccineAppointmentHistoryDTO> historyPage = vaccineAppointmentService.getHistoryByUsername(username, PageRequest.of(page, size));
+        return ResponseEntity.ok(historyPage);
     }
 }

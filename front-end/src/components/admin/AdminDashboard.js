@@ -1,4 +1,5 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import Header from './Header';
 import DashboardOverview from './DashboardOverview';
@@ -7,9 +8,12 @@ import DoctorManagement from './DoctorManagement';
 import { Settings } from 'lucide-react';
 import useNotifications from './useNotifications';
 import PatientManagement from './PatientManagement';
+import AccountManagement from './AccountManagement';
+import UserService from '../../service/userService';
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan' },
+  { id: 'accounts', label: 'Tài khoản' },
   { id: 'appointments', label: 'Lịch hẹn' },
   { id: 'doctors', label: 'Bác sĩ' },
   { id: 'patients', label: 'Bệnh nhân' },
@@ -21,16 +25,33 @@ const NAVIGATION_ITEMS = [
 const AdminDashboards = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
   const { count: notificationCount, clearNotifications } = useNotifications();
+  const navigate = useNavigate();
+
+  // Lấy tên người dùng từ localStorage
+  const [adminName, setAdminName] = useState('');
+  const [isAuthChecked, setIsAuthChecked] = useState(false);
+
+  useEffect(() => {
+    // Kiểm tra quyền truy cập
+    if (!UserService.isLoggedIn() || UserService.getRole().toUpperCase() !== 'ADMIN') {
+      navigate('/login', { replace: true });
+    } else {
+      setAdminName(UserService.getFullName() || UserService.getUsername() || 'Admin');
+      setIsAuthChecked(true);
+    }
+  }, [navigate]);
 
   const renderContent = useCallback(() => {
     switch (activeTab) {
       case 'dashboard':
         return <DashboardOverview />;
+      case 'accounts':
+        return <AccountManagement />;
       case 'appointments':
         return <AppointmentManagement />;
       case 'doctors':
         return <DoctorManagement />;
-     case 'patients':
+      case 'patients':
         return <PatientManagement />;
       case 'consultations':
       case 'reports':
@@ -54,6 +75,11 @@ const AdminDashboards = () => {
     }
   }, [activeTab]);
 
+  if (!isAuthChecked) {
+    // Chưa xác thực xong, không render gì cả (tránh nháy trang)
+    return null;
+  }
+
   const currentPageTitle = NAVIGATION_ITEMS.find(item => item.id === activeTab)?.label || 'Tổng quan';
 
   return (
@@ -64,6 +90,7 @@ const AdminDashboards = () => {
           currentPageTitle={currentPageTitle}
           notificationCount={notificationCount}
           clearNotifications={clearNotifications}
+          adminName={adminName}
         />
         <main className="flex-1 p-6 overflow-auto">
           {renderContent()}

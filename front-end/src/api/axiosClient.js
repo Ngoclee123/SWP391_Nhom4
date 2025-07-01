@@ -22,7 +22,10 @@ axiosClient.interceptors.request.use(async (req) => {
         console.log("Interceptor - Added Authorization header for:", req.url);
     } else if (token) {
         console.log("Interceptor - Token present but skipped for:", req.url);
-    } else {
+    } else if (
+        !req.url.match(/\/api\/(login|register|auth\/google\/callback|oauth2\/authorization\/google|login\/oauth2\/code\/|login|oauth2\/redirect)/) &&
+        !['/login', '/register', '/forgot-password', '/reset-password'].includes(window.location.pathname)
+    ) {
         console.warn("No valid token available, redirecting to login for:", req.url);
         window.location.href = '/login';
     }
@@ -54,10 +57,12 @@ const handleOAuthRedirect = () => {
     const accountId = urlParams.get('accountId');
 
     if (token && role) {
-        UserService.setUser(token, username, fullName, accountId);
+        UserService.setUser(token, username, fullName, accountId,role);
         console.log("OAuth redirect: Token set, Role:", role, "Redirecting to:", role.toLowerCase() === "user" ? "/home" : "/login");
         if (role.toLowerCase() === "user") {
             window.location.href = "/home";
+        } else if (role.toLowerCase() === "admin") {
+            window.location.href = "/admin-dashboard";
         } else {
             window.location.href = "/login";
         }

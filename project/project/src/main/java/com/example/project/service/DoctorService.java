@@ -79,13 +79,20 @@ public class DoctorService {
                 dto.setEndTime(da.getEndTime().toString());
             });
 
+            // Map certificates
+            dto.setCertificates(
+                doctor.getCertificates() != null
+                    ? doctor.getCertificates().stream().map(c -> c.getCertificateName()).collect(java.util.stream.Collectors.toList())
+                    : new java.util.ArrayList<>()
+            );
+
             return dto;
         });
     }
 
     public DoctorSearchDTO getDoctorById(Integer doctorId) {
         logger.info("Fetching doctor with ID: {}", doctorId);
-        Doctor doctor = doctorRepository.findByIdWithAvailabilities(doctorId)
+        Doctor doctor = doctorRepository.findByIdWithAvailabilitiesAndCertificates(doctorId)
                 .orElseThrow(() -> {
                     logger.error("Doctor not found with ID: {}", doctorId);
                     return new RuntimeException("Doctor not found with ID: " + doctorId);
@@ -106,6 +113,13 @@ public class DoctorService {
             dto.setStartTime(da.getStartTime().toString());
             dto.setEndTime(da.getEndTime().toString());
         });
+
+        // Map certificates
+        dto.setCertificates(
+            doctor.getCertificates() != null
+                ? doctor.getCertificates().stream().map(c -> c.getCertificateName()).collect(java.util.stream.Collectors.toList())
+                : new java.util.ArrayList<>()
+        );
 
         return dto;
     }

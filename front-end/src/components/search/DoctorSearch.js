@@ -234,8 +234,17 @@ function DoctorSearch() {
                                         <p className="text-gray-600">Tiểu sử: {doctor.bio ? doctor.bio.slice(0, 100) + (doctor.bio.length > 100 ? '...' : '') : 'N/A'}</p>
                                         <p className="text-gray-600">Số điện thoại: {doctor.phoneNumber || 'N/A'}</p>
                                         <p className="text-gray-600">Địa điểm: {doctor.locational || 'N/A'}</p>
-                                        {/* <p className="text-gray-600">Trạng thái: {doctor.availabilityStatus || 'N/A'}</p>
-                                        <p className="text-gray-600">Thời gian: {doctor.startTime ? `${doctor.startTime} - ${doctor.endTime}` : 'N/A'}</p> */}
+                                        {/* Hiển thị danh sách chứng chỉ nếu có */}
+                                        {doctor.certificates && doctor.certificates.length > 0 && (
+                                            <div className="mt-2">
+                                                <p className="text-gray-600 font-semibold">Chứng chỉ:</p>
+                                                <ul className="list-disc list-inside text-gray-600">
+                                                    {doctor.certificates.map((cert, idx) => (
+                                                        <li key={idx}>{cert}</li>
+                                                    ))}
+                                                </ul>
+                                            </div>
+                                        )}
                                     </div>
                                     <button
                                         onClick={() => handleBookNow(doctor)}

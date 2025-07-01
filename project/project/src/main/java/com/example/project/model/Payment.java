@@ -33,9 +33,6 @@ public class Payment {
     @JoinColumn(name = "vaccine_appointment_id")
     private VaccineAppointment vaccineAppointment;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "vaccination_id")
-    private Vaccination vaccination;
 
     @NotNull
     @Column(name = "amount", nullable = false, precision = 10, scale = 2)
@@ -63,4 +60,10 @@ public class Payment {
 
     @Column(name = "vaccine_id")
     private Integer vaccineId;
+
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Parent parent;
+
 }

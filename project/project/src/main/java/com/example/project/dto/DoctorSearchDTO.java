@@ -1,5 +1,7 @@
 package com.example.project.dto;
 
+import java.util.List;
+
 public class DoctorSearchDTO {
 
     private Integer id;
@@ -13,6 +15,7 @@ public class DoctorSearchDTO {
     private String availabilityStatus; // Từ DoctorAvailability.status
     private String startTime; // Từ DoctorAvailability.start_time
     private String endTime;   // Từ DoctorAvailability.end_time
+    private List<String> certificates;
 
     // Getters và setters
     public Integer getId() { return id; }
@@ -47,4 +50,7 @@ public class DoctorSearchDTO {
 
     public String getEndTime() { return endTime; }
     public void setEndTime(String endTime) { this.endTime = endTime; }
+
+    public List<String> getCertificates() { return certificates; }
+    public void setCertificates(List<String> certificates) { this.certificates = certificates; }
 }

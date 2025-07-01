@@ -60,4 +60,8 @@ public class VaccineAppointment {
     @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Parent parent;
 }

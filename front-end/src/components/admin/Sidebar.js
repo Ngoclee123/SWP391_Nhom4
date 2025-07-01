@@ -3,6 +3,7 @@ import { Stethoscope, BarChart3, Calendar, Users, MessageSquare, FileText, Setti
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan', icon: BarChart3 },
+  { id: 'accounts', label: 'Tài khoản', icon: Users },
   { id: 'appointments', label: 'Lịch hẹn', icon: Calendar },
   { id: 'doctors', label: 'Bác sĩ', icon: Stethoscope },
   { id: 'patients', label: 'Bệnh nhân', icon: Users },
@@ -18,7 +19,7 @@ const Sidebar = React.memo(({ activeTab, setActiveTab }) => (
         {/* <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
           <Stethoscope className="w-6 h-6 text-white" />
         </div> */}
-        <img alt="Baby Health Hub Logo" class="w-20 h-20 object-contain rounded-full" src="/images/Logo.jpg"></img>
+        <img alt="Baby Health Hub Logo" className="w-20 h-20 object-contain rounded-full" src="/images/Logo.jpg" />
         <div>
           <h1 className="text-xl font-bold text-gray-900">BabyHealthHub</h1>
           <p className="text-sm text-gray-500">Admin Dashboard</p>

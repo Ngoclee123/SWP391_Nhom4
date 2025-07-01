@@ -9,12 +9,15 @@ import com.example.project.repository.PaymentRepository;
 import com.example.project.repository.RefundRepository;
 import com.example.project.repository.PatientRepository;
 import com.example.project.repository.AccountRepository;
+import com.example.project.repository.ParentRepository;
 import com.example.project.dto.VaccineAppointmentHistoryDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.scheduling.annotation.EnableAsync;
@@ -58,6 +61,9 @@ public class VaccineAppointmentService {
 
     @Autowired
     private AccountRepository accountRepository;
+
+    @Autowired
+    private ParentRepository parentRepository;
 
     @Autowired
     @Qualifier("securityTaskExecutor")
@@ -126,6 +132,9 @@ public class VaccineAppointmentService {
             appointment.setStatus("Pending");
             appointment.setNotes(notes);
             appointment.setCreatedAt(Instant.now());
+            Integer parentId = getCurrentParentId();
+            Parent parent = parentRepository.findById(parentId).orElseThrow(() -> new IllegalArgumentException("Parent not found"));
+            appointment.setParent(parent);
             vaccineAppointmentRepository.save(appointment);
             availability.setCapacity(availability.getCapacity() - 1);
             vaccineAvailabilityRepository.save(availability);
@@ -209,6 +218,7 @@ public class VaccineAppointmentService {
         payment.setPaymentMethod(paymentMethod);
         payment.setStatus("Pending");
         payment.setPaymentDate(Instant.now());
+        payment.setParent(appointment.getParent());
         return paymentRepository.save(payment);
     }
 
@@ -250,7 +260,8 @@ public class VaccineAppointmentService {
                 appointment.setNotes(request.getNotes());
                 appointment.setStatus("Pending");
                 appointment.setCreatedAt(Instant.now());
-
+                Parent parent = parentRepository.findById(parentId).orElseThrow(() -> new IllegalArgumentException("Parent not found"));
+                appointment.setParent(parent);
                 return vaccineAppointmentRepository.save(appointment);
             } catch (Exception e) {
                 logger.error("Error in createVaccineAppointment: {}", e.getMessage(), e);
@@ -373,19 +384,25 @@ public class VaccineAppointmentService {
             logger.warn("SecurityContext lost or not authenticated, username is null");
             throw new SecurityException("Unauthorized: No authenticated user");
         }
-        try {
-            return Integer.parseInt(auth.getName());
-        } catch (NumberFormatException e) {
-            logger.error("Invalid username format: {}", auth.getName(), e);
-            throw new SecurityException("Unauthorized: Invalid username format");
+        String username = auth.getName();
+        Account account = accountRepository.findByUsername(username);
+        if (account == null) {
+            logger.error("No account found for username: {}", username);
+            throw new SecurityException("Unauthorized: No account found");
         }
+        Parent parent = parentRepository.findByAccountId(account.getId());
+        if (parent == null) {
+            logger.error("No parent found for accountId: {}", account.getId());
+            throw new SecurityException("Unauthorized: No parent found");
+        }
+        return parent.getId();
     }
 
-    public List<VaccineAppointmentHistoryDTO> getHistoryByUsername(String username) {
+    public Page<VaccineAppointmentHistoryDTO> getHistoryByUsername(String username, Pageable pageable) {
         Account account = accountRepository.findByUsername(username);
-        if (account == null) return Collections.emptyList();
-        List<VaccineAppointment> history = vaccineAppointmentRepository.findByAccountId(account.getId());
-        return history.stream().map(va -> {
+        if (account == null) return Page.empty();
+        Page<VaccineAppointment> historyPage = vaccineAppointmentRepository.findByAccountId(account.getId(), pageable);
+        return historyPage.map(va -> {
             VaccineAppointmentHistoryDTO dto = new VaccineAppointmentHistoryDTO();
             dto.setId(va.getId());
             if (va.getVaccine() != null) {
@@ -401,6 +418,6 @@ public class VaccineAppointmentService {
             dto.setLocation(va.getLocation());
             dto.setStatus(va.getStatus());
             return dto;
-        }).collect(Collectors.toList());
+        });
     }
 }
