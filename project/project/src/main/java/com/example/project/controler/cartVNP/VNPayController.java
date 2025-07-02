@@ -213,7 +213,7 @@ public class VNPayController {
             String transactionStatus = request.getParameter("vnp_TransactionStatus");
             String redirectUrl;
             if ("00".equals(transactionStatus)) {
-                vaccineAppointmentService.updateAppointmentStatus(vaccineAppointmentId, "Completed");
+                vaccineAppointmentService.updateAppointmentStatusOnlyStatus(vaccineAppointmentId, "Completed");
                 Optional<Payment> paymentOpt = paymentService.getPaymentByVaccineAppointmentId(vaccineAppointmentId);
                 Payment payment;
                 if (paymentOpt.isPresent()) {
@@ -222,6 +222,8 @@ public class VNPayController {
                     payment.setPaymentDate(Instant.now());
                     payment.setVaccineId(appointment.getVaccine().getId());
                     payment.setParent(appointment.getParent());
+                    payment.setAmount(vaccineAppointmentService.calculateTotalFee(appointment));
+                    payment.setPaymentMethod("BankCard");
                 } else {
                     // Nếu chưa có payment, tạo mới
                     payment = new Payment();

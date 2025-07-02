@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface PaymentRepository extends JpaRepository<Payment, Integer> {
     Optional<Payment> findByVaccineAppointmentId(Integer vaccineAppointmentId);
     Optional<Payment> findByVaccineAppointmentIdAndPaymentMethod(Integer vaccineAppointmentId, String paymentMethod);
+    void deleteByVaccineAppointmentId(Integer vaccineAppointmentId);
 }

@@ -10,6 +10,9 @@ import useNotifications from './useNotifications';
 import PatientManagement from './PatientManagement';
 import AccountManagement from './AccountManagement';
 import UserService from '../../service/userService';
+import VaccineManagement from "./VaccineManagement";
+import VaccineAppointmentManagement from "./VaccineAppointmentManagement";
+import VaccineStatistics from "./VaccineStatistics";
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan' },
@@ -70,6 +73,12 @@ const AdminDashboards = () => {
             </p>
           </div>
         );
+      case 'vaccine-management':
+        return <VaccineManagement />;
+      case 'vaccine-appointment-management':
+        return <VaccineAppointmentManagement />;
+      case 'vaccine-statistics':
+        return <VaccineStatistics />;
       default:
         return <DashboardOverview />;
     }

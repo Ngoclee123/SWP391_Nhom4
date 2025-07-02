@@ -1,5 +1,5 @@
 import React from 'react';
-import { Stethoscope, BarChart3, Calendar, Users, MessageSquare, FileText, Settings } from 'lucide-react';
+import { Stethoscope, BarChart3, Calendar, Users, MessageSquare, FileText, Settings, Syringe, ClipboardList } from 'lucide-react';
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan', icon: BarChart3 },
@@ -9,6 +9,9 @@ const NAVIGATION_ITEMS = [
   { id: 'patients', label: 'Bệnh nhân', icon: Users },
   { id: 'consultations', label: 'Tư vấn', icon: MessageSquare },
   { id: 'reports', label: 'Báo cáo', icon: FileText },
+  { id: 'vaccine-management', label: 'Vaccine', icon: Syringe },
+  { id: 'vaccine-appointment-management', label: 'Lịch tiêm', icon: ClipboardList },
+  { id: 'vaccine-statistics', label: 'Thống kê vaccine', icon: BarChart3 },
   { id: 'settings', label: 'Cài đặt', icon: Settings }
 ];
 

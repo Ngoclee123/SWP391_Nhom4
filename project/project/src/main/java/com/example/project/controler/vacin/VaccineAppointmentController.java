@@ -3,6 +3,8 @@ package com.example.project.controler.vacin;
 import com.example.project.service.VaccineAppointmentService;
 import com.example.project.model.VaccineAppointment;
 import com.example.project.dto.VaccineAppointmentHistoryDTO;
+import com.example.project.dto.VaccineAppointmentDTO;
+import com.example.project.dto.VaccineStatisticsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -59,5 +61,37 @@ public class VaccineAppointmentController {
         String username = authentication.getName();
         Page<VaccineAppointmentHistoryDTO> historyPage = vaccineAppointmentService.getHistoryByUsername(username, PageRequest.of(page, size));
         return ResponseEntity.ok(historyPage);
+    }
+
+    @GetMapping("/admin")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Page<VaccineAppointmentDTO>> getAllAppointments(
+        @RequestParam(defaultValue = "0") int page,
+        @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok(vaccineAppointmentService.getAllAppointments(PageRequest.of(page, size)));
+    }
+
+    @PutMapping("/admin/{id}/status")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> updateStatus(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        boolean ok = vaccineAppointmentService.updateAppointmentStatusOnlyStatus(id, status);
+        if (!ok) return ResponseEntity.notFound().build();
+        return ResponseEntity.ok().build();
+    }
+
+    @DeleteMapping("/admin/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> deleteAppointment(@PathVariable Integer id) {
+        boolean deleted = vaccineAppointmentService.deleteAppointment(id);
+        if (!deleted) return ResponseEntity.notFound().build();
+        return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/statistics")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<VaccineStatisticsDTO> getVaccineStatistics(@RequestParam int month, @RequestParam int year) {
+        return ResponseEntity.ok(vaccineAppointmentService.getVaccineStatistics(month, year));
     }
 }

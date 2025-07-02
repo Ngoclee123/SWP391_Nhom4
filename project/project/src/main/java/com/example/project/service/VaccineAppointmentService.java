@@ -11,6 +11,8 @@ import com.example.project.repository.PatientRepository;
 import com.example.project.repository.AccountRepository;
 import com.example.project.repository.ParentRepository;
 import com.example.project.dto.VaccineAppointmentHistoryDTO;
+import com.example.project.dto.VaccineAppointmentDTO;
+import com.example.project.dto.VaccineStatisticsDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +26,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -357,17 +360,6 @@ public class VaccineAppointmentService {
                 .orElseThrow(() -> new RuntimeException("Payment not found"));
     }
 
-    public void updateAppointmentStatus(Integer vaccineAppointmentId, String status) {
-        logger.debug("Updating status for vaccineAppointmentId: {} to {}", vaccineAppointmentId, status);
-        Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentRepository.findById(vaccineAppointmentId);
-        if (!appointmentOpt.isPresent()) {
-            throw new RuntimeException("Vaccine appointment not found");
-        }
-        VaccineAppointment appointment = appointmentOpt.get();
-        appointment.setStatus(status);
-        vaccineAppointmentRepository.save(appointment);
-    }
-
     public Optional<VaccineAppointment> getAppointmentById(Integer vaccineAppointmentId) {
         logger.debug("Fetching appointment by id: {}", vaccineAppointmentId);
         return vaccineAppointmentRepository.findById(vaccineAppointmentId);
@@ -419,5 +411,67 @@ public class VaccineAppointmentService {
             dto.setStatus(va.getStatus());
             return dto;
         });
+    }
+
+    public Page<VaccineAppointmentDTO> getAllAppointments(Pageable pageable) {
+        return vaccineAppointmentRepository.findAll(pageable).map(va -> {
+            VaccineAppointmentDTO dto = new VaccineAppointmentDTO();
+            dto.setId(va.getId());
+            if (va.getPatient() != null) {
+                dto.setPatientName(va.getPatient().getFullName());
+                dto.setPatientId(va.getPatient().getId());
+            } else {
+                dto.setPatientName(null);
+                dto.setPatientId(null);
+            }
+            if (va.getVaccine() != null) {
+                dto.setVaccineName(va.getVaccine().getName());
+                dto.setVaccineId(va.getVaccine().getId());
+            } else {
+                dto.setVaccineName(null);
+                dto.setVaccineId(null);
+            }
+            dto.setAppointmentDate(va.getAppointmentDate() != null ? va.getAppointmentDate().toString() : null);
+            dto.setLocation(va.getLocation());
+            dto.setStatus(va.getStatus());
+            return dto;
+        });
+    }
+
+    @Transactional
+    public boolean updateAppointmentStatusOnlyStatus(Integer id, String status) {
+        return vaccineAppointmentRepository.updateStatus(id, status) > 0;
+    }
+    @Transactional
+    public boolean deleteAppointment(Integer id) {
+        paymentRepository.deleteByVaccineAppointmentId(id);
+        if (vaccineAppointmentRepository.existsById(id)) {
+            vaccineAppointmentRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    public VaccineAppointment updateAppointmentStatus(Integer id, String status) {
+        Optional<VaccineAppointment> opt = vaccineAppointmentRepository.findById(id);
+        if (opt.isPresent()) {
+            VaccineAppointment app = opt.get();
+            app.setStatus(status);
+            return vaccineAppointmentRepository.save(app);
+        }
+        return null;
+    }
+
+    public VaccineStatisticsDTO getVaccineStatistics(int month, int year) {
+        VaccineStatisticsDTO dto = new VaccineStatisticsDTO();
+        Double totalRevenue = vaccineAppointmentRepository.getTotalRevenueByMonth(month, year);
+        dto.setTotalRevenue(totalRevenue != null ? totalRevenue : 0);
+        Map<String, Integer> typeCount = new java.util.HashMap<>();
+        for (Object[] row : vaccineAppointmentRepository.getVaccineTypeCountByMonth(month, year)) {
+            typeCount.put((String) row[0], ((Number) row[1]).intValue());
+        }
+        dto.setVaccineTypeCount(typeCount);
+        dto.setVaccineCategoryCount(new java.util.HashMap<>()); // Nếu có danh mục, bổ sung sau
+        return dto;
     }
 }
