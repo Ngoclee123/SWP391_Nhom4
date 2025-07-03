@@ -1,28 +1,25 @@
-// src/service/DoctorService.js
 import axiosClient from "../api/axiosClient";
 
-class DoctorService {async getAllDoctors() {
-    const url = '/api/doctors';
-    console.log(`Fetching all doctors from: ${url}`);
-    try {
-      const response = await axiosClient.get(url);
-      console.log('Doctors response (raw):', response);
-      // Đảm bảo response là mảng
-      const data = Array.isArray(response) ? response : (response.data || []);
-      return {
-        data: data,
-        message: data.length > 0 ? 'Danh sách bác sĩ đã được tải' : 'Không có bác sĩ nào'
-      };
-    } catch (error) {
-      console.error('Error fetching doctors:', error.response ? error.response.data : error.message);
-      return {
-        data: [],
-        message: 'Lỗi khi lấy danh sách bác sĩ: ' + (error.message || 'Không xác định')
-      };
+class DoctorService {
+    async getAllDoctors() {
+        const url = '/api/doctors';
+        console.log(`Fetching all doctors from: ${url}`);
+        try {
+            const response = await axiosClient.get(url);
+            console.log('Doctors response (raw):', response);
+            const data = Array.isArray(response) ? response : (response.data || []);
+            return {
+                data: data,
+                message: data.length > 0 ? 'Danh sách bác sĩ đã được tải' : 'Không có bác sĩ nào'
+            };
+        } catch (error) {
+            console.error('Error fetching doctors:', error.response ? error.response.data : error.message);
+            return {
+                data: [],
+                message: 'Lỗi khi lấy danh sách bác sĩ: ' + (error.message || 'Không xác định')
+            };
+        }
     }
-  }
-    
-    
 
     async getDoctorById(doctorId) {
         const url = `/api/doctors/${doctorId}`;
@@ -49,8 +46,22 @@ class DoctorService {async getAllDoctors() {
             return [];
         }
     }
+
+    async getAllDoctorsBySpecialty(specialtyId) {
+        const url = `/api/doctors/specialty/${specialtyId}/all`;
+        console.log(`Fetching all doctors for specialty ${specialtyId} from: ${url}`);
+        try {
+            const response = await axiosClient.get(url);
+            console.log('All doctors response:', response);
+            return response;
+        } catch (error) {
+            console.error('Error fetching all doctors:', error);
+            return { data: [] }; // Trả về đối tượng với data rỗng để xử lý đồng nhất
+        }
+    }
+
     async getScheduleByDoctorId(doctorId) {
-        const url = '/api/doctor-availability/doctor/${doctorId}';
+        const url = `/api/doctor-availability/doctor/${doctorId}`;
         try {
             const response = await axiosClient.get(url);
             return response.data;
@@ -59,6 +70,7 @@ class DoctorService {async getAllDoctors() {
             throw error;
         }
     }
+
     async getAppointmentsByDoctorId(doctorId) {
         const url = `/api/appointments/doctor/${doctorId}`;
         try {
@@ -69,7 +81,7 @@ class DoctorService {async getAllDoctors() {
             return [];
         }
     }
-    
+
     async searchDoctors(criteria) {
         const url = '/api/doctors/search';
         const config = {
@@ -93,26 +105,26 @@ class DoctorService {async getAllDoctors() {
     }
 
     async getCertificatesByDoctorId(doctorId) {
-    const url = `/api/doctors/${doctorId}/certificates`; // Cần tạo API này
-    try {
-      const response = await axiosClient.get(url);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching certificates:", error);
-      return [];
+        const url = `/api/doctors/${doctorId}/certificates`;
+        try {
+            const response = await axiosClient.get(url);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching certificates:", error);
+            return [];
+        }
     }
-  }
 
-  async getFeedbackByDoctorId(doctorId) {
-    const url = `/api/feedback/doctor/${doctorId}`; // Cần tạo API này
-    try {
-      const response = await axiosClient.get(url);
-      return response.data;
-    } catch (error) {
-      console.error("Error fetching feedback:", error);
-      return [];
+    async getFeedbackByDoctorId(doctorId) {
+        const url = `/api/feedback/doctor/${doctorId}`;
+        try {
+            const response = await axiosClient.get(url);
+            return response.data;
+        } catch (error) {
+            console.error("Error fetching feedback:", error);
+            return [];
+        }
     }
-  }
 }
 
 export default new DoctorService();

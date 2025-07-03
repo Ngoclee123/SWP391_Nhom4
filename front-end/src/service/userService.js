@@ -8,7 +8,7 @@ class UserService {
         localStorage.setItem('accountId', accountId);
         // Lưu vai trò từ token
         const decodedToken = jwtDecode(token);
-        const role = decodedToken.role || 'USER'; // Giả sử role được nhúng trong token
+        const role = decodedToken.role || 'USER'; 
         localStorage.setItem('role', role);
     }
 

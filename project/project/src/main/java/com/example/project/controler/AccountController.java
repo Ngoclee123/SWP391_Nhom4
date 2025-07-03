@@ -99,4 +99,13 @@ public class AccountController {
 
     }
 
+    @GetMapping("/username/{username}")
+    public ResponseEntity<Account> getAccountByUsername(@PathVariable String username) {
+        Account account = accountService.findByUsername(username);
+        if (account == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(account);
+    }
+
 }

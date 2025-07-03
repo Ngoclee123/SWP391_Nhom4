@@ -155,7 +155,50 @@ public class DoctorService {
         return dto;
     }
 
+    public List<DoctorSearchDTO> getAvailableDoctorsBySpecialty(Integer specialtyId) {
+        logger.info("Fetching available doctors for specialtyId: {}", specialtyId);
+        List<Doctor> doctors = doctorRepository.findAll(
+                DoctorSpecification.searchDoctors(specialtyId, null, "Available", null, Instant.now())
+        );
+        return doctors.stream().map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+            doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+                dto.setAvailabilityStatus(da.getStatus());
+                dto.setStartTime(da.getStartTime().toString());
+                dto.setEndTime(da.getEndTime().toString());
+            });
+            return dto;
+        }).collect(Collectors.toList());
+    }
 
+    public List<DoctorSearchDTO> getAllDoctorsBySpecialty(Integer specialtyId) {
+        logger.info("Fetching all doctors for specialtyId: {}", specialtyId);
+        List<Doctor> doctors = doctorRepository.findBySpecialtyId(specialtyId);
+        if (doctors == null) {
+            return List.of();
+        }
+        return doctors.stream().map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setUsername(doctor.getAccount() != null ? doctor.getAccount().getUsername() : null); // Lấy username từ Account
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+            return dto;
+        }).collect(Collectors.toList());
+    }
 }
 
 

@@ -75,12 +75,13 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/login/**", "/api/register", "/oauth2/authorization/google",
                                 "/login/oauth2/code/*", "/login", "/oauth2/redirect",
-                                "/api/vnpay/**", "/api/doctors", "/api/doctors/**", "/api/reset-password", "/api/forgot-password","/ws/**").permitAll()
+                                "/api/vnpay/**", "/api/doctors", "/api/doctors/**", "/api/reset-password",
+                                "/api/forgot-password", "/ws/**", "/api/doctors/specialties",
+                                "/api/doctors/specialty/**", "/api/accounts/username/**", "/api/messages/history/**").permitAll()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
-                        // phan theo vai tro 
                         .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")
                         .requestMatchers("/api/vaccine-appointments/confirm/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/vaccine-appointments/availability/**").permitAll() // Đồng bộ với controller
+                        .requestMatchers("/api/vaccine-appointments/availability/**").permitAll()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parent/**").hasRole("USER")
                         .requestMatchers("/api/doctor/**").hasRole("DOCTOR")

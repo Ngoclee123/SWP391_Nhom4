@@ -5,6 +5,7 @@ import java.util.List;
 public class DoctorSearchDTO {
     private Integer id;
     private String fullName;
+    private String username; // Thêm trường username
     private String bio;
     private String phoneNumber;
     private String imgs;
@@ -17,13 +18,15 @@ public class DoctorSearchDTO {
     private String education;
     private String hospital;
 
-
     // Getters và Setters
     public Integer getId() { return id; }
     public void setId(Integer id) { this.id = id; }
 
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
+
+    public String getUsername() { return username; } // Getter cho username
+    public void setUsername(String username) { this.username = username; } // Setter cho username
 
     public String getBio() { return bio; }
     public void setBio(String bio) { this.bio = bio; }
@@ -57,6 +60,4 @@ public class DoctorSearchDTO {
 
     public String getHospital() { return hospital; }
     public void setHospital(String hospital) { this.hospital = hospital; }
-
-
 }

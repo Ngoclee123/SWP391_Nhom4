@@ -23,6 +23,6 @@ public interface DoctorRepository extends JpaRepository<Doctor, Integer>, JpaSpe
     Optional<Doctor> findByIdWithAvailabilities(@Param("id") Integer id, @Param("searchTime") Instant searchTime);
 
 
-
+    List<Doctor> findBySpecialtyId(Integer specialtyId);
     Optional<Doctor> findByAccountId(Integer accountId);
 }

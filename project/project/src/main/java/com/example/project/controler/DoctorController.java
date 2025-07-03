@@ -14,7 +14,9 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/doctors")
@@ -42,8 +44,8 @@ public class DoctorController {
 
     @GetMapping("/specialties")
     public ResponseEntity<List<Specialty>> getAllSpecialties() {
-        logger.info("Fetching all specialties");
-        return ResponseEntity.ok(doctorService.getAllSpecialties());
+        List<Specialty> specialties = doctorService.getAllSpecialties();
+        return ResponseEntity.ok(specialties);
     }
 
     @GetMapping("/search")
@@ -66,4 +68,26 @@ public class DoctorController {
         return ResponseEntity.ok(doctor);
     }
 
+    @GetMapping("/specialty/{specialtyId}/available")
+    public ResponseEntity<List<DoctorSearchDTO>> getAvailableDoctorsBySpecialty(@PathVariable Integer specialtyId) {
+        List<DoctorSearchDTO> doctors = doctorService.getAvailableDoctorsBySpecialty(specialtyId);
+        if (doctors.isEmpty()) {
+            return ResponseEntity.noContent().build();
+        }
+        return ResponseEntity.ok(doctors);
+    }
+
+    @GetMapping("/specialty/{specialtyId}/all")
+    public ResponseEntity<Map<String, Object>> getAllDoctorsBySpecialty(@PathVariable Integer specialtyId) {
+        List<DoctorSearchDTO> doctors = doctorService.getAllDoctorsBySpecialty(specialtyId);
+        Map<String, Object> response = new HashMap<>();
+        if (doctors.isEmpty()) {
+            response.put("data", List.of());
+            response.put("message", "Không có bác sĩ nào trong chuyên khoa này.");
+            return ResponseEntity.ok(response); // Trả về 200 với body rỗng và thông báo
+        }
+        response.put("data", doctors);
+        response.put("message", "Danh sách bác sĩ đã được tải.");
+        return ResponseEntity.ok(response);
+    }
 }
