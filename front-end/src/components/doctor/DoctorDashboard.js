@@ -15,6 +15,7 @@ const DoctorDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
     const [doctorId, setDoctorId] = useState(null);
     const [userName, setUserName] = useState('Doctor User');
+    const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [stats, setStats] = useState({
         totalPatients: 0,
         todaysAppointments: 0,
@@ -121,7 +122,6 @@ const DoctorDashboard = () => {
             await fetchMessageHistory(UserService.getAccountId(), receiverId);
         } catch (error) {
             console.error('Error fetching receiver ID:', error);
-            setFetchError('Không thể tải thông tin người nhận');
         }
     };
 
@@ -176,115 +176,193 @@ const DoctorDashboard = () => {
 
     // Loading and error states
     if (loading) return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 flex items-center justify-center">
+        <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center">
             <div className="text-center">
-                <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mb-4"></div>
-                <p className="text-blue-600 font-medium">Đang tải...</p>
+                <div className="relative">
+                    <div className="w-24 h-24 border-4 border-indigo-200 rounded-full animate-spin"></div>
+                    <div className="absolute inset-0 w-24 h-24 border-4 border-indigo-600 rounded-full animate-spin border-t-transparent"></div>
+                </div>
+                <p className="mt-6 text-indigo-700 font-semibold text-lg">Đang tải bảng điều khiển...</p>
             </div>
         </div>
     );
 
     if (error) return (
-        <div className="min-h-screen bg-gradient-to-br from-red-50 to-pink-50 flex items-center justify-center">
-            <div className="bg-white p-8 rounded-3xl shadow-xl text-center">
-                <div className="text-6xl mb-4">⚠️</div>
+        <div className="min-h-screen bg-gradient-to-br from-red-50 via-white to-pink-50 flex items-center justify-center">
+            <div className="bg-white/80 backdrop-blur-xl p-12 rounded-3xl shadow-2xl border border-red-100 text-center max-w-md">
+                <div className="w-20 h-20 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-10 h-10 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-bold text-red-700 mb-2">Có lỗi xảy ra</h3>
                 <p className="text-red-600 font-medium">{error}</p>
             </div>
         </div>
     );
 
     if (!doctorId) return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 to-blue-50 flex items-center justify-center">
-            <div className="bg-white p-8 rounded-3xl shadow-xl text-center">
-                <div className="text-6xl mb-4">🔍</div>
+        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-blue-50 flex items-center justify-center">
+            <div className="bg-white/80 backdrop-blur-xl p-12 rounded-3xl shadow-2xl border border-gray-100 text-center max-w-md">
+                <div className="w-20 h-20 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <svg className="w-10 h-10 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                    </svg>
+                </div>
+                <h3 className="text-xl font-bold text-gray-700 mb-2">Không tìm thấy</h3>
                 <p className="text-gray-600 font-medium">Không có ID bác sĩ</p>
             </div>
         </div>
     );
 
     const menuItems = [
-        { id: 'overview', label: 'Tổng quan', icon: '📊' },
-        { id: 'appointments', label: 'Lịch hẹn', icon: '📅' },
-        { id: 'schedule', label: 'Lịch làm việc', icon: '⏰' },
-        { id: 'records', label: 'Hồ sơ khám bệnh', icon: '📋' },
-        { id: 'feedback', label: 'Phản hồi', icon: '💬' },
-        { id: 'profile', label: 'Hồ sơ chuyên môn', icon: '👤' },
-        { id: 'messages', label: 'Tin nhắn', icon: '📩' },
+        { id: 'overview', label: 'Tổng quan', icon: '📊', color: 'from-blue-500 to-blue-600' },
+        { id: 'appointments', label: 'Lịch hẹn', icon: '📅', color: 'from-green-500 to-green-600' },
+        { id: 'schedule', label: 'Lịch làm việc', icon: '⏰', color: 'from-purple-500 to-purple-600' },
+        { id: 'records', label: 'Hồ sơ khám bệnh', icon: '📋', color: 'from-orange-500 to-orange-600' },
+        { id: 'feedback', label: 'Phản hồi', icon: '💬', color: 'from-pink-500 to-pink-600' },
+        { id: 'profile', label: 'Hồ sơ chuyên môn', icon: '👤', color: 'from-indigo-500 to-indigo-600' },
+        { id: 'messages', label: 'Tin nhắn', icon: '📩', color: 'from-cyan-500 to-cyan-600' },
     ];
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
             <div className="flex h-screen">
-                {/* Sidebar */}
-                <div className="w-80 bg-white/80 backdrop-blur-xl shadow-2xl">
-                    <div className="p-6">
-                        <div className="flex items-center mb-8">
-                            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mr-3">
-                                <span className="text-white font-bold text-xl">🏥</span>
+                {/* Enhanced Sidebar */}
+                <div className={`${sidebarCollapsed ? 'w-20' : 'w-80'} bg-white/70 backdrop-blur-2xl shadow-2xl border-r border-white/20 transition-all duration-300 ease-in-out`}>
+                    <div className="p-6 h-full flex flex-col">
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-8">
+                            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
+                                <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
+                                    <span className="text-white font-bold text-xl">🏥</span>
+                                </div>
+                                {!sidebarCollapsed && (
+                                    <div className="ml-3">
+                                        <h2 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                            BabyHealthHub
+                                        </h2>
+                                        <p className="text-xs text-gray-500 font-medium">Doctor Dashboard</p>
+                                    </div>
+                                )}
                             </div>
-                            <div>
-                                <h2 className="text-xl font-bold text-blue-600">BabyHealthHub</h2>
-                                <p className="text-xs text-gray-500">Doctor Dashboard</p>
-                            </div>
+                            <button
+                                onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
+                                className="p-2 hover:bg-gray-100 rounded-xl transition-colors"
+                            >
+                                <svg className={`w-5 h-5 text-gray-600 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                                </svg>
+                            </button>
                         </div>
                         
                         {/* Doctor info */}
-                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-2xl mb-6 text-white">
-                            <div className="flex items-center space-x-3">
-                                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
+                        <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-3xl mb-6 text-white shadow-xl">
+                            <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'}`}>
+                                <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
                                     <span className="text-2xl">👨‍⚕️</span>
                                 </div>
-                                <div>
-                                    <p className="font-semibold">{userName}</p>
-                                    <p className="text-xs opacity-80">Bác sĩ chuyên khoa</p>
-                                </div>
+                                {!sidebarCollapsed && (
+                                    <div>
+                                        <p className="font-bold text-lg">{userName}</p>
+                                        <p className="text-sm opacity-90">Bác sĩ chuyên khoa</p>
+                                        <div className="flex items-center mt-1">
+                                            <div className="w-2 h-2 bg-green-400 rounded-full mr-2"></div>
+                                            <span className="text-xs">Đang hoạt động</span>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
                         </div>
                         
                         {/* Navigation */}
-                        <nav className="space-y-2">
+                        <nav className="space-y-2 flex-1">
                             {menuItems.map((item) => (
                                 <button
                                     key={item.id}
                                     onClick={() => setActiveTab(item.id)}
-                                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-2xl font-medium transition-all duration-300 ${
+                                    className={`w-full flex items-center space-x-3 px-4 py-4 rounded-2xl font-medium transition-all duration-300 group ${
                                         activeTab === item.id
-                                            ? 'bg-gradient-to-r from-blue-500 to-purple-600 text-white shadow-lg'
-                                            : 'text-gray-600 hover:bg-gray-100'
+                                            ? `bg-gradient-to-r ${item.color} text-white shadow-lg transform scale-105`
+                                            : 'text-gray-700 hover:bg-gray-100 hover:shadow-md'
                                     }`}
                                 >
-                                    <span className="text-lg">{item.icon}</span>
-                                    <span>{item.label}</span>
+                                    <span className="text-xl">{item.icon}</span>
+                                    {!sidebarCollapsed && <span className="font-semibold">{item.label}</span>}
+                                    {!sidebarCollapsed && activeTab === item.id && (
+                                        <div className="ml-auto">
+                                            <div className="w-2 h-2 bg-white rounded-full"></div>
+                                        </div>
+                                    )}
                                 </button>
                             ))}
                         </nav>
+                        
+                        {/* Quick Actions */}
+                        {!sidebarCollapsed && (
+                            <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200">
+                                <h4 className="font-semibold text-emerald-800 mb-2">Thao tác nhanh</h4>
+                                <div className="space-y-2">
+                                    <button className="w-full text-left text-sm text-emerald-700 hover:text-emerald-900 transition-colors">
+                                        📞 Gọi khẩn cấp
+                                    </button>
+                                    <button className="w-full text-left text-sm text-emerald-700 hover:text-emerald-900 transition-colors">
+                                        📋 Tạo báo cáo
+                                    </button>
+                                </div>
+                            </div>
+                        )}
                     </div>
                 </div>
 
                 {/* Main content */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Header */}
-                    <div className="bg-white/80 backdrop-blur-xl shadow-lg p-6">
+                    {/* Enhanced Header */}
+                    <div className="bg-white/70 backdrop-blur-2xl shadow-lg border-b border-white/20 p-6">
                         <div className="flex justify-between items-center">
                             <div>
-                                <h1 className="text-3xl font-bold text-blue-600">Bảng điều khiển bác sĩ</h1>
-                                <p className="text-gray-600">Quản lý và theo dõi hoạt động</p>
+                                <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+                                    Bảng điều khiển bác sĩ
+                                </h1>
+                                <p className="text-gray-600 mt-1 font-medium">Quản lý và theo dõi hoạt động một cách hiệu quả</p>
                             </div>
                             <div className="flex items-center space-x-4">
+                                {/* Search */}
                                 <div className="relative">
-                                    <button className="p-3 bg-orange-500 text-white rounded-2xl">
-                                        <span className="text-lg">🔔</span>
+                                    <input
+                                        type="text"
+                                        placeholder="Tìm kiếm..."
+                                        className="pl-10 pr-4 py-3 bg-white/50 backdrop-blur-xl border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                    />
+                                    <svg className="absolute left-3 top-3.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                    </svg>
+                                </div>
+                                
+                                {/* Notifications */}
+                                <div className="relative">
+                                    <button className="p-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
+                                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-5-5 5-5h-5l-5 5 5 5z" />
+                                        </svg>
                                     </button>
-                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                                    <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
                                         {messages.filter(msg => msg.type === 'NOTIFICATION').length}
                                     </div>
                                 </div>
-                                <button
-                                    onClick={handleLogout}
-                                    className="px-6 py-3 bg-red-500 text-white rounded-2xl font-medium hover:bg-red-600 transition-all"
-                                >
-                                    Đăng xuất
-                                </button>
+                                
+                                {/* Profile Menu */}
+                                <div className="flex items-center space-x-3">
+                                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
+                                        {userName.charAt(0).toUpperCase()}
+                                    </div>
+                                    <button
+                                        onClick={handleLogout}
+                                        className="px-6 py-3 bg-gradient-to-r from-red-500 to-pink-500 text-white rounded-2xl font-semibold hover:shadow-xl transition-all duration-300 transform hover:scale-105"
+                                    >
+                                        Đăng xuất
+                                    </button>
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -292,52 +370,84 @@ const DoctorDashboard = () => {
                     {/* Content */}
                     <div className="flex-1 overflow-auto p-6">
                         {activeTab === 'overview' && (
-                            <div className="space-y-6">
+                            <div className="space-y-8">
                                 {/* Welcome section */}
-                                <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl">
-                                    <h3 className="text-3xl font-bold text-blue-600 mb-2">Chào mừng trở lại! 👋</h3>
-                                    <p className="text-gray-600">Tổng quan về hoạt động hôm nay</p>
+                                <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h3 className="text-4xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-2">
+                                                Chào mừng trở lại! 👋
+                                            </h3>
+                                            <p className="text-gray-600 text-lg">Tổng quan về hoạt động hôm nay</p>
+                                        </div>
+                                        <div className="text-6xl opacity-20">
+                                            🩺
+                                        </div>
+                                    </div>
                                 </div>
 
-                                {/* Stats grid */}
-                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                    <div className="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="w-16 h-16 bg-blue-500 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                {/* Enhanced Stats grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                                    <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="w-20 h-20 bg-gradient-to-r from-blue-500 to-blue-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-lg">
                                                 👥
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-3xl font-bold">{stats.totalPatients}</p>
-                                                <p className="text-sm text-gray-600">Tổng bệnh nhân</p>
+                                                <p className="text-4xl font-bold text-blue-600">{stats.totalPatients}</p>
+                                                <p className="text-sm text-gray-600 font-medium">Tổng bệnh nhân</p>
                                             </div>
                                         </div>
-                                        <div className="text-green-500 text-sm">↗️ +12% so với tháng trước</div>
+                                        <div className="flex items-center text-emerald-600 font-semibold">
+                                            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                            </svg>
+                                            +12% so với tháng trước
+                                        </div>
                                     </div>
                                     
-                                    <div className="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                    <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-green-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-lg">
                                                 📅
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-3xl font-bold">{stats.todaysAppointments}</p>
-                                                <p className="text-sm text-gray-600">Lịch hẹn hôm nay</p>
+                                                <p className="text-4xl font-bold text-green-600">{stats.todaysAppointments}</p>
+                                                <p className="text-sm text-gray-600 font-medium">Lịch hẹn hôm nay</p>
                                             </div>
                                         </div>
-                                        <div className="text-green-500 text-sm">↗️ +8% so với hôm qua</div>
+                                        <div className="flex items-center text-emerald-600 font-semibold">
+                                            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                            </svg>
+                                            +8% so với hôm qua
+                                        </div>
                                     </div>
                                     
-                                    <div className="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl">
-                                        <div className="flex items-center justify-between mb-4">
-                                            <div className="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center text-white text-2xl">
+                                    <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-lg">
                                                 ✅
                                             </div>
                                             <div className="text-right">
-                                                <p className="text-3xl font-bold">{stats.completedWeek}</p>
-                                                <p className="text-sm text-gray-600">Hoàn thành tuần</p>
+                                                <p className="text-4xl font-bold text-purple-600">{stats.completedWeek}</p>
+                                                <p className="text-sm text-gray-600 font-medium">Hoàn thành tuần</p>
                                             </div>
                                         </div>
-                                        <div className="text-green-500 text-sm">↗️ +15% so với tuần trước</div>
+                                        <div className="flex items-center text-emerald-600 font-semibold">
+                                            <svg className="w-5 h-5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                                            </svg>
+                                            +15% so với tuần trước
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Activity Chart Placeholder */}
+                                <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20">
+                                    <h4 className="text-2xl font-bold text-gray-800 mb-6">Biểu đồ hoạt động</h4>
+                                    <div className="h-64 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center">
+                                        <p className="text-gray-500 text-lg">Biểu đồ thống kê sẽ được hiển thị tại đây</p>
                                     </div>
                                 </div>
                             </div>
@@ -350,79 +460,168 @@ const DoctorDashboard = () => {
                         {activeTab === 'profile' && <Profile doctorId={doctorId} />}
                         
                         {activeTab === 'messages' && (
-                            <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl">
-                                <h4 className="text-2xl font-bold mb-6">Tin nhắn</h4>
-                                <div className="flex h-[500px]">
-                                    {/* Chat list */}
-                                    <div className="w-1/3 border-r pr-4">
-                                        <h5 className="text-lg font-semibold mb-4">Danh sách trò chuyện</h5>
-                                        {[...new Set(messages.map(msg => msg.sender !== userName ? msg.sender : msg.receiver))].map((user, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() => handleSelectChat(user)}
-                                                className={`w-full text-left p-3 rounded-lg mb-2 transition-all ${
-                                                    selectedChat === user ? 'bg-blue-100' : 'bg-gray-100'
-                                                } hover:bg-blue-200`}
-                                            >
-                                                {user}
+                            <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20">
+                                <h4 className="text-3xl font-bold text-gray-800 mb-8">Tin nhắn</h4>
+                                <div className="flex h-[600px] bg-gray-50 rounded-2xl overflow-hidden">
+                                    {/* Enhanced Chat list */}
+                                    <div className="w-1/3 bg-white border-r border-gray-200 p-6">
+                                        <div className="flex items-center justify-between mb-6">
+                                            <h5 className="text-xl font-bold text-gray-800">Cuộc trò chuyện</h5>
+                                            <button className="p-2 bg-blue-500 text-white rounded-xl hover:bg-blue-600 transition-colors">
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                                </svg>
                                             </button>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Chat area */}
-                                    <div className="w-2/3 pl-4 flex flex-col">
-                                        <h5 className="text-lg font-semibold mb-4">
-                                            Trò chuyện với {selectedChat}
-                                        </h5>
-                                        <div className="flex-1 overflow-y-auto space-y-3">
-                                            {messages
-                                                .filter(msg => 
-                                                    (msg.sender === selectedChat && msg.receiver === userName) || 
-                                                    (msg.sender === userName && msg.receiver === selectedChat)
-                                                )
-                                                .map((msg, index) => (
-                                                    <div key={index} className="flex justify-end">
-                                                        <div className={`rounded-lg p-3 max-w-xs ${
-                                                            msg.sender === userName 
-                                                                ? 'bg-blue-500 text-white' 
-                                                                : 'bg-green-500 text-white'
+                                        </div>
+                                        <div className="space-y-3">
+                                            {[...new Set(messages.map(msg => msg.sender !== userName ? msg.sender : msg.receiver))].map((user, index) => (
+                                                <button
+                                                    key={index}
+                                                    onClick={() => handleSelectChat(user)}
+                                                    className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
+                                                        selectedChat === user 
+                                                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg' 
+                                                            : 'bg-gray-50 hover:bg-gray-100'
+                                                    }`}
+                                                >
+                                                    <div className="flex items-center space-x-3">
+                                                        <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
+                                                            selectedChat === user 
+                                                                ? 'bg-white/20 text-white' 
+                                                                : 'bg-blue-100 text-blue-600'
                                                         }`}>
-                                                            <div className="flex items-center space-x-2 mb-1">
-                                                                <span className="text-xs font-medium">
-                                                                    {msg.sender === userName ? '👨‍⚕️ Bác sĩ' : '👤 Người dùng'}
-                                                                </span>
-                                                                <span className="text-xs opacity-70">
-                                                                    {msg.sender}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm">{msg.content}</p>
-                                                            <p className="text-xs mt-1 opacity-70">
-                                                                {new Date(msg.sentAt).toLocaleTimeString('vi-VN')}
+                                                            {user.charAt(0).toUpperCase()}
+                                                        </div>
+                                                        <div>
+                                                            <p className="font-semibold">{user}</p>
+                                                            <p className={`text-sm ${selectedChat === user ? 'text-white/80' : 'text-gray-500'}`}>
+                                                                Nhấn để xem tin nhắn
                                                             </p>
                                                         </div>
                                                     </div>
-                                                ))}
-                                            {fetchError && <p className="text-red-500 text-sm">{fetchError}</p>}
-                                        </div>
-                                        
-                                        {/* Message input */}
-                                        {selectedChat && (
-                                            <form onSubmit={sendMessage} className="flex gap-3 mt-4">
-                                                <input
-                                                    type="text"
-                                                    value={messageInput}
-                                                    onChange={(e) => setMessageInput(e.target.value)}
-                                                    placeholder="Nhập tin nhắn..."
-                                                    className="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={!messageInput.trim()}
-                                                    className="bg-blue-500 text-white px-6 py-3 rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Gửi
                                                 </button>
-                                            </form>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    
+                                    {/* Enhanced Chat area */}
+                                    <div className="w-2/3 flex flex-col">
+                                        {selectedChat ? (
+                                            <>
+                                                {/* Chat header */}
+                                                <div className="p-6 bg-white border-b border-gray-200">
+                                                    <div className="flex items-center justify-between">
+                                                        <div className="flex items-center space-x-3">
+                                                            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                                                                {selectedChat.charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <h5 className="text-xl font-bold text-gray-800">{selectedChat}</h5>
+                                                                <p className="text-sm text-gray-500">Đang hoạt động</p>
+                                                            </div>
+                                                        </div>
+                                                        <div className="flex items-center space-x-2">
+                                                            <button className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+                                                                </svg>
+                                                            </button>
+                                                            <button className="p-2 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors">
+                                                                <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                </svg>
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                
+                                                {/* Messages */}
+                                                <div className="flex-1 overflow-y-auto p-6 space-y-4">
+                                                    {messages
+                                                        .filter(msg => 
+                                                            (msg.sender === selectedChat && msg.receiver === userName) || 
+                                                            (msg.sender === userName && msg.receiver === selectedChat)
+                                                        )
+                                                        .map((msg, index) => (
+                                                            <div key={index} className={`flex ${msg.sender === userName ? 'justify-end' : 'justify-start'}`}>
+                                                                <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg ${
+                                                                    msg.sender === userName 
+                                                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white' 
+                                                                        : 'bg-white text-gray-800 border border-gray-200'
+                                                                }`}>
+                                                                    <div className="flex items-center space-x-2 mb-2">
+                                                                        <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold ${
+                                                                            msg.sender === userName ? 'bg-white/20 text-white' : 'bg-blue-100 text-blue-600'
+                                                                        }`}>
+                                                                            {msg.sender === userName ? '👨‍⚕️' : '👤'}
+                                                                        </div>
+                                                                        <span className={`text-xs font-medium ${
+                                                                            msg.sender === userName ? 'text-white/80' : 'text-gray-500'
+                                                                        }`}>
+                                                                            {msg.sender === userName ? 'Bác sĩ' : msg.sender}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="text-sm leading-relaxed">{msg.content}</p>
+                                                                    <p className={`text-xs mt-2 ${
+                                                                        msg.sender === userName ? 'text-white/70' : 'text-gray-400'
+                                                                    }`}>
+                                                                        {new Date(msg.sentAt).toLocaleTimeString('vi-VN', {
+                                                                            hour: '2-digit',
+                                                                            minute: '2-digit'
+                                                                        })}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        ))}
+                                                    {fetchError && (
+                                                        <div className="text-center p-4">
+                                                            <p className="text-red-500 text-sm font-medium">{fetchError}</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                                
+                                                {/* Enhanced Message input */}
+                                                <div className="p-6 bg-white border-t border-gray-200">
+                                                    <form onSubmit={sendMessage} className="flex items-center space-x-4">
+                                                        <button
+                                                            type="button"
+                                                            className="p-3 bg-gray-100 rounded-xl hover:bg-gray-200 transition-colors"
+                                                        >
+                                                            <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                            </svg>
+                                                        </button>
+                                                        <input
+                                                            type="text"
+                                                            value={messageInput}
+                                                            onChange={(e) => setMessageInput(e.target.value)}
+                                                            placeholder="Nhập tin nhắn..."
+                                                            className="flex-1 p-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+                                                        />
+                                                        <button
+                                                            type="submit"
+                                                            disabled={!messageInput.trim()}
+                                                            className="p-4 bg-gradient-to-r from-blue-500 to-purple-500 text-white rounded-2xl hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-300 transform hover:scale-105"
+                                                        >
+                                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                                            </svg>
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </>
+                                        ) : (
+                                            <div className="flex-1 flex items-center justify-center">
+                                                <div className="text-center">
+                                                    <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                                                        <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                        </svg>
+                                                    </div>
+                                                    <h3 className="text-xl font-bold text-gray-700 mb-2">Chọn cuộc trò chuyện</h3>
+                                                    <p className="text-gray-500">Chọn một cuộc trò chuyện để bắt đầu nhắn tin</p>
+                                                </div>
+                                            </div>
                                         )}
                                     </div>
                                 </div>

@@ -12,7 +12,6 @@ const ChatButton = () => {
     const [messageInput, setMessageInput] = useState('');
     const [stompClient, setStompClient] = useState(null);
     const [connecting, setConnecting] = useState(false);
-    const [isTyping, setIsTyping] = useState(false);
     const [specialties, setSpecialties] = useState([]);
     const [selectedSpecialty, setSelectedSpecialty] = useState(null);
     const [availableDoctors, setAvailableDoctors] = useState([]);
@@ -20,26 +19,23 @@ const ChatButton = () => {
     const [selectedDoctorInfo, setSelectedDoctorInfo] = useState(null);
     const [errorMessage, setErrorMessage] = useState('');
     const [messageHistory, setMessageHistory] = useState({});
+    const [isTyping, setIsTyping] = useState(false);
+    const [onlineStatus, setOnlineStatus] = useState(true);
     const messageAreaRef = useRef(null);
-    const typingTimeoutRef = useRef(null);
 
     const colors = [
-        '#4F46E5', '#06B6D4', '#10B981', '#F59E0B',
-        '#EF4444', '#8B5CF6', '#F97316', '#84CC16'
+        '#6366f1', '#8b5cf6', '#ec4899', '#ef4444', '#f97316', 
+        '#f59e0b', '#84cc16', '#22c55e', '#10b981', '#06b6d4'
     ];
 
-    // Hàm kiểm tra và thêm tin nhắn, tránh trùng lặp
     const addMessage = (message, doctorUsername) => {
         const targetDoctor = doctorUsername || selectedDoctor;
         if (!targetDoctor) return;
 
         setMessageHistory(prev => {
             const doctorMessages = prev[targetDoctor] || [];
-            
-            // Kiểm tra trùng lặp dựa trên nội dung, thời gian và người gửi
             const isDuplicate = doctorMessages.some(msg => 
-                msg.content === message.content && 
-                msg.sender === message.sender && 
+                msg.content === message.content && msg.sender === message.sender && 
                 Math.abs(new Date(msg.sentAt) - new Date(message.sentAt)) < 1000
             );
             
@@ -56,7 +52,6 @@ const ChatButton = () => {
         });
     };
 
-    // Cập nhật messages hiện tại dựa trên selectedDoctor
     useEffect(() => {
         if (selectedDoctor && messageHistory[selectedDoctor]) {
             setMessages(messageHistory[selectedDoctor]);
@@ -65,24 +60,16 @@ const ChatButton = () => {
         }
     }, [selectedDoctor, messageHistory]);
 
-    // Lấy lịch sử tin nhắn
     const fetchMessageHistory = async (senderId, receiverId, doctorUsername) => {
         try {
             const token = UserService.getToken();
-            if (!token) {
-                setErrorMessage('Vui lòng đăng nhập để sử dụng chat.');
-                return;
-            }
+            if (!token) return;
 
-            console.log('Fetching message history:', { senderId, receiverId, doctorUsername });
             const response = await axiosClient.get(`/api/messages/history/${senderId}/${receiverId}`, {
                 headers: { Authorization: `Bearer ${token}` }
             });
             
             const historyMessages = response.data || [];
-            console.log('Message history loaded:', historyMessages.length, 'messages');
-            
-            // Lưu lịch sử tin nhắn vào state
             setMessageHistory(prev => ({
                 ...prev,
                 [doctorUsername]: historyMessages.map(msg => ({
@@ -91,27 +78,14 @@ const ChatButton = () => {
                     sentAt: msg.sentAt || new Date().toISOString()
                 }))
             }));
-            
-            setErrorMessage('');
         } catch (error) {
             console.error('Error fetching message history:', error);
-            if (error.response?.status === 401) {
-                setErrorMessage('Lỗi xác thực: Vui lòng đăng nhập lại.');
-                // Có thể redirect tới trang login
-            } else {
-                setErrorMessage('Lỗi khi tải lịch sử tin nhắn.');
-            }
         }
     };
 
-    // Kết nối WebSocket
     const connect = (doctorUsername) => {
-        if (!UserService.isLoggedIn()) {
-            setErrorMessage('Vui lòng đăng nhập để sử dụng chat.');
-            return;
-        }
+        if (!UserService.isLoggedIn()) return;
 
-        // Đóng kết nối cũ nếu có
         if (stompClient) {
             stompClient.deactivate();
             setStompClient(null);
@@ -123,53 +97,24 @@ const ChatButton = () => {
             accountId: UserService.getAccountId()
         };
 
-        if (!user.username) {
-            setErrorMessage('Không thể lấy thông tin người dùng.');
-            return;
-        }
-
         setUsername(user.username);
         setConnecting(true);
-        setErrorMessage('');
 
         const socket = new SockJS('http://localhost:8080/ws');
         const client = new Client({
             webSocketFactory: () => socket,
-            connectHeaders: {
-                Authorization: `Bearer ${UserService.getToken()}`,
-            },
-            debug: (str) => console.log('WebSocket Debug:', str),
+            connectHeaders: { Authorization: `Bearer ${UserService.getToken()}` },
             onConnect: () => {
-                console.log('Connected to WebSocket for doctor:', doctorUsername);
                 setConnecting(false);
                 setStompClient(client);
+                setOnlineStatus(true);
                 
-                // Subscribe to personal message queue
                 client.subscribe(`/user/${user.username}/queue/messages`, (payload) => {
-                    try {
-                        const message = JSON.parse(payload.body);
-                        console.log('Received message:', message);
-                        
-                        // Xác định bác sĩ tương ứng với tin nhắn
-                        const messageDoctorUsername = message.sender === user.username ? message.receiver : message.sender;
-                        addMessage(message, messageDoctorUsername);
-                    } catch (error) {
-                        console.error('Error parsing message:', error);
-                    }
+                    const message = JSON.parse(payload.body);
+                    const messageDoctorUsername = message.sender === user.username ? message.receiver : message.sender;
+                    addMessage(message, messageDoctorUsername);
                 });
 
-                // Subscribe to notifications
-                client.subscribe(`/user/${user.username}/queue/notifications`, (payload) => {
-                    try {
-                        const notification = JSON.parse(payload.body);
-                        console.log('Received notification:', notification);
-                        // Có thể xử lý notification riêng biệt
-                    } catch (error) {
-                        console.error('Error parsing notification:', error);
-                    }
-                });
-
-                // Send join message
                 client.publish({
                     destination: '/app/chat.sendPrivateMessage',
                     body: JSON.stringify({ 
@@ -182,102 +127,57 @@ const ChatButton = () => {
                 });
             },
             onStompError: (error) => {
-                console.error('WebSocket connection error:', error);
+                console.error('WebSocket error:', error);
                 setConnecting(false);
-                setErrorMessage('Không thể kết nối đến server chat. Vui lòng kiểm tra kết nối mạng và thử lại!');
-            },
-            onDisconnect: () => {
-                console.log('Disconnected from WebSocket');
-                setStompClient(null);
-                setConnecting(false);
+                setOnlineStatus(false);
+                setErrorMessage('Không thể kết nối chat');
             }
         });
 
-        try {
-            client.activate();
-        } catch (error) {
-            console.error('Error activating WebSocket client:', error);
-            setConnecting(false);
-            setErrorMessage('Lỗi khi kích hoạt kết nối WebSocket.');
-        }
+        client.activate();
     };
 
-    // Lấy danh sách chuyên khoa
-    const fetchSpecialties = async () => {
-        try {
-            setErrorMessage('');
-            const response = await DoctorService.getAllSpecialties();
-            console.log('Specialties response:', response);
-            
-            if (response && Array.isArray(response) && response.length > 0) {
-                setSpecialties(response);
-            } else {
-                setSpecialties([]);
-                setErrorMessage('Không có chuyên khoa nào để hiển thị.');
-            }
-        } catch (error) {
-            console.error('Error fetching specialties:', error);
-            setSpecialties([]);
-            setErrorMessage('Lỗi khi tải danh sách chuyên khoa.');
+    const disconnect = () => {
+        if (stompClient) {
+            stompClient.deactivate();
+            setStompClient(null);
         }
-    };
-
-    // Chọn chuyên khoa và lấy danh sách bác sĩ
-    const handleSelectSpecialty = async (specialtyId) => {
-        setSelectedSpecialty(specialtyId);
         setSelectedDoctor(null);
         setSelectedDoctorInfo(null);
         setMessages([]);
-        setErrorMessage('');
-        
+        setOnlineStatus(false);
+    };
+
+    const fetchSpecialties = async () => {
         try {
-            const response = await DoctorService.getAllDoctorsBySpecialty(specialtyId);
-            console.log('Doctors response:', response);
-            
-            if (response && response.data && Array.isArray(response.data)) {
-                setAvailableDoctors(response.data);
-                if (response.data.length === 0) {
-                    setErrorMessage('Không có bác sĩ nào trong chuyên khoa này.');
-                }
-            } else {
-                setAvailableDoctors([]);
-                setErrorMessage('Không có bác sĩ nào trong chuyên khoa này.');
-            }
+            const response = await DoctorService.getAllSpecialties();
+            setSpecialties(response || []);
         } catch (error) {
-            console.error('Error fetching doctors:', error);
-            setErrorMessage(error.response?.status === 401 ? 'Lỗi xác thực: Vui lòng đăng nhập lại.' : 'Lỗi khi tải danh sách bác sĩ.');
-            setAvailableDoctors([]);
+            console.error('Error fetching specialties:', error);
         }
     };
 
-    // Chọn bác sĩ
+    const handleSelectSpecialty = async (specialtyId) => {
+        setSelectedSpecialty(specialtyId);
+        setSelectedDoctor(null);
+        try {
+            const response = await DoctorService.getAllDoctorsBySpecialty(specialtyId);
+            setAvailableDoctors(response?.data || []);
+        } catch (error) {
+            console.error('Error fetching doctors:', error);
+        }
+    };
+
     const handleSelectDoctor = async (doctor) => {
         setSelectedDoctor(doctor.username);
         setSelectedDoctorInfo(doctor);
-        setMessages([]);
-        setErrorMessage('');
-        
-        try {
-            // Lấy lịch sử tin nhắn
-            await fetchMessageHistory(UserService.getAccountId(), doctor.id, doctor.username);
-            
-            // Kết nối WebSocket
-            connect(doctor.username);
-        } catch (error) {
-            console.error('Error selecting doctor:', error);
-            setErrorMessage('Lỗi khi chọn bác sĩ.');
-        }
+        await fetchMessageHistory(UserService.getAccountId(), doctor.id, doctor.username);
+        connect(doctor.username);
     };
 
-    // Gửi tin nhắn
     const sendMessage = (e) => {
         e.preventDefault();
-        if (!messageInput.trim()) return;
-        
-        if (!stompClient || !selectedDoctor) {
-            setErrorMessage('Chưa kết nối được tới server hoặc chưa chọn bác sĩ.');
-            return;
-        }
+        if (!messageInput.trim() || !stompClient || !selectedDoctor) return;
 
         const chatMessage = {
             sender: username,
@@ -287,24 +187,16 @@ const ChatButton = () => {
             sentAt: new Date().toISOString()
         };
 
-        try {
-            stompClient.publish({
-                destination: '/app/chat.sendPrivateMessage',
-                body: JSON.stringify(chatMessage)
-            });
-            
-            // Thêm tin nhắn vào UI ngay lập tức
-            addMessage(chatMessage, selectedDoctor);
-            setMessageInput('');
-        } catch (error) {
-            console.error('Error sending message:', error);
-            setErrorMessage('Lỗi khi gửi tin nhắn.');
-        }
+        stompClient.publish({
+            destination: '/app/chat.sendPrivateMessage',
+            body: JSON.stringify(chatMessage)
+        });
+        
+        addMessage(chatMessage, selectedDoctor);
+        setMessageInput('');
     };
 
-    // Tạo màu avatar
     const getAvatarColor = (sender) => {
-        if (!sender) return colors[0];
         let hash = 0;
         for (let i = 0; i < sender.length; i++) {
             hash = 31 * hash + sender.charCodeAt(i);
@@ -312,269 +204,317 @@ const ChatButton = () => {
         return colors[Math.abs(hash % colors.length)];
     };
 
-    // Xử lý nhập liệu
-    const handleInputChange = (e) => {
-        setMessageInput(e.target.value);
+    const formatTime = (timestamp) => {
+        const date = new Date(timestamp);
+        const now = new Date();
+        const diffInMinutes = Math.floor((now - date) / 60000);
         
-        // Xử lý typing indicator
-        setIsTyping(true);
-        if (typingTimeoutRef.current) {
-            clearTimeout(typingTimeoutRef.current);
-        }
-        typingTimeoutRef.current = setTimeout(() => setIsTyping(false), 1000);
+        if (diffInMinutes < 1) return 'Vừa xong';
+        if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+        if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
+        
+        return date.toLocaleDateString('vi-VN', { 
+            day: '2-digit', 
+            month: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
     };
 
-    // Cuộn xuống cuối khu vực tin nhắn
     useEffect(() => {
         if (messageAreaRef.current) {
             messageAreaRef.current.scrollTop = messageAreaRef.current.scrollHeight;
         }
     }, [messages]);
 
-    // Xử lý mở/đóng chat
     useEffect(() => {
         if (isChatOpen && UserService.isLoggedIn()) {
-            setSelectedSpecialty(null);
-            setSelectedDoctor(null);
-            setSelectedDoctorInfo(null);
-            setMessages([]);
-            setMessageHistory({});
             fetchSpecialties();
         }
-        
-        // Cleanup khi đóng chat
-        return () => {
-            if (!isChatOpen && stompClient) {
-                stompClient.deactivate();
-                setStompClient(null);
-            }
-        };
     }, [isChatOpen]);
 
-    // Cleanup khi component unmount
-    useEffect(() => {
-        return () => {
-            if (stompClient) {
-                stompClient.deactivate();
-            }
-            if (typingTimeoutRef.current) {
-                clearTimeout(typingTimeoutRef.current);
-            }
-        };
-    }, []);
-
-    // Tính toán số tin nhắn chưa đọc
-    const unreadCount = Object.values(messageHistory).flat()
-        .filter(msg => msg.receiver === username && msg.type === 'CHAT').length;
-
-    if (!UserService.isLoggedIn()) {
-        return null;
-    }
+    if (!UserService.isLoggedIn()) return null;
 
     return (
         <div className="fixed bottom-6 right-6 z-50">
+            {/* Chat Button */}
             <button
-                className={`relative bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 rounded-full shadow-xl hover:shadow-2xl hover:scale-110 transform transition-all duration-300 ${isChatOpen ? 'rotate-180' : ''}`}
+                className={`relative bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white p-4 rounded-full shadow-2xl hover:shadow-blue-500/25 hover:scale-110 transform transition-all duration-300 group ${
+                    isChatOpen ? 'rotate-45' : ''
+                }`}
                 onClick={() => setIsChatOpen(!isChatOpen)}
             >
+                <div className="absolute inset-0 bg-gradient-to-r from-blue-400 to-blue-600 rounded-full blur opacity-30 group-hover:opacity-50 transition-opacity duration-300"></div>
                 <div className="relative">
-                    <svg 
-                        className={`w-6 h-6 transition-opacity duration-300 ${isChatOpen ? 'opacity-0' : 'opacity-100'}`} 
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                              d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 11.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-                    </svg>
-                    <svg 
-                        className={`w-6 h-6 absolute top-0 left-0 transition-opacity duration-300 ${isChatOpen ? 'opacity-100' : 'opacity-0'}`}
-                        fill="none" stroke="currentColor" viewBox="0 0 24 24"
-                    >
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    {isChatOpen ? (
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    ) : (
+                        <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                                  d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 11.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                        </svg>
+                    )}
                 </div>
-                {unreadCount > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-6 w-6 flex items-center justify-center animate-pulse">
-                        {unreadCount > 99 ? '99+' : unreadCount}
-                    </span>
-                )}
+                
+                {/* Notification Badge */}
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 rounded-full flex items-center justify-center">
+                    <span className="text-xs font-bold text-white">!</span>
+                </div>
             </button>
 
+            {/* Chat Window */}
             {isChatOpen && (
-                <div className="w-80 sm:w-96 h-[550px] bg-white rounded-2xl shadow-2xl flex flex-col absolute bottom-20 right-0 overflow-hidden border border-gray-100 animate-in slide-in-from-bottom-5 duration-300">
+                <div className="w-96 h-[600px] bg-white rounded-3xl shadow-2xl border border-gray-100 flex flex-col absolute bottom-20 right-0 overflow-hidden animate-in slide-in-from-bottom-5 duration-300">
                     {/* Header */}
-                    <div className="bg-gradient-to-r from-blue-500 to-blue-600 text-white p-4 flex justify-between items-center relative">
-                        <div className="flex items-center space-x-3">
-                            <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center">
-                                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                                    <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.431 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
-                                </svg>
+                    <div className="bg-gradient-to-r from-blue-500 via-blue-600 to-blue-700 text-white p-5 relative overflow-hidden">
+                        <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-transparent"></div>
+                        <div className="relative flex justify-between items-center">
+                            <div className="flex items-center space-x-3">
+                                <div className="relative">
+                                    <div className="w-12 h-12 bg-white/20 backdrop-blur-sm rounded-full flex items-center justify-center border border-white/30">
+                                        {selectedDoctorInfo ? (
+                                            <span className="text-lg font-semibold">
+                                                {selectedDoctorInfo.fullName.charAt(0).toUpperCase()}
+                                            </span>
+                                        ) : (
+                                            <svg className="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+                                                <path fillRule="evenodd" d="M18 10c0 3.866-3.582 7-8 7a8.841 8.841 0 01-4.083-.98L2 17l1.338-3.123C2.493 12.767 2 11.431 2 10c0-3.866 3.582-7 8-7s8 3.134 8 7zM7 9H5v2h2V9zm8 0h-2v2h2V9zM9 9h2v2H9V9z" clipRule="evenodd" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    {selectedDoctorInfo && (
+                                        <div className={`absolute -bottom-1 -right-1 w-4 h-4 rounded-full border-2 border-white ${
+                                            onlineStatus ? 'bg-green-400' : 'bg-gray-400'
+                                        }`}></div>
+                                    )}
+                                </div>
+                                <div>
+                                    <h2 className="text-xl font-bold">
+                                        {selectedDoctorInfo ? `BS. ${selectedDoctorInfo.fullName}` : 'Chat Trực Tuyến'}
+                                    </h2>
+                                    <p className="text-sm text-blue-100 flex items-center">
+                                        {selectedDoctorInfo ? (
+                                            <>
+                                                <span className={`inline-block w-2 h-2 rounded-full mr-2 ${
+                                                    onlineStatus ? 'bg-green-300' : 'bg-gray-300'
+                                                }`}></span>
+                                                {onlineStatus ? 'Đang trực tuyến' : 'Không hoạt động'}
+                                            </>
+                                        ) : (
+                                            'Chọn bác sĩ để bắt đầu'
+                                        )}
+                                    </p>
+                                </div>
                             </div>
-                            <div>
-                                <h2 className="text-lg font-semibold">Chat Trực Tuyến</h2>
-                                <p className="text-sm text-blue-100">
-                                    {selectedDoctorInfo ? `Dr. ${selectedDoctorInfo.fullName}` : 'Baby Health Hub Support'}
-                                </p>
+                            <div className="flex items-center space-x-2">
+                                {selectedDoctor && (
+                                    <button
+                                        onClick={disconnect}
+                                        className="text-white hover:text-red-300 p-2 rounded-full hover:bg-white/10 transition-all duration-200"
+                                        title="Rời khỏi cuộc trò chuyện"
+                                    >
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                                        </svg>
+                                    </button>
+                                )}
+                                <button
+                                    onClick={() => setIsChatOpen(false)}
+                                    className="text-white hover:text-blue-200 p-2 rounded-full hover:bg-white/10 transition-all duration-200"
+                                >
+                                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7" />
+                                    </svg>
+                                </button>
                             </div>
                         </div>
-                        <button
-                            onClick={() => setIsChatOpen(false)}
-                            className="text-white hover:text-blue-200 hover:bg-white/10 p-2 rounded-full transition-all duration-200"
-                        >
-                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
                     </div>
 
                     {/* Content */}
-                    <div className="flex-1 flex flex-col overflow-hidden">
+                    <div className="flex-1 flex flex-col overflow-hidden bg-gradient-to-br from-gray-50 to-gray-100">
                         {/* Chọn chuyên khoa */}
                         {!selectedSpecialty && (
-                            <div className="p-4 flex-1 overflow-y-auto">
-                                <h3 className="text-lg font-semibold mb-4">Chọn chuyên khoa</h3>
-                                <div className="space-y-2">
-                                    {specialties.length > 0 ? (
-                                        specialties.map((specialty) => (
-                                            <button
-                                                key={specialty.id}
-                                                onClick={() => handleSelectSpecialty(specialty.id)}
-                                                className="w-full text-left p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200"
-                                            >
-                                                {specialty.name}
-                                            </button>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-500">Đang tải chuyên khoa...</p>
-                                        </div>
-                                    )}
+                            <div className="p-6 flex-1 overflow-y-auto">
+                                <div className="mb-6">
+                                    <h3 className="text-xl font-bold text-gray-800 mb-2">Chọn chuyên khoa</h3>
+                                    <p className="text-gray-600 text-sm">Vui lòng chọn chuyên khoa phù hợp để được tư vấn</p>
+                                </div>
+                                <div className="space-y-3">
+                                    {specialties.map((specialty, index) => (
+                                        <button
+                                            key={specialty.id}
+                                            onClick={() => handleSelectSpecialty(specialty.id)}
+                                            className="w-full text-left p-4 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-200 hover:border-blue-200 transition-all duration-200 group transform hover:scale-[1.02]"
+                                            style={{ animationDelay: `${index * 100}ms` }}
+                                        >
+                                            <div className="flex items-center justify-between">
+                                                <div>
+                                                    <span className="font-medium text-gray-800 group-hover:text-blue-600 transition-colors">
+                                                        {specialty.name}
+                                                    </span>
+                                                </div>
+                                                <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 5l7 7-7 7" />
+                                                </svg>
+                                            </div>
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}
 
                         {/* Chọn bác sĩ */}
                         {selectedSpecialty && !selectedDoctor && (
-                            <div className="p-4 flex-1 overflow-y-auto">
-                                <div className="flex items-center justify-between mb-4">
-                                    <h3 className="text-lg font-semibold">Chọn bác sĩ</h3>
+                            <div className="p-6 flex-1 overflow-y-auto">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div>
+                                        <h3 className="text-xl font-bold text-gray-800 mb-2">Chọn bác sĩ</h3>
+                                        <p className="text-gray-600 text-sm">Các bác sĩ đang trực tuyến</p>
+                                    </div>
                                     <button
-                                        onClick={() => {
-                                            setSelectedSpecialty(null);
-                                            setAvailableDoctors([]);
-                                        }}
-                                        className="text-blue-500 hover:text-blue-700 text-sm"
+                                        onClick={() => setSelectedSpecialty(null)}
+                                        className="text-blue-600 hover:text-blue-700 font-medium flex items-center text-sm bg-blue-50 px-3 py-2 rounded-lg hover:bg-blue-100 transition-colors"
                                     >
-                                        ← Quay lại
+                                        <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                        </svg>
+                                        Quay lại
                                     </button>
                                 </div>
-                                <div className="space-y-2">
-                                    {availableDoctors.length > 0 ? (
-                                        availableDoctors.map((doctor) => (
-                                            <button
-                                                key={doctor.id}
-                                                onClick={() => handleSelectDoctor(doctor)}
-                                                className="w-full text-left p-3 bg-gray-100 rounded-lg hover:bg-gray-200 transition-all duration-200"
-                                            >
-                                                <div className="font-medium">{doctor.fullName}</div>
-                                                <div className="text-sm text-gray-600">{doctor.specialty}</div>
-                                            </button>
-                                        ))
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-500">Đang tải danh sách bác sĩ...</p>
-                                        </div>
-                                    )}
+                                <div className="space-y-3">
+                                    {availableDoctors.map((doctor, index) => (
+                                        <button
+                                            key={doctor.id}
+                                            onClick={() => handleSelectDoctor(doctor)}
+                                            className="w-full text-left p-4 bg-white rounded-xl shadow-sm hover:shadow-md border border-gray-200 hover:border-blue-200 transition-all duration-200 group transform hover:scale-[1.02]"
+                                            style={{ animationDelay: `${index * 100}ms` }}
+                                        >
+                                            <div className="flex items-center space-x-3">
+                                                <div 
+                                                    className="w-12 h-12 rounded-full flex items-center justify-center text-white font-semibold text-lg shadow-md"
+                                                    style={{ backgroundColor: getAvatarColor(doctor.fullName) }}
+                                                >
+                                                    {doctor.fullName.charAt(0).toUpperCase()}
+                                                </div>
+                                                <div className="flex-1">
+                                                    <div className="font-semibold text-gray-800 group-hover:text-blue-600 transition-colors">
+                                                        BS. {doctor.fullName}
+                                                    </div>
+                                                    <div className="text-sm text-gray-600">{doctor.specialty}</div>
+                                                    <div className="flex items-center mt-1">
+                                                        <span className="inline-block w-2 h-2 bg-green-400 rounded-full mr-2"></span>
+                                                        <span className="text-xs text-green-600 font-medium">Đang trực tuyến</span>
+                                                    </div>
+                                                </div>
+                                                <svg className="w-5 h-5 text-gray-400 group-hover:text-blue-500 transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 11.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                </svg>
+                                            </div>
+                                        </button>
+                                    ))}
                                 </div>
                             </div>
                         )}
 
-                        {/* Khu vực chat */}
+                        {/* Chat area */}
                         {selectedDoctor && (
                             <>
-                                {/* Connection status */}
-                                {connecting && (
-                                    <div className="bg-yellow-50 border-l-4 border-yellow-400 p-3 flex items-center space-x-2">
-                                        <div className="animate-spin rounded-full h-4 w-4 border-2 border-yellow-400 border-t-transparent"></div>
-                                        <span className="text-yellow-700 text-sm font-medium">Đang kết nối...</span>
-                                    </div>
-                                )}
-
-                                {/* Messages area */}
-                                <div ref={messageAreaRef} className="flex-1 p-4 overflow-y-auto bg-gradient-to-b from-gray-50 to-white space-y-3">
-                                    {messages.length > 0 ? (
+                                <div ref={messageAreaRef} className="flex-1 p-4 overflow-y-auto space-y-4">
+                                    {connecting ? (
+                                        <div className="flex items-center justify-center py-8">
+                                            <div className="flex items-center space-x-3">
+                                                <div className="animate-spin rounded-full h-6 w-6 border-2 border-blue-500 border-t-transparent"></div>
+                                                <span className="text-gray-600">Đang kết nối...</span>
+                                            </div>
+                                        </div>
+                                    ) : messages.length === 0 ? (
+                                        <div className="text-center py-8">
+                                            <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <svg className="w-8 h-8 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 11.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                </svg>
+                                            </div>
+                                            <h4 className="text-gray-800 font-medium mb-2">Bắt đầu cuộc trò chuyện</h4>
+                                            <p className="text-gray-600 text-sm">Gửi tin nhắn đầu tiên để bắt đầu tư vấn</p>
+                                        </div>
+                                    ) : (
                                         messages.map((message, index) => (
-                                            <div
-                                                key={message.id || index}
-                                                className={`flex items-start space-x-3 ${message.sender === username ? 'justify-end' : ''}`}
-                                            >
+                                            <div key={message.id || index} className={`flex items-end space-x-3 ${message.sender === username ? 'justify-end' : ''}`}>
                                                 {message.sender !== username && (
                                                     <div 
-                                                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium flex-shrink-0"
+                                                        className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-md flex-shrink-0"
                                                         style={{ backgroundColor: getAvatarColor(message.sender) }}
                                                     >
                                                         {message.sender?.charAt(0)?.toUpperCase() || 'D'}
                                                     </div>
                                                 )}
-                                                <div
-                                                    className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg shadow-sm ${
-                                                        message.sender === username 
-                                                            ? 'bg-blue-500 text-white' 
-                                                            : 'bg-white border border-gray-200'
-                                                    }`}
-                                                >
-                                                    <p className="text-sm">{message.content}</p>
-                                                    <p className="text-xs mt-1 opacity-70">
-                                                        {new Date(message.sentAt).toLocaleTimeString('vi-VN', { 
-                                                            hour: '2-digit', 
-                                                            minute: '2-digit' 
-                                                        })}
+                                                <div className={`max-w-xs px-4 py-3 rounded-2xl shadow-sm ${
+                                                    message.sender === username 
+                                                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white rounded-br-md' 
+                                                        : 'bg-white border border-gray-200 rounded-bl-md'
+                                                }`}>
+                                                    <p className="text-sm leading-relaxed">{message.content}</p>
+                                                    <p className={`text-xs mt-2 ${
+                                                        message.sender === username ? 'text-blue-100' : 'text-gray-500'
+                                                    }`}>
+                                                        {formatTime(message.sentAt)}
                                                     </p>
                                                 </div>
                                             </div>
                                         ))
-                                    ) : (
-                                        <div className="text-center py-8">
-                                            <p className="text-gray-500">Chưa có tin nhắn nào</p>
-                                            <p className="text-sm text-gray-400">Gửi tin nhắn đầu tiên để bắt đầu trò chuyện</p>
-                                        </div>
                                     )}
                                     
                                     {/* Typing indicator */}
                                     {isTyping && (
-                                        <div className="flex items-center space-x-2 text-gray-500 text-sm animate-pulse">
-                                            <div className="flex space-x-1">
-                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
-                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
-                                                <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                        <div className="flex items-end space-x-3">
+                                            <div 
+                                                className="w-8 h-8 rounded-full flex items-center justify-center text-white text-sm font-medium shadow-md"
+                                                style={{ backgroundColor: getAvatarColor(selectedDoctor) }}
+                                            >
+                                                D
                                             </div>
-                                            <span>Đang soạn tin...</span>
+                                            <div className="bg-white border border-gray-200 rounded-2xl rounded-bl-md px-4 py-3">
+                                                <div className="flex space-x-1">
+                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></div>
+                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }}></div>
+                                                    <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
+                                                </div>
+                                            </div>
                                         </div>
                                     )}
                                 </div>
 
-                                {/* Input area */}
-                                <div className="p-4 bg-white border-t border-gray-100">
+                                {/* Message input */}
+                                <div className="p-4 bg-white border-t border-gray-200">
                                     <form onSubmit={sendMessage} className="flex gap-3">
                                         <div className="flex-1 relative">
                                             <input
                                                 type="text"
                                                 value={messageInput}
-                                                onChange={handleInputChange}
-                                                placeholder="Nhập tin nhắn của bạn..."
-                                                className="w-full p-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50 focus:bg-white"
-                                                autoComplete="off"
+                                                onChange={(e) => setMessageInput(e.target.value)}
+                                                placeholder="Nhập tin nhắn..."
+                                                className="w-full p-3 pr-12 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200"
                                                 disabled={!stompClient || connecting}
                                             />
+                                            <button
+                                                type="button"
+                                                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                            >
+                                                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                                                </svg>
+                                            </button>
                                         </div>
                                         <button
                                             type="submit"
                                             disabled={!messageInput.trim() || !stompClient || connecting}
-                                            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 transition-all duration-200 font-medium shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                                            className="bg-gradient-to-r from-blue-500 to-blue-600 text-white px-6 py-3 rounded-xl hover:from-blue-600 hover:to-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105"
                                         >
                                             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                                             </svg>
-                                            <span className="hidden sm:inline">Gửi</span>
                                         </button>
                                     </form>
                                 </div>
@@ -584,8 +524,24 @@ const ChatButton = () => {
 
                     {/* Error message */}
                     {errorMessage && (
-                        <div className="bg-red-50 border-l-4 border-red-400 p-3">
-                            <p className="text-red-700 text-sm">{errorMessage}</p>
+                        <div className="bg-red-50 border-l-4 border-red-400 p-4 m-4 rounded-lg animate-in slide-in-from-top-2">
+                            <div className="flex items-center">
+                                <svg className="w-5 h-5 text-red-400 mr-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <div>
+                                    <p className="text-red-700 font-medium">Lỗi kết nối</p>
+                                    <p className="text-red-600 text-sm">{errorMessage}</p>
+                                </div>
+                                <button
+                                    onClick={() => setErrorMessage('')}
+                                    className="ml-auto text-red-400 hover:text-red-600 transition-colors"
+                                >
+                                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>
