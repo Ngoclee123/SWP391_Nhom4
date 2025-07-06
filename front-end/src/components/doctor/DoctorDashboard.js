@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Profile from './Profile';
 import Schedule from './Schedule';
 import Appointments from './Appointments';
@@ -10,6 +10,7 @@ import { jwtDecode } from 'jwt-decode';
 import SockJS from 'sockjs-client';
 import { Client } from '@stomp/stompjs';
 import axiosClient from '../../api/axiosClient';
+import io from 'socket.io-client';
 
 const DoctorDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -28,17 +29,32 @@ const DoctorDashboard = () => {
     const [selectedChat, setSelectedChat] = useState(null);
     const [messageInput, setMessageInput] = useState('');
     const [fetchError, setFetchError] = useState('');
+    const [incomingCall, setIncomingCall] = useState(null);
+    const [isVideoCallOpen, setIsVideoCallOpen] = useState(false);
+    const [localStream, setLocalStream] = useState(null);
+    const [remoteStream, setRemoteStream] = useState(null);
+    const [rtcPeerConnection, setRtcPeerConnection] = useState(null);
+    const [isCaller, setIsCaller] = useState(false);
+    const [roomName, setRoomName] = useState('');
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
+    const socketRef = useRef(null);
 
-    // Utility functions
+    const iceServers = {
+        iceServers: [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    };
+
+    const streamConstraints = { audio: true, video: true };
+
     const addMessage = (message) => {
         setMessages(prev => {
-            // Nếu có ID, kiểm tra trùng lặp
             if (message.id) {
                 const isDuplicate = prev.some(msg => msg.id === message.id);
                 if (isDuplicate) return prev;
             }
-            
-            // Thêm tin nhắn mới và sắp xếp theo thời gian
             const newMessages = [...prev, message];
             return newMessages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
         });
@@ -50,7 +66,7 @@ const DoctorDashboard = () => {
             setMessages(response.data || []);
             setFetchError('');
         } catch (error) {
-            console.error('Error fetching message history:', error);
+            console.error('Lỗi khi lấy lịch sử tin nhắn:', error);
             setFetchError(error.response?.status === 401 ? 'Lỗi xác thực' : 'Lỗi tải tin nhắn');
         }
     };
@@ -63,7 +79,7 @@ const DoctorDashboard = () => {
             webSocketFactory: () => socket,
             connectHeaders: { Authorization: `Bearer ${UserService.getToken()}` },
             onConnect: () => {
-                console.log('Connected to WebSocket');
+                console.log('Đã kết nối WebSocket');
                 setStompClient(client);
                 client.subscribe(`/user/${username}/queue/messages`, (payload) => {
                     const message = JSON.parse(payload.body);
@@ -75,7 +91,7 @@ const DoctorDashboard = () => {
                 });
             },
             onStompError: (error) => {
-                console.error('WebSocket error:', error);
+                console.error('Lỗi WebSocket:', error);
                 setFetchError('Không thể kết nối chat');
             },
             onDisconnect: () => setStompClient(null)
@@ -93,14 +109,12 @@ const DoctorDashboard = () => {
                 type: 'CHAT',
                 sentAt: new Date().toISOString()
             };
-            
-            // Thêm tin nhắn vào state ngay lập tức để hiển thị
+
             addMessage({
                 ...chatMessage,
-                id: Date.now() // Tạo ID tạm thời
+                id: Date.now()
             });
-            
-            // Gửi tin nhắn qua WebSocket
+
             stompClient.publish({
                 destination: '/app/chat.sendPrivateMessage',
                 body: JSON.stringify(chatMessage)
@@ -121,11 +135,51 @@ const DoctorDashboard = () => {
             const receiverId = response.data.id;
             await fetchMessageHistory(UserService.getAccountId(), receiverId);
         } catch (error) {
-            console.error('Error fetching receiver ID:', error);
+            console.error('Lỗi khi lấy ID người nhận:', error);
+            setFetchError('Không thể lấy thông tin người nhận');
         }
     };
 
-    // Main data fetching
+    const handleCallResponse = (accepted) => {
+        if (!incomingCall) return;
+        socketRef.current.emit('callResponse', {
+            room: incomingCall.room,
+            callerUsername: incomingCall.callerUsername,
+            accepted
+        });
+        if (accepted) {
+            setRoomName(incomingCall.room);
+            setIsVideoCallOpen(true);
+            socketRef.current.emit('joinRoom', incomingCall.room);
+        }
+        setIncomingCall(null);
+    };
+
+    const cleanup = () => {
+        if (localStream) {
+            localStream.getTracks().forEach(track => track.stop());
+        }
+        if (rtcPeerConnection) {
+            rtcPeerConnection.close();
+        }
+        setLocalStream(null);
+        setRemoteStream(null);
+        setRtcPeerConnection(null);
+        setIsCaller(false);
+    };
+
+    const toggleTrack = (trackType) => {
+        if (!localStream) return;
+        const track = trackType === 'video' ? localStream.getVideoTracks()[0] : localStream.getAudioTracks()[0];
+        track.enabled = !track.enabled;
+    };
+
+    const endCall = () => {
+        socketRef.current.emit('leaveRoom', roomName);
+        setIsVideoCallOpen(false);
+        cleanup();
+    };
+
     useEffect(() => {
         const initializeDashboard = async () => {
             try {
@@ -171,10 +225,134 @@ const DoctorDashboard = () => {
                 stompClient.deactivate();
                 setStompClient(null);
             }
+            if (socketRef.current) {
+                socketRef.current.disconnect();
+            }
         };
     }, []);
 
-    // Loading and error states
+    useEffect(() => {
+        socketRef.current = io('http://localhost:8000', {
+            query: { token: `Bearer ${UserService.getToken()}` }
+        });
+
+        socketRef.current.on('incomingCall', (data) => {
+            setIncomingCall(data);
+        });
+
+        socketRef.current.on('created', (room) => {
+            navigator.mediaDevices.getUserMedia(streamConstraints)
+                .then(stream => {
+                    setLocalStream(stream);
+                    localVideoRef.current.srcObject = stream;
+                    setIsCaller(true);
+                })
+                .catch(err => {
+                    console.error('Lỗi truy cập thiết bị media:', err);
+                    setFetchError('Không thể truy cập camera/mic');
+                });
+        });
+
+        socketRef.current.on('joined', (room) => {
+            navigator.mediaDevices.getUserMedia(streamConstraints)
+                .then(stream => {
+                    setLocalStream(stream);
+                    localVideoRef.current.srcObject = stream;
+                    socketRef.current.emit('ready', room);
+                })
+                .catch(err => {
+                    console.error('Lỗi truy cập thiết bị media:', err);
+                    setFetchError('Không thể truy cập camera/mic');
+                });
+        });
+
+        socketRef.current.on('ready', () => {
+            if (isCaller) {
+                const pc = new RTCPeerConnection(iceServers);
+                setRtcPeerConnection(pc);
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        socketRef.current.emit('candidate', {
+                            type: 'candidate',
+                            label: e.candidate.sdpMLineIndex,
+                            id: e.candidate.sdpMid,
+                            candidate: e.candidate.candidate,
+                            room: roomName
+                        });
+                    }
+                };
+                pc.ontrack = (e) => {
+                    setRemoteStream(e.streams[0]);
+                    remoteVideoRef.current.srcObject = e.streams[0];
+                };
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                pc.createOffer()
+                    .then(offer => {
+                        pc.setLocalDescription(offer);
+                        socketRef.current.emit('offer', { sdp: offer, room: roomName });
+                    })
+                    .catch(console.error);
+            }
+        });
+
+        socketRef.current.on('offer', (sdp) => {
+            if (!isCaller) {
+                const pc = new RTCPeerConnection(iceServers);
+                setRtcPeerConnection(pc);
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        socketRef.current.emit('candidate', {
+                            type: 'candidate',
+                            label: e.candidate.sdpMLineIndex,
+                            id: e.candidate.sdpMid,
+                            candidate: e.candidate.candidate,
+                            room: roomName
+                        });
+                    }
+                };
+                pc.ontrack = (e) => {
+                    setRemoteStream(e.streams[0]);
+                    remoteVideoRef.current.srcObject = e.streams[0];
+                };
+                localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
+                pc.setRemoteDescription(new RTCSessionDescription(sdp))
+                    .then(() => pc.createAnswer())
+                    .then(answer => {
+                        pc.setLocalDescription(answer);
+                        socketRef.current.emit('answer', { sdp: answer, room: roomName });
+                    })
+                    .catch(console.error);
+            }
+        });
+
+        socketRef.current.on('answer', (sdp) => {
+            if (isCaller) {
+                rtcPeerConnection.setRemoteDescription(new RTCSessionDescription(sdp))
+                    .catch(console.error);
+            }
+        });
+
+        socketRef.current.on('candidate', (data) => {
+            if (rtcPeerConnection) {
+                rtcPeerConnection.addIceCandidate(new RTCIceCandidate({
+                    sdpMLineIndex: data.label,
+                    candidate: data.candidate
+                }))
+                    .catch(console.error);
+            }
+        });
+
+        socketRef.current.on('userDisconnected', () => {
+            setRemoteStream(null);
+            setIsVideoCallOpen(false);
+            cleanup();
+        });
+
+        return () => {
+            socketRef.current.disconnect();
+        };
+    }, []);
+
     if (loading) return (
         <div className="min-h-screen bg-gradient-to-br from-indigo-50 via-white to-cyan-50 flex items-center justify-center">
             <div className="text-center">
@@ -228,10 +406,9 @@ const DoctorDashboard = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
             <div className="flex h-screen">
-                {/* Enhanced Sidebar */}
+                {/* Sidebar */}
                 <div className={`${sidebarCollapsed ? 'w-20' : 'w-80'} bg-white/70 backdrop-blur-2xl shadow-2xl border-r border-white/20 transition-all duration-300 ease-in-out`}>
                     <div className="p-6 h-full flex flex-col">
-                        {/* Header */}
                         <div className="flex items-center justify-between mb-8">
                             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : ''}`}>
                                 <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center shadow-lg">
@@ -255,8 +432,6 @@ const DoctorDashboard = () => {
                                 </svg>
                             </button>
                         </div>
-                        
-                        {/* Doctor info */}
                         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-3xl mb-6 text-white shadow-xl">
                             <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'space-x-3'}`}>
                                 <div className="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
@@ -274,8 +449,6 @@ const DoctorDashboard = () => {
                                 )}
                             </div>
                         </div>
-                        
-                        {/* Navigation */}
                         <nav className="space-y-2 flex-1">
                             {menuItems.map((item) => (
                                 <button
@@ -297,8 +470,6 @@ const DoctorDashboard = () => {
                                 </button>
                             ))}
                         </nav>
-                        
-                        {/* Quick Actions */}
                         {!sidebarCollapsed && (
                             <div className="mt-6 p-4 bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200">
                                 <h4 className="font-semibold text-emerald-800 mb-2">Thao tác nhanh</h4>
@@ -317,7 +488,7 @@ const DoctorDashboard = () => {
 
                 {/* Main content */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Enhanced Header */}
+                    {/* Header */}
                     <div className="bg-white/70 backdrop-blur-2xl shadow-lg border-b border-white/20 p-6">
                         <div className="flex justify-between items-center">
                             <div>
@@ -327,7 +498,6 @@ const DoctorDashboard = () => {
                                 <p className="text-gray-600 mt-1 font-medium">Quản lý và theo dõi hoạt động một cách hiệu quả</p>
                             </div>
                             <div className="flex items-center space-x-4">
-                                {/* Search */}
                                 <div className="relative">
                                     <input
                                         type="text"
@@ -338,8 +508,6 @@ const DoctorDashboard = () => {
                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                                     </svg>
                                 </div>
-                                
-                                {/* Notifications */}
                                 <div className="relative">
                                     <button className="p-3 bg-gradient-to-r from-orange-500 to-red-500 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:scale-105">
                                         <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -350,8 +518,6 @@ const DoctorDashboard = () => {
                                         {messages.filter(msg => msg.type === 'NOTIFICATION').length}
                                     </div>
                                 </div>
-                                
-                                {/* Profile Menu */}
                                 <div className="flex items-center space-x-3">
                                     <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl flex items-center justify-center text-white font-bold shadow-lg">
                                         {userName.charAt(0).toUpperCase()}
@@ -367,11 +533,82 @@ const DoctorDashboard = () => {
                         </div>
                     </div>
 
+                    {/* Incoming Call Notification */}
+                    {incomingCall && (
+                        <div className="fixed top-20 right-6 bg-white rounded-3xl shadow-2xl p-6 w-80 z-50 border border-gray-100">
+                            <h3 className="text-lg font-bold text-gray-800">Cuộc gọi đến</h3>
+                            <p className="text-gray-600 mt-2">Từ: {incomingCall.callerUsername}</p>
+                            <div className="flex space-x-4 mt-4">
+                                <button
+                                    onClick={() => handleCallResponse(true)}
+                                    className="flex-1 bg-green-500 text-white py-2 rounded-xl hover:bg-green-600 transition-all"
+                                >
+                                    Chấp nhận
+                                </button>
+                                <button
+                                    onClick={() => handleCallResponse(false)}
+                                    className="flex-1 bg-red-500 text-white py-2 rounded-xl hover:bg-red-600 transition-all"
+                                >
+                                    Từ chối
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Video Call Window */}
+                    {isVideoCallOpen && (
+                        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50">
+                            <div className="bg-white rounded-3xl w-[800px] h-[600px] flex flex-col overflow-hidden">
+                                <div className="bg-gradient-to-r from-blue-500 to-blue-700 text-white p-4 flex justify-between items-center">
+                                    <h3 className="text-lg font-bold">Gọi video với {incomingCall?.callerUsername}</h3>
+                                    <div className="flex space-x-2">
+                                        <button
+                                            onClick={() => toggleTrack('video')}
+                                            className="p-2 bg-white/20 rounded-full hover:bg-white/30"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={() => toggleTrack('audio')}
+                                            className="p-2 bg-white/20 rounded-full hover:bg-white/30"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" />
+                                            </svg>
+                                        </button>
+                                        <button
+                                            onClick={endCall}
+                                            className="p-2 bg-red-500 rounded-full hover:bg-red-600"
+                                        >
+                                            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+                                            </svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div className="flex-1 relative bg-gray-900">
+                                    <video
+                                        ref={remoteVideoRef}
+                                        autoPlay
+                                        className="w-full h-full object-contain"
+                                    ></video>
+                                    <video
+                                        ref={localVideoRef}
+                                        autoPlay
+                                        muted
+                                        className="absolute bottom-4 right-4 w-40 h-40 object-contain rounded-lg border-2 border-white"
+                                    ></video>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     {/* Content */}
                     <div className="flex-1 overflow-auto p-6">
                         {activeTab === 'overview' && (
                             <div className="space-y-8">
-                                {/* Welcome section */}
                                 <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20">
                                     <div className="flex items-center justify-between">
                                         <div>
@@ -385,8 +622,6 @@ const DoctorDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Enhanced Stats grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
                                     <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
                                         <div className="flex items-center justify-between mb-6">
@@ -405,7 +640,6 @@ const DoctorDashboard = () => {
                                             +12% so với tháng trước
                                         </div>
                                     </div>
-                                    
                                     <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
                                         <div className="flex items-center justify-between mb-6">
                                             <div className="w-20 h-20 bg-gradient-to-r from-green-500 to-green-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-lg">
@@ -423,7 +657,6 @@ const DoctorDashboard = () => {
                                             +8% so với hôm qua
                                         </div>
                                     </div>
-                                    
                                     <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20 hover:shadow-2xl transition-all duration-300 transform hover:scale-105">
                                         <div className="flex items-center justify-between mb-6">
                                             <div className="w-20 h-20 bg-gradient-to-r from-purple-500 to-purple-600 rounded-3xl flex items-center justify-center text-white text-3xl shadow-lg">
@@ -442,8 +675,6 @@ const DoctorDashboard = () => {
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Activity Chart Placeholder */}
                                 <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20">
                                     <h4 className="text-2xl font-bold text-gray-800 mb-6">Biểu đồ hoạt động</h4>
                                     <div className="h-64 bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl flex items-center justify-center">
@@ -458,12 +689,10 @@ const DoctorDashboard = () => {
                         {activeTab === 'records' && <MedicalRecords doctorId={doctorId} />}
                         {activeTab === 'feedback' && <Feedback doctorId={doctorId} />}
                         {activeTab === 'profile' && <Profile doctorId={doctorId} />}
-                        
                         {activeTab === 'messages' && (
                             <div className="bg-white/70 backdrop-blur-2xl p-8 rounded-3xl shadow-xl border border-white/20">
                                 <h4 className="text-3xl font-bold text-gray-800 mb-8">Tin nhắn</h4>
                                 <div className="flex h-[600px] bg-gray-50 rounded-2xl overflow-hidden">
-                                    {/* Enhanced Chat list */}
                                     <div className="w-1/3 bg-white border-r border-gray-200 p-6">
                                         <div className="flex items-center justify-between mb-6">
                                             <h5 className="text-xl font-bold text-gray-800">Cuộc trò chuyện</h5>
@@ -479,15 +708,15 @@ const DoctorDashboard = () => {
                                                     key={index}
                                                     onClick={() => handleSelectChat(user)}
                                                     className={`w-full text-left p-4 rounded-xl transition-all duration-300 ${
-                                                        selectedChat === user 
-                                                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg' 
+                                                        selectedChat === user
+                                                            ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg'
                                                             : 'bg-gray-50 hover:bg-gray-100'
                                                     }`}
                                                 >
                                                     <div className="flex items-center space-x-3">
                                                         <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold ${
-                                                            selectedChat === user 
-                                                                ? 'bg-white/20 text-white' 
+                                                            selectedChat === user
+                                                                ? 'bg-white/20 text-white'
                                                                 : 'bg-blue-100 text-blue-600'
                                                         }`}>
                                                             {user.charAt(0).toUpperCase()}
@@ -503,12 +732,9 @@ const DoctorDashboard = () => {
                                             ))}
                                         </div>
                                     </div>
-                                    
-                                    {/* Enhanced Chat area */}
                                     <div className="w-2/3 flex flex-col">
                                         {selectedChat ? (
                                             <>
-                                                {/* Chat header */}
                                                 <div className="p-6 bg-white border-b border-gray-200">
                                                     <div className="flex items-center justify-between">
                                                         <div className="flex items-center space-x-3">
@@ -534,19 +760,17 @@ const DoctorDashboard = () => {
                                                         </div>
                                                     </div>
                                                 </div>
-                                                
-                                                {/* Messages */}
                                                 <div className="flex-1 overflow-y-auto p-6 space-y-4">
                                                     {messages
-                                                        .filter(msg => 
-                                                            (msg.sender === selectedChat && msg.receiver === userName) || 
+                                                        .filter(msg =>
+                                                            (msg.sender === selectedChat && msg.receiver === userName) ||
                                                             (msg.sender === userName && msg.receiver === selectedChat)
                                                         )
                                                         .map((msg, index) => (
                                                             <div key={index} className={`flex ${msg.sender === userName ? 'justify-end' : 'justify-start'}`}>
                                                                 <div className={`max-w-xs lg:max-w-md px-4 py-3 rounded-2xl shadow-lg ${
-                                                                    msg.sender === userName 
-                                                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white' 
+                                                                    msg.sender === userName
+                                                                        ? 'bg-gradient-to-r from-blue-500 to-purple-500 text-white'
                                                                         : 'bg-white text-gray-800 border border-gray-200'
                                                                 }`}>
                                                                     <div className="flex items-center space-x-2 mb-2">
@@ -579,8 +803,6 @@ const DoctorDashboard = () => {
                                                         </div>
                                                     )}
                                                 </div>
-                                                
-                                                {/* Enhanced Message input */}
                                                 <div className="p-6 bg-white border-t border-gray-200">
                                                     <form onSubmit={sendMessage} className="flex items-center space-x-4">
                                                         <button
@@ -615,7 +837,7 @@ const DoctorDashboard = () => {
                                                 <div className="text-center">
                                                     <div className="w-32 h-32 bg-gray-100 rounded-full flex items-center justify-center mb-6">
                                                         <svg className="w-16 h-16 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 11.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
                                                         </svg>
                                                     </div>
                                                     <h3 className="text-xl font-bold text-gray-700 mb-2">Chọn cuộc trò chuyện</h3>
