@@ -26,11 +26,10 @@ public class JwtFilter extends OncePerRequestFilter {
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain chain)
             throws ServletException, IOException {
         String path = request.getRequestURI();
-        System.out.println("Processing request for path: " + path);
-
         if (path.startsWith("/api/login") || path.startsWith("/api/register") ||
                 path.startsWith("/oauth2/authorization/google") || path.startsWith("/login/oauth2/code/") ||
-                path.equals("/login") || path.equals("/oauth2/redirect")) {
+                path.equals("/login") || path.equals("/oauth2/redirect") ||
+                path.startsWith("/api/accounts/username/")) { // Thêm dòng này
             chain.doFilter(request, response);
             return;
         }

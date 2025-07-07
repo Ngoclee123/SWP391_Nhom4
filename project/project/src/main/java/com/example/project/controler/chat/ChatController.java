@@ -30,6 +30,7 @@ public class ChatController {
 
     @Autowired
     private AccountRepository accountRepository;
+    private VideoCallService videoCallService;
 
     @MessageMapping("/chat.sendPrivateMessage")
     public void sendPrivateMessage(@Payload ChatMessage chatMessage, SimpMessageHeaderAccessor headerAccessor) {
@@ -97,4 +98,6 @@ public class ChatController {
                 .build()).collect(Collectors.toList());
         return ResponseEntity.ok(chatMessages);
     }
+
+
 }

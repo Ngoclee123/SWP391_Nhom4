@@ -18,7 +18,7 @@ class DoctorDashboardService {
     try {
       const response = await axiosClient.get(url); // Lấy response
       console.log(`Doctor data for accountId ${accountId}:`, response.data); // Log data thực tế
-      return response; // \
+      return response;
     } catch (error) {
       console.error('Error fetching doctor by accountId:', error.response?.data || error.message);
       throw error;

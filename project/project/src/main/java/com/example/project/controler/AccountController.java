@@ -1,5 +1,6 @@
 package com.example.project.controler;
 
+import com.example.project.dto.AccountDTO;
 import com.example.project.dto.ChangePasswordDTO;
 import com.example.project.dto.ParentProfileDTO;
 import com.example.project.model.Account;
@@ -81,6 +82,7 @@ public class AccountController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to update profile");
         }
     }
+
     @PutMapping("/change-password/{accountId}")
     public ResponseEntity<?> changePassword(@PathVariable Integer accountId, @RequestBody ChangePasswordDTO changePasswordDTO) {
         logger.info("Changing password for accountId: {}", accountId);
@@ -100,12 +102,11 @@ public class AccountController {
     }
 
     @GetMapping("/username/{username}")
-    public ResponseEntity<Account> getAccountByUsername(@PathVariable String username) {
+    public ResponseEntity<AccountDTO> getAccountByUsername(@PathVariable String username) {
         Account account = accountService.findByUsername(username);
         if (account == null) {
             return ResponseEntity.notFound().build();
         }
-        return ResponseEntity.ok(account);
+        return ResponseEntity.ok(new AccountDTO(account));
     }
-
 }

@@ -28,4 +28,12 @@ public class MessagesService {
         }
         return messages != null ? messages : List.of();
     }
+
+    public List<Messages> findBySenderId(Integer senderId) {
+        return messagesRepository.findBySenderId(senderId);
+    }
+
+    public List<Messages> findByReceiverId(Integer receiverId) {
+        return messagesRepository.findByReceiverId(receiverId);
+    }
 }

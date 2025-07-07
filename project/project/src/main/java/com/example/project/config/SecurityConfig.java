@@ -77,7 +77,7 @@ public class SecurityConfig {
                                 "/login/oauth2/code/*", "/login", "/oauth2/redirect",
                                 "/api/vnpay/**", "/api/doctors", "/api/doctors/**", "/api/reset-password",
                                 "/api/forgot-password", "/ws/**", "/api/doctors/specialties",
-                                "/api/doctors/specialty/**", "/api/accounts/username/**", "/api/messages/history/**", "/socket.io/**").permitAll()
+                                "/api/doctors/specialty/**", "/api/accounts/username/**", "/api/messages/history/**").permitAll()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
                         .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")
                         .requestMatchers("/api/vaccine-appointments/confirm/**").hasRole("DOCTOR")
