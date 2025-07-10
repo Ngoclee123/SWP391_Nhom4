@@ -15,25 +15,38 @@ class DoctorDashboardService {
 
   async getScheduleByDoctorId(doctorId) {
     const url = `/api/doctor-availability/doctor/${doctorId}/available`;
-    console.log(`Fetching schedule from: ${url}`);
     try {
+<<<<<<< Updated upstream
       const data = await axiosClient.get(url);
       console.log(`Schedule data for doctorId ${doctorId}:`, data);
       return data;
+=======
+      const response = await axiosClient.get(url);
+      console.log("Raw response for schedule:", response);
+      // Thử trả về response trực tiếp
+      return response;
+>>>>>>> Stashed changes
     } catch (error) {
-      console.error('Error fetching doctor schedule:', error.response?.data || error.message);
       throw error;
     }
   }
 
-  async getAppointmentsByDoctorId(doctorId, token) {
+  async getAppointmentsByDoctorId(doctorId) {
     const url = `/api/appointments/doctor/${doctorId}`;
-    console.log(`Fetching appointments from: ${url}`);
     try {
+<<<<<<< Updated upstream
       const config = token ? { headers: { Authorization: `Bearer ${token}` } } : {};
       const data = await axiosClient.get(url, config);
       console.log(`Appointments data for doctorId ${doctorId}:`, data);
       return data;
+=======
+      const response = await axiosClient.get(url);
+      // Nếu axiosClient có interceptor trả về data trực tiếp:
+      if (Array.isArray(response)) return response;
+      // Nếu không, lấy response.data
+      if (Array.isArray(response.data)) return response.data;
+      return [];
+>>>>>>> Stashed changes
     } catch (error) {
       console.error('Error fetching appointments:', error.response?.data || error.message);
       throw error;

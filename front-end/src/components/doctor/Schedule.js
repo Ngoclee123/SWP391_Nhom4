@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import DoctorDashboardService from "../../service/DoctorDashboardService";
 import { FaCalendarAlt, FaClock } from 'react-icons/fa';
+<<<<<<< Updated upstream
 
 function Schedule({ doctorId }) {
   const [schedule, setSchedule] = useState([]);
@@ -78,6 +79,68 @@ function Schedule({ doctorId }) {
                   <span className="ml-2 text-gray-600">({item.status})</span>
                 </div>
                 <FaClock className="text-gray-400" />
+=======
+
+function Schedule({ doctorId }) {
+  const [schedule, setSchedule] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (!doctorId) return;
+    setLoading(true);
+    DoctorDashboardService.getScheduleByDoctorId(doctorId)
+      .then((data) => {
+        setSchedule(Array.isArray(data) ? data : []);
+        setLoading(false);
+      })
+      .catch(() => {
+        setSchedule([]);
+        setLoading(false);
+      });
+  }, [doctorId]);
+
+  if (loading) {
+    return (
+      <div className="flex justify-center items-center h-40">
+        <span className="text-blue-600 font-medium animate-pulse">Đang tải lịch làm việc...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 bg-white/80 backdrop-blur-xl rounded-3xl shadow-xl max-w-2xl mx-auto">
+      <h3 className="text-2xl font-bold text-blue-600 flex items-center mb-6">
+        <FaCalendarAlt className="mr-2" /> Lịch làm việc của bạn (ID: {doctorId})
+      </h3>
+      {schedule.length === 0 ? (
+        <div className="text-gray-500 text-center py-8">
+          <FaClock className="inline-block text-3xl mb-2" />
+          <div>Chưa có lịch làm việc</div>
+        </div>
+      ) : (
+        <ul className="space-y-4">
+          {schedule.map((item) => {
+            const start = new Date(item.startTime);
+            const end = new Date(item.endTime);
+            return (
+              <li
+                key={item.id}
+                className="flex items-center justify-between bg-gradient-to-r from-blue-100 to-purple-100 rounded-xl p-4 shadow hover:shadow-lg transition"
+              >
+                <div>
+                  <div className="font-semibold text-lg text-blue-700">
+                    {start.toLocaleDateString('vi-VN', { weekday: 'long', day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </div>
+                  <div className="text-gray-700 mt-1">
+                    <FaClock className="inline-block mr-1 text-blue-500" />
+                    {start.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })} - {end.toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}
+                  </div>
+                </div>
+                <span className={`px-3 py-1 rounded-full text-sm font-medium
+                  ${item.status === 'Available' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}`}>
+                  {item.status === 'Available' ? 'Sẵn sàng' : item.status}
+                </span>
+>>>>>>> Stashed changes
               </li>
             );
           })}

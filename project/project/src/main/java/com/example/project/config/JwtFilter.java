@@ -61,6 +61,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
 
         if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
+<<<<<<< Updated upstream
             UserDetails userDetails = this.accountService.loadUserByUsername(username);
             if (jwtUtil.validateToken(token)) {
                 UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(
@@ -68,6 +69,25 @@ public class JwtFilter extends OncePerRequestFilter {
                 );
                 SecurityContextHolder.getContext().setAuthentication(authenticationToken);
                 logger.info("Authenticated user: " + username + ", setting security context");
+=======
+            if (jwtUtil.validateToken(jwt)) {
+                String role = jwtUtil.extractRole(jwt);
+                List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+                if (role != null) {
+                    if (role.startsWith("ROLE_")) {
+                        authorities.add(new SimpleGrantedAuthority(role));
+                    } else {
+                        authorities.add(new SimpleGrantedAuthority("ROLE_" + role));
+                    }
+                }
+                UsernamePasswordAuthenticationToken authenticationToken =
+                        new UsernamePasswordAuthenticationToken(username, null, authorities);
+                authenticationToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+                SecurityContextHolder.getContext().setAuthentication(authenticationToken);
+                System.out.println("Authentication set for username: " + username);
+                System.out.println("Extracted role from token: " + role);
+                System.out.println("Authorities set: " + authorities);
+>>>>>>> Stashed changes
             } else {
                 logger.warn("JWT token validation failed for user: " + username);
             }

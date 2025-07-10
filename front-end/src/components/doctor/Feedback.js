@@ -1,26 +1,43 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import FeedbackService from '../../service/FeedbackService';
 
-const Feedback = () => {
-  const feedbacks = [
-    { id: 1, parent: "Nguyen Thi A", rating: 5, comment: "Bác sĩ rất tận tâm!" },
-    { id: 2, parent: "Tran Van C", rating: 4, comment: "Dịch vụ tốt, cần cải thiện thời gian chờ." },
-  ];
+const Feedback = ({ doctorId }) => {
+  const [feedbacks, setFeedbacks] = useState([]);
+
+  useEffect(() => {
+    if (doctorId) {
+      FeedbackService.getFeedbacksForDoctor(doctorId)
+        .then(res => {
+          setFeedbacks(Array.isArray(res) ? res : []); // Đảm bảo luôn là mảng
+        })
+        .catch(err => {
+          setFeedbacks([]);
+        });
+    }
+  }, [doctorId]);
 
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
-      <h2 className="text-xl font-bold mb-4">Phản hồi / Đánh giá</h2>
-      <div className="space-y-4">
-        {feedbacks.map((fb) => (
-          <div key={fb.id} className="p-4 bg-gray-50 rounded">
-            <p className="font-semibold">{fb.parent}</p>
-            <p className="text-yellow-500">{'★'.repeat(fb.rating)}</p>
-            <p>{fb.comment}</p>
+    <div>
+      <h2 style={{ fontWeight: 700, fontSize: 22, marginBottom: 16 }}>Phản hồi / Đánh giá</h2>
+      {feedbacks.length === 0 && <div>Chưa có phản hồi nào.</div>}
+      {feedbacks.map(fb => (
+        <div key={fb.feedbackId} style={{
+          background: "#f8f9fa",
+          borderRadius: "10px",
+          padding: "16px",
+          marginBottom: "12px",
+          boxShadow: "0 2px 8px rgba(0,0,0,0.03)"
+        }}>
+          <b>{fb.parentName}</b>
+          <div style={{ color: "#fbbf24", fontSize: "18px" }}>
+            {'★'.repeat(fb.rating)}{'☆'.repeat(5 - fb.rating)}
           </div>
-        ))}
-      </div>
-      <button className="mt-4 bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
-        Xem tất cả
-      </button>
+          <div style={{ margin: "8px 0" }}>{fb.comment}</div>
+          <div style={{ fontSize: "12px", color: "#888" }}>
+            {fb.createdAt ? new Date(fb.createdAt).toLocaleString() : ""}
+          </div>
+        </div>
+      ))}
     </div>
   );
 };

@@ -16,15 +16,23 @@ import Register from './components/regiters/Register';
 import HealthNewsWebsite, { ArticleDetail } from './components/NewHeath';
 import AdminDashboards from './components/admin/AdminDashboard';
 import DoctorDetail from './components/booking/DoctorDetail';
+<<<<<<< Updated upstream
 import DoctorDashboard from './components/doctor/DoctorDashboard';
+=======
+>>>>>>> Stashed changes
 import BookingConfirmation from './components/booking/BookingConfirmation';
 import Login from './components/login/Login';
 import ChangePassword from './components/ChangePassword';
 
 function App() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+<<<<<<< Updated upstream
   const isAdminRoute = window.location.pathname.startsWith('/admin');
   const isDoctorRoute = window.location.pathname.startsWith('/doctor');
+=======
+  const isAdminRoute = window.location.pathname.startsWith('/admin-dashboard');
+  const isDoctorRoute = window.location.pathname.startsWith('/doctor-dashboard'); // Check for doctor route
+>>>>>>> Stashed changes
 
   return (
     <Router>
@@ -37,8 +45,13 @@ function App() {
           path="*"
           element={
             <div className="min-h-screen flex flex-col bg-gray-100">
+<<<<<<< Updated upstream
               {!isAdminRoute || isDoctorRoute && <Header /> }
              
+=======
+              {!isAdminRoute && !isDoctorRoute && <Header />} {/* Exclude Header for doctor route */}
+
+>>>>>>> Stashed changes
               <main className="flex-grow">
                 <Routes>
                   <Route path="/home" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
@@ -59,9 +72,15 @@ function App() {
                     
                 </Routes>
               </main>
+<<<<<<< Updated upstream
               {!isAdminRoute || isDoctorRoute && <Footer />}
            
               
+=======
+
+              {!isAdminRoute  && !isDoctorRoute && <Footer />} 
+               {!isAdminRoute  && !isDoctorRoute && <ChatButton />} {/* Exclude Footer for doctor route */}
+>>>>>>> Stashed changes
             </div>
           }
         />
