@@ -77,9 +77,8 @@
         @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
         private Set<Certificate> certificates = new HashSet<>();
 
-        public Integer getId() {
-            return id;
+        public Integer getDoctorId() {
+            return this.id;
         }
-
 
     }

@@ -83,8 +83,14 @@ public class SecurityConfig {
                             "/api/vnpay/**", 
                             "/api/doctors/**", 
                             "/api/doctors/*/available-slots",
-                            "/api/appointments/book"
+                            "/api/appointments/book",
+                            "/favicon.ico",
+                            "/css/**",
+                            "/js/**",
+                            "/images/**",
+                            "/static/**"     
                         ).permitAll()
+                        .requestMatchers(org.springframework.http.HttpMethod.GET, "/api/feedback/doctor/**").permitAll()
                         .requestMatchers("/api/appointments/**").authenticated()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
                         .requestMatchers("/api/vaccine-appointments/**").authenticated()

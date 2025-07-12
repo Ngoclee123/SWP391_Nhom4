@@ -12,4 +12,5 @@ import java.util.List;
 public interface AppointmentRepository extends JpaRepository<Appointment, Integer> {
     List<Appointment> findByDoctorIdAndAppointmentDateBetween(Integer doctorId, LocalDateTime start, LocalDateTime end);
     List<Appointment> findByPatient(Patient patient);
+    boolean existsByAppointmentIdAndPatient_Parent_IdAndDoctor_IdAndStatus(Integer appointmentId, Integer parentId, Integer doctorId, String status);
 }

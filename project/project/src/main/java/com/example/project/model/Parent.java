@@ -45,5 +45,7 @@ public class Parent {
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
-
+    public Integer getParentId() {
+        return this.id; // hoặc tên biến đúng của bạn
+    }
 }

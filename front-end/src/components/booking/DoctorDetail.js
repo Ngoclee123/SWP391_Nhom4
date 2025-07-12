@@ -27,6 +27,7 @@ import { faCloud } from "@fortawesome/free-solid-svg-icons";
 import { faSun } from "@fortawesome/free-solid-svg-icons";
 import { faCloudSun } from "@fortawesome/free-solid-svg-icons";
 import BookingModal from "./BookingModal";
+import FeedbackForm from "./FeedbackForm";
 
 function DoctorDetail() {
   const { id } = useParams();
@@ -47,6 +48,12 @@ function DoctorDetail() {
   const [showBookingModal, setShowBookingModal] = useState(false);
   const [bookingNotes, setBookingNotes] = useState("");
   const [bookingError, setBookingError] = useState("");
+
+  const [showFeedbackForm, setShowFeedbackForm] = useState(false);
+  const [parentId, setParentId] = useState(null);
+  const [patientId, setPatientId] = useState(null);
+  const [completedAppointmentId, setCompletedAppointmentId] = useState(null);
+  const [feedbacks, setFeedbacks] = useState([]);
 
   // Gọi API khi component được tải hoặc id thay đổi
   useEffect(() => {
@@ -78,11 +85,9 @@ function DoctorDetail() {
           const dateString = selectedDate.toISOString().split("T")[0]; // Format to YYYY-MM-DD
           const slots = await DoctorService.getAvailableSlots(id, dateString);
 
-          // Sắp xếp các slot nhận được từ API để đảm bảo thứ tự
-          const sortedSlots = slots.sort((a, b) =>
-            a.startTime.localeCompare(b.startTime)
-          );
-
+          const sortedSlots = Array.isArray(slots)
+            ? slots.sort((a, b) => a.startTime.localeCompare(b.startTime))
+            : [];
           setAvailableSlots(sortedSlots);
         } catch (err) {
           console.error("Error fetching available slots:", err);
@@ -93,6 +98,84 @@ function DoctorDetail() {
       fetchAvailableSlots();
     }
   }, [id, selectedDate]);
+
+  // Lấy parentId và patientId khi user đăng nhập
+  useEffect(() => {
+    const fetchParentAndPatient = async () => {
+      if (!userService.isLoggedIn()) return;
+      try {
+        const patientsResponse = await userService.getPatients();
+        const patients = Array.isArray(patientsResponse)
+          ? patientsResponse
+          : patientsResponse.data || [];
+        console.log("patients", patients);
+        if (patients && patients.length > 0) {
+          setParentId(patients[0].parentId || patients[0].parent_id);
+          setPatientId(patients[0].patientId || patients[0].patient_id);
+          console.log(
+            "parentId",
+            patients[0].parentId || patients[0].parent_id
+          );
+          console.log(
+            "patientId",
+            patients[0].patientId || patients[0].patient_id
+          );
+        }
+      } catch (err) {
+        setParentId(null);
+        setPatientId(null);
+      }
+    };
+    fetchParentAndPatient();
+  }, []);
+
+  // Lấy appointment đã hoàn thành với bác sĩ này
+  useEffect(() => {
+    const fetchCompletedAppointment = async () => {
+      if (!patientId || !id) return;
+      try {
+        const appointments = await AppointmentService.getAppointmentsByPatient(
+          patientId
+        );
+        console.log("appointments", appointments);
+        appointments.forEach((a) => console.log("appointment object", a));
+        const completed = appointments.find(
+          (a) =>
+            (a.doctorId == id || a.doctor_id == id) &&
+            a.status &&
+            a.status.toLowerCase() === "completed" &&
+            (!a.hasFeedback ||
+              a.hasFeedback === false ||
+              a.has_feedback === false)
+        );
+        if (completed) {
+          setCompletedAppointmentId(completed.appointmentId);
+          setShowFeedbackForm(true);
+        } else {
+          setShowFeedbackForm(false);
+        }
+      } catch (err) {
+        setShowFeedbackForm(false);
+      }
+    };
+    fetchCompletedAppointment();
+  }, [patientId, id]);
+
+  useEffect(() => {
+    if (id) {
+      const fetchFeedbacks = async () => {
+        try {
+          const res = await fetch(`/api/feedback/doctor/${id}`);
+          const data = await res.json();
+          console.log("Feedback API response:", data);
+          setFeedbacks(data);
+        } catch (err) {
+          console.error("Error fetching feedbacks:", err);
+        }
+      };
+      fetchFeedbacks();
+    }
+  }, [id]);
 
   // Xử lý trạng thái Loading
   if (loading) {
@@ -204,7 +287,7 @@ function DoctorDetail() {
                       {doctor.rating || "N/A"}
                     </span>
                     <span className="text-blue-100 ml-1">
-                      ({doctor.reviews?.length || 0} đánh giá)
+                      ({feedbacks.length || 0} đánh giá)
                     </span>
                   </div>
                   <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
@@ -356,60 +439,51 @@ function DoctorDetail() {
                 <FaStar className="text-yellow-400 mr-3" />
                 Đánh giá từ bệnh nhân
               </h2>
-              {doctor.reviews?.length > 0 ? (
+              {feedbacks.length > 0 ? (
                 <div className="space-y-4">
-                  {doctor.reviews.map((review, index) => {
-                    if (
-                      !review ||
-                      !review.patientName ||
-                      !review.rating ||
-                      !review.comment ||
-                      !review.date
-                    ) {
-                      return null;
-                    }
-                    return (
-                      <div
-                        key={index}
-                        className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition duration-200"
-                      >
-                        <div className="flex items-center justify-between mb-2">
-                          <div className="flex items-center">
-                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center mr-3">
-                              <span className="text-blue-600 font-semibold">
-                                {review.patientName.charAt(0)}
-                              </span>
-                            </div>
-                            <div>
-                              <p className="font-semibold text-gray-800">
-                                {review.patientName}
-                              </p>
-                              <div className="flex items-center">
-                                {renderStars(review.rating)}
-                                <span className="ml-2 text-sm text-gray-600">
-                                  {review.rating}/5
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                          <p className="text-sm text-gray-500">
-                            {review.date &&
-                            !isNaN(new Date(review.date).getTime())
-                              ? new Date(review.date).toLocaleDateString(
-                                  "vi-VN"
-                                )
-                              : "Ngày không xác định"}
-                          </p>
-                        </div>
-                        <p className="text-gray-600">{review.comment}</p>
+                  {feedbacks.map((review, index) => (
+                    <div
+                      key={index}
+                      className="p-4 border border-gray-200 rounded-lg"
+                    >
+                      <div className="flex items-center mb-2">
+                        <span className="font-semibold text-gray-800 mr-2">
+                          {review.parentId
+                            ? `Parent #${review.parentId}`
+                            : "Ẩn danh"}
+                        </span>
+                        <span className="ml-2 text-sm text-gray-600">
+                          {review.createdAt
+                            ? new Date(review.createdAt).toLocaleDateString(
+                                "vi-VN"
+                              )
+                            : ""}
+                        </span>
                       </div>
-                    );
-                  })}
+                      <div className="flex items-center mb-1">
+                        {renderStars(review.rating)}
+                        <span className="ml-2 text-sm text-gray-600">
+                          {review.rating}/5
+                        </span>
+                      </div>
+                      <p className="text-gray-600">{review.comment}</p>
+                    </div>
+                  ))}
                 </div>
               ) : (
                 <p className="text-gray-600">
                   Chưa có đánh giá nào cho bác sĩ này.
                 </p>
+              )}
+              {parentId && completedAppointmentId && (
+                <div className="mt-6">
+                  <FeedbackForm
+                    doctorId={id}
+                    parentId={parentId}
+                    appointmentId={completedAppointmentId}
+                    onSuccess={() => window.location.reload()}
+                  />
+                </div>
               )}
             </div>
           </div>
