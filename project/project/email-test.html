@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Email - HealthCare Portal</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #34495e;
+        }
+        input[type="email"], input[type="number"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        button {
+            background-color: #3498db;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #2980b9;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        .section {
+            border: 1px solid #ddd;
+            padding: 20px;
+            margin-bottom: 20px;
+            border-radius: 5px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Chức Năng Gửi Email</h1>
+        
+        <div class="section">
+            <h3>📧 Test Gửi Email Cơ Bản</h3>
+            <div class="form-group">
+                <label for="email">Email nhận:</label>
+                <input type="email" id="email" placeholder="Nhập email để test" required>
+            </div>
+            
+            <div>
+                <button onclick="testSendEmail()">📧 Gửi Email Test</button>
+                <button onclick="testSendResetEmail()">🔐 Gửi Email Reset Password</button>
+            </div>
+        </div>
+
+        <div class="section">
+            <h3>🔍 Kiểm Tra Đường Dẫn Email từ Vaccine Appointment</h3>
+            <div class="form-group">
+                <label for="appointmentId">Vaccine Appointment ID:</label>
+                <input type="number" id="appointmentId" placeholder="Nhập ID vaccine appointment" required>
+            </div>
+            
+            <div>
+                <button onclick="checkEmailPath()">🔍 Kiểm Tra Email Path</button>
+            </div>
+        </div>
+        
+        <div id="result" class="result"></div>
+    </div>
+
+    <script>
+        async function testSendEmail() {
+            const email = document.getElementById('email').value;
+            if (!email) {
+                showResult('Vui lòng nhập email!', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/test/send-email?toEmail=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.text();
+                
+                if (response.ok) {
+                    showResult(result, 'success');
+                } else {
+                    showResult('Lỗi: ' + result, 'error');
+                }
+            } catch (error) {
+                showResult('Lỗi kết nối: ' + error.message, 'error');
+            }
+        }
+        
+        async function testSendResetEmail() {
+            const email = document.getElementById('email').value;
+            if (!email) {
+                showResult('Vui lòng nhập email!', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/test/send-reset-email?toEmail=${encodeURIComponent(email)}`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const result = await response.text();
+                
+                if (response.ok) {
+                    showResult(result, 'success');
+                } else {
+                    showResult('Lỗi: ' + result, 'error');
+                }
+            } catch (error) {
+                showResult('Lỗi kết nối: ' + error.message, 'error');
+            }
+        }
+
+        async function checkEmailPath() {
+            const appointmentId = document.getElementById('appointmentId').value;
+            if (!appointmentId) {
+                showResult('Vui lòng nhập Vaccine Appointment ID!', 'error');
+                return;
+            }
+            
+            try {
+                const response = await fetch(`http://localhost:8080/api/test/check-email-path/${appointmentId}`, {
+                    method: 'GET',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                if (response.ok) {
+                    const result = await response.json();
+                    const formattedResult = JSON.stringify(result, null, 2);
+                    showResult('✅ Thông tin Email Path:\n' + formattedResult, 'info');
+                } else {
+                    const result = await response.text();
+                    showResult('❌ Lỗi: ' + result, 'error');
+                }
+            } catch (error) {
+                showResult('Lỗi kết nối: ' + error.message, 'error');
+            }
+        }
+        
+        function showResult(message, type) {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = `result ${type}`;
+            resultDiv.style.display = 'block';
+        }
+    </script>
+</body>
+</html> 
