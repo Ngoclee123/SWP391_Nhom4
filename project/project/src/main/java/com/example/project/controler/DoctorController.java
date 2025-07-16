@@ -4,6 +4,7 @@ import com.example.project.dto.DoctorSearchDTO;
 import com.example.project.dto.SlotDTO;
 import com.example.project.model.Doctor;
 import com.example.project.model.Specialty;
+import com.example.project.service.AdminManagementDoctorService;
 import com.example.project.service.DoctorService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Pattern;
@@ -33,6 +34,9 @@ public class DoctorController {
 
     @Autowired
     private DoctorService doctorService;
+
+    @Autowired
+    private AdminManagementDoctorService  adminManagementDoctorService;
 ////Quang
 //    @GetMapping("/{doctorId}")
 //    public ResponseEntity<DoctorSearchDTO> getDoctorId(@PathVariable Integer doctorId) {
@@ -199,6 +203,12 @@ public class DoctorController {
 
 
 
+    @GetMapping("/online")
+    public ResponseEntity<List<Doctor>> getOnlineDoctors() {
+        List<Doctor> onlineDoctors = adminManagementDoctorService.getOnlineDoctors();
+        return ResponseEntity.ok(onlineDoctors);
+    }
+
     // ADMIN: Thêm mới bác sĩ (trả về kèm certificates)
     @PostMapping("")
     public ResponseEntity<?> createDoctor(@RequestBody @Valid Doctor doctor) {
@@ -210,7 +220,7 @@ public class DoctorController {
                 doctor.setCreatedAt(Instant.now());
             }
             System.out.println("Doctor imgs: " + doctor.getImgs());
-            Doctor created = doctorService.saveDoctor(doctor);
+            Doctor created = adminManagementDoctorService.saveDoctor(doctor);
             return ResponseEntity.status(201).body(created);
         } catch (Exception e) {
             logger.error("Error creating doctor: {}", e.getMessage());
@@ -224,7 +234,7 @@ public class DoctorController {
         try {
             doctor.setId(id);
             System.out.println("Doctor imgs: " + doctor.getImgs());
-            Doctor updated = doctorService.saveDoctor(doctor);
+            Doctor updated = adminManagementDoctorService.saveDoctor(doctor);
             return ResponseEntity.ok(updated);
         } catch (Exception e) {
             return ResponseEntity.status(500).body("Error updating doctor: " + e.getMessage());
@@ -235,7 +245,7 @@ public class DoctorController {
     @GetMapping("/entity/{id}")
     public ResponseEntity<?> getDoctorEntity(@PathVariable Integer id) {
         try {
-            Doctor doctor = doctorService.getDoctorEntityById(id);
+            Doctor doctor = adminManagementDoctorService.getDoctorEntityById(id);
             return ResponseEntity.ok(doctor);
         } catch (Exception e) {
             return ResponseEntity.status(404).body("Doctor not found");
@@ -246,7 +256,7 @@ public class DoctorController {
     @DeleteMapping("/{id}")
     public ResponseEntity<?> deleteDoctor(@PathVariable Integer id) {
         try {
-            boolean deleted = doctorService.deleteDoctor(id);
+            boolean deleted = adminManagementDoctorService.deleteDoctor(id);
             if (!deleted) {
                 return ResponseEntity.status(404).body("Doctor not found");
             }

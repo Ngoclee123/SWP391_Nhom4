@@ -30,6 +30,7 @@ import VaccineHistory from './components/vacin/VaccineHistory';
 import PaymentPage from './components/vnpVaccin/PaymentPage';
 import UserService from './service/userService';
 import DoctorDashboard from './components/doctor/DoctorDashboard';
+import ChatButton from './components/ChatButton';
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
 
 function AppRoutes() {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const isDoctorRoute = window.location.pathname.startsWith('/doctor-dashboard');
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -101,6 +103,7 @@ function AppRoutes() {
                 <Route path="/" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
               </Routes>
             </main>
+            {!isDoctorRoute && <ChatButton />} {/* Exclude Footer for doctor route */}
             <Footer />
           </div>
         }

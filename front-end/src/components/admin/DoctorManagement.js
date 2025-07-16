@@ -3,6 +3,7 @@ import { Plus, Edit, Eye, X } from 'lucide-react';
 import StatusBadge from './StatusBadge';
 import ActionButton from './ActionButton';
 import DoctorService from '../../service/DoctorService';
+import { useNavigate } from 'react-router-dom';
 
 const DoctorManagement = React.memo(() => {
   const [doctors, setDoctors] = useState([]);
@@ -13,15 +14,22 @@ const DoctorManagement = React.memo(() => {
     name: '',
     specialty: '',
     status: 'online',
-    patients: 0,
-    rating: 0,
-    experience: 0,
-    certificates: [],
+    imgs: '',
+    bio: '',
+    dateOfBirth: '',
+    locational: '',
+    education: '',
+    hospital: '',
+    phoneNumber: '',
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [specialties, setSpecialties] = useState([]);
   const [allCertificates, setAllCertificates] = useState([]);
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   // Fetch doctors from API
   const fetchDoctors = useCallback(async () => {
@@ -30,15 +38,22 @@ const DoctorManagement = React.memo(() => {
     try {
       const res = await DoctorService.searchDoctors({});
       const apiDoctors = Array.isArray(res.content) ? res.content : (Array.isArray(res) ? res : []);
-      setDoctors(apiDoctors.map(d => ({
-        id: d.id,
-        name: d.fullName || d.name || '',
-        specialty: d.specialtyName || d.specialty || '',
-        status: d.availabilityStatus || 'online',
-        patients: d.patients || 0,
-        rating: d.rating || 0,
-        experience: d.experience || 0
-      })));
+      setDoctors(apiDoctors.map(d => {
+        // Log giá trị status thực tế để debug
+        console.log('Doctor status from API:', d.status);
+        return {
+          id: d.id,
+          imgs: d.imgs || '',
+          name: d.fullName || d.name || '',
+          specialty: d.specialtyName || d.specialty || '',
+          phoneNumber: d.phoneNumber || '',
+        dateOfBirth: d.dateOfBirth || '',
+          locational: d.locational || '',
+          education: d.education || d.degree || '',
+          hospital: d.hospital || d.hospitalName || '',
+          status: d.status || 'offline', // lấy đúng status từ BE, không ép về lowerCase nữa
+        };
+      }));
     } catch (err) {
       setError('Không thể tải danh sách bác sĩ');
     } finally {
@@ -76,7 +91,7 @@ const DoctorManagement = React.memo(() => {
 
   const handleDoctorAction = useCallback((action, doctorId) => {
     if (action === 'view') {
-      console.log('View doctor:', doctorId);
+      navigate(`/admin/doctors/${doctorId}`);
     } else if (action === 'edit') {
       setLoading(true);
       DoctorService.getDoctorEntityById(doctorId)
@@ -87,10 +102,13 @@ const DoctorManagement = React.memo(() => {
             name: doctor.fullName || '',
             specialty: doctor.specialty?.id || '',
             status: 'online',
-            patients: 0,
-            rating: 0,
-            experience: 0,
-            certificates: (doctor.certificates || []).map(c => c.id),
+            imgs: doctor.imgs || '',
+            bio: doctor.bio || '',
+            dateOfBirth: doctor.dateOfBirth || '',
+            locational: doctor.locational || '',
+            education: doctor.education || '',
+            hospital: doctor.hospital || '',
+            phoneNumber: doctor.phoneNumber || '',
           });
           fetchSpecialties();
           fetchCertificates();
@@ -108,7 +126,7 @@ const DoctorManagement = React.memo(() => {
           .finally(() => setLoading(false));
       }
     }
-  }, [fetchDoctors, fetchSpecialties, fetchCertificates]);
+  }, [fetchDoctors, fetchSpecialties, fetchCertificates, navigate]);
 
   const handleAddDoctor = useCallback(() => {
     setModalMode('create');
@@ -116,10 +134,13 @@ const DoctorManagement = React.memo(() => {
       name: '',
       specialty: '',
       status: 'online',
-      patients: 0,
-      rating: 0,
-      experience: 0,
-      certificates: [],
+      imgs: '',
+      bio: '',
+      dateOfBirth: '',
+      locational: '',
+      education: '',
+      hospital: '',
+      phoneNumber: '',
     });
     fetchSpecialties();
     fetchCertificates();
@@ -148,30 +169,49 @@ const DoctorManagement = React.memo(() => {
 
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
-    setLoading(true);
     setError('');
+    setSuccess('');
+    // Validate các trường bắt buộc
+    if (!formData.name) {
+      setError('Tên bác sĩ không được để trống!');
+      return;
+    }
+    if (!formData.specialty) {
+      setError('Bạn phải chọn chuyên khoa!');
+      return;
+    }
+    if (!formData.imgs) {
+      setError('Bạn phải upload ảnh đại diện!');
+      return;
+    }
+    setLoading(true);
     try {
-      // Map certificates về dạng object
-      const certObjs = (formData.certificates || []).filter(c => c && c.trim()).map(c => ({ certificateName: c }));
+      const payload = {
+        fullName: formData.name,
+        specialty: { id: Number(formData.specialty) },
+        imgs: formData.imgs,
+        bio: formData.bio,
+        dateOfBirth: formData.dateOfBirth,
+        locational: formData.locational,
+        education: formData.education,
+        hospital: formData.hospital,
+        phoneNumber: formData.phoneNumber,
+        status: formData.status,
+      };
+      let res;
       if (modalMode === 'create') {
-        const payload = {
-          fullName: formData.name,
-          specialty: { id: Number(formData.specialty) },
-          certificates: certObjs,
-        };
-        await DoctorService.createDoctor(payload);
+        res = await DoctorService.createDoctor(payload);
+        setSuccess('Thêm bác sĩ thành công!');
       } else if (modalMode === 'edit') {
-        const payload = {
-          fullName: formData.name,
-          specialty: { id: Number(formData.specialty) },
-          certificates: certObjs,
-        };
-        await DoctorService.updateDoctor(selectedDoctor.id, payload);
+        res = await DoctorService.updateDoctor(selectedDoctor.id, payload);
+        setSuccess('Cập nhật bác sĩ thành công!');
       }
+      console.log('Doctor API response:', res);
       setIsModalOpen(false);
       fetchDoctors();
     } catch (err) {
-      setError('Lưu bác sĩ thất bại');
+      console.error('Doctor API error:', err);
+      setError(err?.response?.data?.message || err?.message || 'Lưu bác sĩ thất bại');
     } finally {
       setLoading(false);
     }
@@ -182,75 +222,127 @@ const DoctorManagement = React.memo(() => {
     setFormData(prev => ({ ...prev, [name]: value }));
   }, []);
 
+  // Thêm hàm upload avatar
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formDataUpload = new FormData();
+    formDataUpload.append('file', file);
+    try {
+      const url = await DoctorService.uploadAvatar(formDataUpload);
+      // Log giá trị url để debug
+      console.log('Upload avatar response:', url);
+      // Đảm bảo imgs là string, không phải mảng, không phải undefined
+      let imgUrl = url;
+      if (Array.isArray(url)) {
+        imgUrl = url[0];
+      } else if (typeof url === 'object' && url !== null && url.url) {
+        imgUrl = url.url;
+      }
+      setFormData(prev => ({ ...prev, imgs: imgUrl }));
+    } catch (err) {
+      setError('Upload ảnh thất bại');
+    }
+  };
+
+  // Thêm filter search và status cho danh sách bác sĩ
+  const filteredDoctors = doctors.filter(doctor => {
+    const matchesSearch = !searchTerm ||
+      (doctor.name && doctor.name.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (doctor.specialty && doctor.specialty.toLowerCase().includes(searchTerm.toLowerCase())) ||
+      (doctor.id && doctor.id.toString().includes(searchTerm));
+    const matchesStatus = statusFilter === 'all' || doctor.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
   return (
-    <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">Quản lý bác sĩ</h2>
-          <p className="text-gray-600 mt-1">Theo dõi và quản lý đội ngũ bác sĩ</p>
+    <div className="p-6">
+      {/* Search and Filter */}
+      <div className="mb-6 flex flex-col sm:flex-row gap-4">
+        <div className="flex-1">
+          <input
+            type="text"
+            placeholder="Tìm kiếm theo tên, chuyên khoa hoặc ID..."
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={searchTerm}
+            onChange={e => setSearchTerm(e.target.value)}
+          />
         </div>
-        <button
-          onClick={handleAddDoctor}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-lg"
-        >
-          <Plus className="w-4 h-4" />
-          <span>Thêm bác sĩ</span>
-        </button>
+        <div className="sm:w-48">
+          <select
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            value={statusFilter}
+            onChange={e => setStatusFilter(e.target.value)}
+          >
+            <option value="all">Tất cả status</option>
+            <option value="online">Online</option>
+            <option value="offline">Offline</option>
+          </select>
+        </div>
       </div>
-
-      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-        {doctors.map((doctor) => (
-          <div key={doctor.id} className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all">
-            <div className="flex items-start space-x-4 mb-6">
-              <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
-                <span className="text-white text-xl font-bold">
-                  {doctor.name.split(' ').pop().charAt(0)}
-                </span>
-              </div>
-              <div className="flex-1">
-                <h3 className="font-bold text-gray-900 text-lg">{doctor.name}</h3>
-                <p className="text-gray-600 mb-2">{doctor.specialty}</p>
-                <StatusBadge status={doctor.status} type="doctor" />
-              </div>
-            </div>
-            
-            <div className="grid grid-cols-3 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <p className="text-2xl font-bold text-blue-600">{doctor.patients}</p>
-                <p className="text-xs text-gray-600 font-medium">Bệnh nhân</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-yellow-600">{doctor.rating}</p>
-                <p className="text-xs text-gray-600 font-medium">Đánh giá</p>
-              </div>
-              <div className="text-center">
-                <p className="text-2xl font-bold text-green-600">{doctor.experience}</p>
-                <p className="text-xs text-gray-600 font-medium">Năm KN</p>
-              </div>
-            </div>
-
-            <div className="flex space-x-2">
-              <button 
-                onClick={() => handleDoctorAction('view', doctor.id)}
-                className="flex-1 bg-blue-50 text-blue-700 px-4 py-2 rounded-lg hover:bg-blue-100 text-sm font-semibold transition-colors"
-              >
-                Xem chi tiết
-              </button>
-              <ActionButton
-                icon={Edit}
-                onClick={() => handleDoctorAction('edit', doctor.id)}
-                color="green"
-                tooltip="Chỉnh sửa"
-              />
-              <ActionButton
-                icon={X}
-                onClick={() => handleDoctorAction('delete', doctor.id)}
-                color="red"
-                tooltip="Xóa"
-              />
-            </div>
-          </div>
-        ))}
+      {/* Table hiển thị danh sách bác sĩ dùng filteredDoctors thay vì doctors */}
+      <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-100">
+        <table className="min-w-full divide-y divide-gray-200">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ảnh</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Họ tên</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Chuyên khoa</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SĐT</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ngày sinh</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Địa chỉ</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trình độ</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bệnh viện</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
+              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hành động</th>
+            </tr>
+          </thead>
+          <tbody className="bg-white divide-y divide-gray-100">
+            {filteredDoctors.map((doctor) => (
+              <tr key={doctor.id}>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{doctor.id}</td>
+                <td className="px-4 py-3 whitespace-nowrap">
+                  {doctor.imgs ? (
+                    <img src={doctor.imgs.startsWith('http') ? doctor.imgs : `http://localhost:8080${doctor.imgs}`} alt={doctor.name} className="w-12 h-12 object-cover rounded-lg" onError={e => {e.target.onerror=null; e.target.src='/logo192.png'}} />
+                  ) : (
+                    <span className="inline-block w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 font-bold">
+                      {doctor.name.split(' ').pop().charAt(0)}
+                    </span>
+                  )}
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{doctor.name}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.specialty}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.phoneNumber}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.dateOfBirth}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.locational}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.education}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.hospital}</td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${doctor.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                    {doctor.status === 'online' ? 'Trực tuyến' : 'Ngoại tuyến'}
+                  </span>
+                </td>
+                <td className="px-4 py-3 whitespace-nowrap text-sm">
+                  <div className="flex space-x-2">
+                    <ActionButton
+                      icon={Edit}
+                      onClick={() => handleDoctorAction('edit', doctor.id)}
+                      color="green"
+                      tooltip="Chỉnh sửa"
+                    />
+                    <ActionButton
+                      icon={X}
+                      onClick={() => handleDoctorAction('delete', doctor.id)}
+                      color="red"
+                      tooltip="Xóa"
+                    />
+                  </div>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       </div>
 
       {isModalOpen && (
@@ -265,6 +357,18 @@ const DoctorManagement = React.memo(() => {
               </button>
             </div>
             <form onSubmit={handleSubmit}>
+              {error && (
+                <div className="mb-2 p-2 bg-red-100 text-red-700 rounded">{error}</div>
+              )}
+            {/* Popup thành công ngoài modal */}
+            {success && !isModalOpen && (
+              <div className="fixed inset-0 flex items-center justify-center z-50 bg-black bg-opacity-30">
+                <div className="bg-white p-6 rounded shadow text-center">
+                  <div className="mb-4 text-green-700 font-bold">{success}</div>
+                  <button onClick={() => setSuccess('')} className="px-4 py-2 bg-blue-600 text-white rounded">OK</button>
+                </div>
+              </div>
+            )}
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Tên bác sĩ</label>
@@ -302,65 +406,84 @@ const DoctorManagement = React.memo(() => {
                   >
                     <option value="online">Trực tuyến</option>
                     <option value="offline">Ngoại tuyến</option>
-                    <option value="busy">Bận rộn</option>
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Số bệnh nhân</label>
+                  <label className="block text-sm font-medium text-gray-700">Ảnh đại diện (upload)</label>
                   <input
-                    type="number"
-                    name="patients"
-                    value={formData.patients}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleAvatarChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg"
+                    required={modalMode === 'create'}
+                  />
+                  {formData.imgs && (
+                    <img
+                      src={formData.imgs.startsWith('http') ? formData.imgs : (formData.imgs.startsWith('/avatars/') ? `http://localhost:8080${formData.imgs}` : formData.imgs)}
+                      alt="avatar"
+                      className="mt-2 w-24 h-24 object-cover rounded-lg"
+                      onError={e => {e.target.onerror=null; e.target.src='/logo192.png'}}
+                    />
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Tiểu sử</label>
+                  <textarea
+                    name="bio"
+                    value={formData.bio}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                    min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Đánh giá</label>
+                  <label className="block text-sm font-medium text-gray-700">Ngày sinh</label>
                   <input
-                    type="number"
-                    name="rating"
-                    value={formData.rating}
+                    type="date"
+                    name="dateOfBirth"
+                    value={formData.dateOfBirth}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                    min="0"
-                    max="5"
-                    step="0.1"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Năm kinh nghiệm</label>
+                  <label className="block text-sm font-medium text-gray-700">Địa chỉ</label>
                   <input
-                    type="number"
-                    name="experience"
-                    value={formData.experience}
+                    type="text"
+                    name="locational"
+                    value={formData.locational}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                    min="0"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Chứng chỉ</label>
-                  {(formData.certificates || []).map((cert, idx) => (
-                    <div key={idx} className="flex items-center mb-2">
-                      <select
-                        value={cert}
-                        onChange={e => handleCertificateChange(idx, e.target.value)}
-                        className="flex-1 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                      >
-                        <option value="">Chọn chứng chỉ</option>
-                        {allCertificates.map(c => (
-                          <option key={c.id} value={c.id}>{c.certificateName}</option>
-                        ))}
-                      </select>
-                      <button type="button" onClick={() => handleRemoveCertificate(idx)} className="ml-2 text-red-500 hover:text-red-700">X</button>
-                    </div>
-                  ))}
-                  <button type="button" onClick={handleAddCertificate} className="mt-2 px-3 py-1 bg-blue-100 text-blue-700 rounded hover:bg-blue-200">+ Thêm chứng chỉ</button>
+                  <label className="block text-sm font-medium text-gray-700">Học vấn</label>
+                  <input
+                    type="text"
+                    name="education"
+                    value={formData.education}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Bệnh viện</label>
+                  <input
+                    type="text"
+                    name="hospital"
+                    value={formData.hospital}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Số điện thoại</label>
+                  <input
+                    type="text"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                  />
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">

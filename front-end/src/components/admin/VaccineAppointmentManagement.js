@@ -31,7 +31,7 @@ function VaccineAppointmentManagement() {
     // Lấy tên bệnh nhân cho các lịch đặt thiếu tên
     const missingPatients = appointments.filter(app => !app.patientName && app.patientId && !patientNames[app.patientId]);
     missingPatients.forEach(app => {
-      PatientService.getPatientById(app.patientId).then(data => {
+      PatientService.getPatientId(app.patientId).then(data => {
         setPatientNames(prev => ({ ...prev, [app.patientId]: data.fullName }));
       });
     });

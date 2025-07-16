@@ -49,4 +49,10 @@ public interface DoctorRepository extends JpaRepository<Doctor, Integer>, JpaSpe
 
     Optional<Doctor> findByAccountId(Integer accountId);
 
+    @Query("SELECT d FROM Doctor d WHERE LOWER(d.status) = 'online'")
+    List<Doctor> findOnlineDoctors();
+
+    @org.springframework.data.jpa.repository.Query("SELECT COUNT(d) FROM Doctor d WHERE LOWER(d.status) = LOWER(:status)")
+    long countByStatus(@org.springframework.data.repository.query.Param("status") String status);
+
 }

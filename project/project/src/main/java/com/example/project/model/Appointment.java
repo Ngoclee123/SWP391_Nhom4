@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
@@ -64,10 +65,13 @@ public class Appointment {
     private String paymentMethod;
 
     @Column(name = "total_fee")
-    private Double totalFee;
+    private BigDecimal totalFee;
 
     @Column(name = "symptoms")
     private String symptoms;
+
+    @Column(name = "service_id")
+    private Integer serviceId;
 
     // Fields from second file that were not in the first and do not duplicate
     // None were unique that are not already included in more complete form

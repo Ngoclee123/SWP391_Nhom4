@@ -34,7 +34,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS","PACTH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -82,7 +82,7 @@ public class SecurityConfig {
                                 "/login",
                                 "/oauth2/redirect",
                                 "/api/vnpay/**",
-                                "/api/doctors/**",
+                                "/api/doctors/**","api/doctors","/api/doctors/specialties","/api/doctors/specialty/**","/ws/**",
                                 "/api/doctors/*/available-slots",
                                 "/api/appointments/book",
                                 "/favicon.ico",

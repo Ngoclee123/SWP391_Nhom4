@@ -63,30 +63,35 @@ function AccountManagement() {
       phoneNumber: account.phoneNumber || '',
       address: account.address || '',
       status: account.status,
-      role: account.role?.name || '',
+      role: account.role?.rolename || '',
       password: '',
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn xóa tài khoản này?')) return;
+  // Thay thế hàm handleDelete thành handleDisable
+  const handleDisable = async (id) => {
+    if (!window.confirm('Bạn có chắc muốn vô hiệu hóa tài khoản này?')) return;
     try {
-      await userService.deleteAccount(id);
+      await userService.updateAccount(id, { status: false });
       fetchAccounts();
     } catch (err) {
-      setError('Xóa tài khoản thất bại');
+      setError('Vô hiệu hóa tài khoản thất bại');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
+      let payload = {
         ...form,
         passwordHash: form.password, // Đổi tên trường cho đúng backend
       };
       delete payload.password; // Xóa trường password cũ
+      // Đảm bảo role là object { rolename: ... }
+      if (typeof payload.role === 'string') {
+        payload.role = { rolename: payload.role };
+      }
       if (editingId) {
         await userService.updateAccount(editingId, payload);
       } else {
@@ -119,7 +124,7 @@ function AccountManagement() {
         acc.username?.toLowerCase().includes(search.toLowerCase()) ||
         acc.email?.toLowerCase().includes(search.toLowerCase()) ||
         acc.fullName?.toLowerCase().includes(search.toLowerCase());
-      const matchesRole = !roleFilter || (acc.role && acc.role.name === roleFilter);
+      const matchesRole = !roleFilter || (acc.role && acc.role.rolename === roleFilter);
       return matchesSearch && matchesRole;
     });
   }, [accounts, search, roleFilter]);
@@ -326,12 +331,28 @@ function AccountManagement() {
                         >
                           Sửa
                         </button>
-                        <button
-                          onClick={() => handleDelete(acc.id)}
-                          className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded font-semibold text-xs text-white"
-                        >
-                          Xóa
-                        </button>
+                        {acc.status ? (
+                          <button
+                            onClick={() => handleDisable(acc.id)}
+                            className="bg-gray-500 hover:bg-gray-600 px-2 py-1 rounded font-semibold text-xs text-white"
+                          >
+                            Vô hiệu hóa
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await userService.updateAccount(acc.id, { status: true });
+                                fetchAccounts();
+                              } catch (err) {
+                                setError('Kích hoạt tài khoản thất bại');
+                              }
+                            }}
+                            className="bg-green-500 hover:bg-green-600 px-2 py-1 rounded font-semibold text-xs text-white"
+                          >
+                            Kích hoạt
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>

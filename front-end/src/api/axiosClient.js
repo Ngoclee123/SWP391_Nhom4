@@ -24,7 +24,7 @@ axiosClient.interceptors.request.use(async (req) => {
         console.log("Interceptor - Token present but skipped for:", req.url);
     } else if (
         !req.url.match(/\/api\/(login|register|auth\/google\/callback|oauth2\/authorization\/google|login\/oauth2\/code\/|login|oauth2\/redirect)/) &&
-        !['/login', '/register', '/forgot-password', '/reset-password'].includes(window.location.pathname)
+        !['/login', '/register', '/forgot-password', '/reset-password', '/', '/home'].includes(window.location.pathname)
     ) {
         console.warn("No valid token available, redirecting to login for:", req.url);
         window.location.href = '/login';

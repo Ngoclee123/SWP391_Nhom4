@@ -25,11 +25,51 @@ public class DoctorSearchDTO {
     private String address;
     private String education;
     private String hospital;
+    private String status;
+    public String getStatus() { return status; }
+    public void setStatus(String status) { this.status = status; }
+
+    private String dateOfBirth;
+    public String getDateOfBirth() { return dateOfBirth; }
+    public void setDateOfBirth(String dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+
+
+
+
 //    // Các trường mới cho giờ làm việc cố định
 //    private String morningHours;
 //    private String afternoonHours;
     private List<AvailabilityDTO> availabilities;
 
+    //A
+    private Integer accountId;
+    private String accountUsername;
+    private String accountEmail;
+    private String accountRole;
+    private String accountPhoneNumber;
+    private String accountAddress;
+    private Boolean accountStatus;
+
+    public Integer getAccountId() { return accountId; }
+    public void setAccountId(Integer accountId) { this.accountId = accountId; }
+
+    public String getAccountUsername() { return accountUsername; }
+    public void setAccountUsername(String accountUsername) { this.accountUsername = accountUsername; }
+
+    public String getAccountEmail() { return accountEmail; }
+    public void setAccountEmail(String accountEmail) { this.accountEmail = accountEmail; }
+
+    public String getAccountRole() { return accountRole; }
+    public void setAccountRole(String accountRole) { this.accountRole = accountRole; }
+
+    public String getAccountPhoneNumber() { return accountPhoneNumber; }
+    public void setAccountPhoneNumber(String accountPhoneNumber) { this.accountPhoneNumber = accountPhoneNumber; }
+
+    public String getAccountAddress() { return accountAddress; }
+    public void setAccountAddress(String accountAddress) { this.accountAddress = accountAddress; }
+
+    public Boolean getAccountStatus() { return accountStatus; }
+    public void setAccountStatus(Boolean accountStatus) { this.accountStatus = accountStatus; }
 
 //    // Getters và setters
 //    public Integer getId() { return id; }

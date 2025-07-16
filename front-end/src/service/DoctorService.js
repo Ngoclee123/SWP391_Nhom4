@@ -32,7 +32,7 @@ class DoctorService {
         try {
             const response = await axiosClient.get(url);
             console.log('All doctors response:', response);
-            return response;
+            return response.data;
         } catch (error) {
             console.error('Error fetching all doctors:', error);
             return { data: [] }; // Trả về đối tượng với data rỗng để xử lý đồng nhất
@@ -150,22 +150,29 @@ async getFeedbackByDoctorId(doctorId) {
         return axiosClient.delete(`/api/doctors/${id}`);
     }
 
-    // ADMIN: Lấy chi tiết bác sĩ kèm certificates
-    async getDoctorEntityById(id) {
-        return axiosClient.get(`/api/doctors/entity/${id}`);
-    }
+  // ADMIN: Lấy chi tiết bác sĩ kèm certificates
+  async getDoctorEntityById(id) {
+    return axiosClient.get(`/api/doctors/entity/${id}`);
+}
 
-    // ADMIN: Lấy danh sách chứng chỉ
-    async getAllCertificates() {
-        return axiosClient.get('/api/doctors/certificates');
-    }
+// ADMIN: Lấy danh sách chứng chỉ
+async getAllCertificates() {
+    return axiosClient.get('/api/doctors/certificates');
+}
 
-    async uploadAvatar(formData) {
-        const response = await axiosClient.post('/api/doctors/upload-avatar', formData, {
-            headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        return response.data;
-    }
+async uploadAvatar(formData) {
+    // interceptor đã trả về response.data, nên response là chuỗi đường dẫn ảnh
+    const response = await axiosClient.post('/api/doctors/upload-avatar', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    return response;
+}
+
+// Lấy danh sách bác sĩ online
+async getOnlineDoctors() {
+    // Gọi API backend trả về danh sách bác sĩ online
+    return await axiosClient.get('/api/doctors/online');
+}
 
 }
 

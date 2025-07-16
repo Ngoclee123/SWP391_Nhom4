@@ -7,9 +7,7 @@ import Feedback from './Feedback';
 import DoctorDashboardService from '../../service/DoctorDashboardService';
 import UserService from '../../service/userService';
 import { jwtDecode } from 'jwt-decode';
-import SockJS from 'sockjs-client';
-import { Client } from '@stomp/stompjs';
-import axiosClient from '../../api/axiosClient';
+import ChatDoctor from './ChatDoctor';
 
 const DoctorDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -22,107 +20,10 @@ const DoctorDashboard = () => {
     });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
-    const [messages, setMessages] = useState([]);
-    const [stompClient, setStompClient] = useState(null);
-    const [selectedChat, setSelectedChat] = useState(null);
-    const [messageInput, setMessageInput] = useState('');
-    const [fetchError, setFetchError] = useState('');
-
-    // Utility functions
-    const addMessage = (message) => {
-        setMessages(prev => {
-            // Nếu có ID, kiểm tra trùng lặp
-            if (message.id) {
-                const isDuplicate = prev.some(msg => msg.id === message.id);
-                if (isDuplicate) return prev;
-            }
-            
-            // Thêm tin nhắn mới và sắp xếp theo thời gian
-            const newMessages = [...prev, message];
-            return newMessages.sort((a, b) => new Date(a.sentAt) - new Date(b.sentAt));
-        });
-    };
-
-    const fetchMessageHistory = async (senderId, receiverId) => {
-        try {
-            const response = await axiosClient.get(`/api/messages/history/${senderId}/${receiverId}`);
-            setMessages(response.data || []);
-            setFetchError('');
-        } catch (error) {
-            console.error('Error fetching message history:', error);
-            setFetchError(error.response?.status === 401 ? 'Lỗi xác thực' : 'Lỗi tải tin nhắn');
-        }
-    };
-
-    const connectWebSocket = (username) => {
-        if (!UserService.isLoggedIn() || stompClient) return;
-
-        const socket = new SockJS('http://localhost:8080/ws');
-        const client = new Client({
-            webSocketFactory: () => socket,
-            connectHeaders: { Authorization: `Bearer ${UserService.getToken()}` },
-            onConnect: () => {
-                console.log('Connected to WebSocket');
-                setStompClient(client);
-                client.subscribe(`/user/${username}/queue/messages`, (payload) => {
-                    const message = JSON.parse(payload.body);
-                    addMessage({ ...message, sentAt: message.sentAt || new Date().toISOString() });
-                });
-                client.subscribe(`/user/${username}/queue/notifications`, (payload) => {
-                    const notification = JSON.parse(payload.body);
-                    addMessage({ ...notification, sentAt: notification.sentAt || new Date().toISOString() });
-                });
-            },
-            onStompError: (error) => {
-                console.error('WebSocket error:', error);
-                setFetchError('Không thể kết nối chat');
-            },
-            onDisconnect: () => setStompClient(null)
-        });
-        client.activate();
-    };
-
-    const sendMessage = (e) => {
-        e.preventDefault();
-        if (messageInput.trim() && stompClient && selectedChat) {
-            const chatMessage = {
-                sender: userName,
-                receiver: selectedChat,
-                content: messageInput,
-                type: 'CHAT',
-                sentAt: new Date().toISOString()
-            };
-            
-            // Thêm tin nhắn vào state ngay lập tức để hiển thị
-            addMessage({
-                ...chatMessage,
-                id: Date.now() // Tạo ID tạm thời
-            });
-            
-            // Gửi tin nhắn qua WebSocket
-            stompClient.publish({
-                destination: '/app/chat.sendPrivateMessage',
-                body: JSON.stringify(chatMessage)
-            });
-            setMessageInput('');
-        }
-    };
 
     const handleLogout = () => {
         localStorage.removeItem('token');
         window.location.href = '/login';
-    };
-
-    const handleSelectChat = async (user) => {
-        setSelectedChat(user);
-        try {
-            const response = await axiosClient.get(`/api/accounts/username/${user}`);
-            const receiverId = response.data.id;
-            await fetchMessageHistory(UserService.getAccountId(), receiverId);
-        } catch (error) {
-            console.error('Error fetching receiver ID:', error);
-            setFetchError('Không thể tải thông tin người nhận');
-        }
     };
 
     // Main data fetching
@@ -149,7 +50,6 @@ const DoctorDashboard = () => {
                         todaysAppointments: 45,
                         completedWeek: 89,
                     });
-                    connectWebSocket(userNameFromToken);
                 } else {
                     setError('Không tìm thấy ID bác sĩ');
                 }
@@ -166,12 +66,6 @@ const DoctorDashboard = () => {
         };
 
         initializeDashboard();
-        return () => {
-            if (stompClient) {
-                stompClient.deactivate();
-                setStompClient(null);
-            }
-        };
     }, []);
 
     // Loading and error states
@@ -227,8 +121,6 @@ const DoctorDashboard = () => {
                                 <p className="text-xs text-gray-500">Doctor Dashboard</p>
                             </div>
                         </div>
-                        
-                        {/* Doctor info */}
                         <div className="bg-gradient-to-r from-blue-500 to-purple-600 p-4 rounded-2xl mb-6 text-white">
                             <div className="flex items-center space-x-3">
                                 <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
@@ -240,8 +132,6 @@ const DoctorDashboard = () => {
                                 </div>
                             </div>
                         </div>
-                        
-                        {/* Navigation */}
                         <nav className="space-y-2">
                             {menuItems.map((item) => (
                                 <button
@@ -263,7 +153,6 @@ const DoctorDashboard = () => {
 
                 {/* Main content */}
                 <div className="flex-1 flex flex-col overflow-hidden">
-                    {/* Header */}
                     <div className="bg-white/80 backdrop-blur-xl shadow-lg p-6">
                         <div className="flex justify-between items-center">
                             <div>
@@ -271,14 +160,6 @@ const DoctorDashboard = () => {
                                 <p className="text-gray-600">Quản lý và theo dõi hoạt động</p>
                             </div>
                             <div className="flex items-center space-x-4">
-                                <div className="relative">
-                                    <button className="p-3 bg-orange-500 text-white rounded-2xl">
-                                        <span className="text-lg">🔔</span>
-                                    </button>
-                                    <div className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
-                                        {messages.filter(msg => msg.type === 'NOTIFICATION').length}
-                                    </div>
-                                </div>
                                 <button
                                     onClick={handleLogout}
                                     className="px-6 py-3 bg-red-500 text-white rounded-2xl font-medium hover:bg-red-600 transition-all"
@@ -289,17 +170,13 @@ const DoctorDashboard = () => {
                         </div>
                     </div>
 
-                    {/* Content */}
                     <div className="flex-1 overflow-auto p-6">
                         {activeTab === 'overview' && (
                             <div className="space-y-6">
-                                {/* Welcome section */}
                                 <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl">
                                     <h3 className="text-3xl font-bold text-blue-600 mb-2">Chào mừng trở lại! 👋</h3>
                                     <p className="text-gray-600">Tổng quan về hoạt động hôm nay</p>
                                 </div>
-
-                                {/* Stats grid */}
                                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                                     <div className="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl">
                                         <div className="flex items-center justify-between mb-4">
@@ -313,7 +190,6 @@ const DoctorDashboard = () => {
                                         </div>
                                         <div className="text-green-500 text-sm">↗️ +12% so với tháng trước</div>
                                     </div>
-                                    
                                     <div className="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="w-16 h-16 bg-green-500 rounded-2xl flex items-center justify-center text-white text-2xl">
@@ -326,7 +202,6 @@ const DoctorDashboard = () => {
                                         </div>
                                         <div className="text-green-500 text-sm">↗️ +8% so với hôm qua</div>
                                     </div>
-                                    
                                     <div className="bg-white/80 backdrop-blur-xl p-6 rounded-3xl shadow-xl">
                                         <div className="flex items-center justify-between mb-4">
                                             <div className="w-16 h-16 bg-purple-500 rounded-2xl flex items-center justify-center text-white text-2xl">
@@ -348,86 +223,7 @@ const DoctorDashboard = () => {
                         {activeTab === 'records' && <MedicalRecords doctorId={doctorId} />}
                         {activeTab === 'feedback' && <Feedback doctorId={doctorId} />}
                         {activeTab === 'profile' && <Profile doctorId={doctorId} />}
-                        
-                        {activeTab === 'messages' && (
-                            <div className="bg-white/80 backdrop-blur-xl p-8 rounded-3xl shadow-xl">
-                                <h4 className="text-2xl font-bold mb-6">Tin nhắn</h4>
-                                <div className="flex h-[500px]">
-                                    {/* Chat list */}
-                                    <div className="w-1/3 border-r pr-4">
-                                        <h5 className="text-lg font-semibold mb-4">Danh sách trò chuyện</h5>
-                                        {[...new Set(messages.map(msg => msg.sender !== userName ? msg.sender : msg.receiver))].map((user, index) => (
-                                            <button
-                                                key={index}
-                                                onClick={() => handleSelectChat(user)}
-                                                className={`w-full text-left p-3 rounded-lg mb-2 transition-all ${
-                                                    selectedChat === user ? 'bg-blue-100' : 'bg-gray-100'
-                                                } hover:bg-blue-200`}
-                                            >
-                                                {user}
-                                            </button>
-                                        ))}
-                                    </div>
-                                    
-                                    {/* Chat area */}
-                                    <div className="w-2/3 pl-4 flex flex-col">
-                                        <h5 className="text-lg font-semibold mb-4">
-                                            Trò chuyện với {selectedChat}
-                                        </h5>
-                                        <div className="flex-1 overflow-y-auto space-y-3">
-                                            {messages
-                                                .filter(msg => 
-                                                    (msg.sender === selectedChat && msg.receiver === userName) || 
-                                                    (msg.sender === userName && msg.receiver === selectedChat)
-                                                )
-                                                .map((msg, index) => (
-                                                    <div key={index} className="flex justify-end">
-                                                        <div className={`rounded-lg p-3 max-w-xs ${
-                                                            msg.sender === userName 
-                                                                ? 'bg-blue-500 text-white' 
-                                                                : 'bg-green-500 text-white'
-                                                        }`}>
-                                                            <div className="flex items-center space-x-2 mb-1">
-                                                                <span className="text-xs font-medium">
-                                                                    {msg.sender === userName ? '👨‍⚕️ Bác sĩ' : '👤 Người dùng'}
-                                                                </span>
-                                                                <span className="text-xs opacity-70">
-                                                                    {msg.sender}
-                                                                </span>
-                                                            </div>
-                                                            <p className="text-sm">{msg.content}</p>
-                                                            <p className="text-xs mt-1 opacity-70">
-                                                                {new Date(msg.sentAt).toLocaleTimeString('vi-VN')}
-                                                            </p>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            {fetchError && <p className="text-red-500 text-sm">{fetchError}</p>}
-                                        </div>
-                                        
-                                        {/* Message input */}
-                                        {selectedChat && (
-                                            <form onSubmit={sendMessage} className="flex gap-3 mt-4">
-                                                <input
-                                                    type="text"
-                                                    value={messageInput}
-                                                    onChange={(e) => setMessageInput(e.target.value)}
-                                                    placeholder="Nhập tin nhắn..."
-                                                    className="flex-1 p-3 border rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500"
-                                                />
-                                                <button
-                                                    type="submit"
-                                                    disabled={!messageInput.trim()}
-                                                    className="bg-blue-500 text-white px-6 py-3 rounded-xl hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
-                                                >
-                                                    Gửi
-                                                </button>
-                                            </form>
-                                        )}
-                                    </div>
-                                </div>
-                            </div>
-                        )}
+                        {activeTab === 'messages' && <ChatDoctor userName={userName} />}
                     </div>
                 </div>
             </div>

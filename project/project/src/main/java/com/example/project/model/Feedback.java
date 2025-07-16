@@ -45,6 +45,10 @@ public class Feedback {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+    @ColumnDefault("false")
+    @Column(name = "is_read")
+    private Boolean isRead = false;
+
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

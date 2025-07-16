@@ -1,86 +1,137 @@
-import React, { useState, useMemo, useCallback } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Download, Plus, Eye, Edit, Trash2, AlertCircle, X } from 'lucide-react';
 import SearchAndFilter from './SearchAndFilter';
 import StatusBadge from './StatusBadge';
 import ActionButton from './ActionButton';
 import useSearch from './useSearch';
 
-const MOCK_DATA = {
-  patients: [
-    { id: 1, name: 'Nguyễn Minh An', age: 5, gender: 'Nam', status: 'active', lastVisit: '2024-01-15', contact: '0123 456 789' },
-    { id: 2, name: 'Lê Thị Bình', age: 3, gender: 'Nữ', status: 'inactive', lastVisit: '2024-01-10', contact: '0987 654 321' },
-    { id: 3, name: 'Phạm Văn Cường', age: 7, gender: 'Nam', status: 'active', lastVisit: '2024-01-14', contact: '0912 345 678' },
-    { id: 4, name: 'Hoàng Thị Dung', age: 4, gender: 'Nữ', status: 'inactive', lastVisit: '2024-01-12', contact: '0935 123 456' }
-  ]
-};
+import PatientService from '../../service/PatientService';
 
 const PatientManagement = React.memo(() => {
   const { searchTerm, setSearchTerm, statusFilter, setStatusFilter, clearFilters } = useSearch();
-  const [patients, setPatients] = useState(MOCK_DATA.patients);
+  const [patients, setPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Fetch patients from backend
+  useEffect(() => {
+    setLoading(true);
+    // Nếu là trang admin thì lấy toàn bộ bệnh nhân
+    PatientService.getAllPatients(true)
+      .then((res) => {
+        console.log('Patients response:', res);
+        setPatients(Array.isArray(res) ? res : []);
+        setLoading(false);
+      })
+      .catch((error) => {
+        console.error('Error fetching patients:', error);
+        setPatients([]);
+        setLoading(false);
+      });
+  }, []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalMode, setModalMode] = useState('create'); // 'create' or 'edit'
   const [selectedPatient, setSelectedPatient] = useState(null);
   const [formData, setFormData] = useState({
-    name: '',
-    age: '',
-    gender: 'Nam',
-    status: 'active',
-    lastVisit: '',
-    contact: ''
+    fullName: '',
+    dateOfBirth: '',
+    gender: 'Male',
+    weight: '',
+    height: '',
+    status: 'Chờ xác nhận'
   });
 
   const filteredPatients = useMemo(() => {
     return patients.filter(patient => {
       const matchesSearch = !searchTerm ||
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        patient.contact.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = statusFilter === 'all' || patient.status === statusFilter;
+        (patient.fullName && patient.fullName.toLowerCase().includes(searchTerm.toLowerCase()));
+      // Nếu có status thì filter, nếu không thì luôn true
+      const matchesStatus = statusFilter === 'all' || (patient.status ? patient.status === statusFilter : true);
       return matchesSearch && matchesStatus;
     });
   }, [searchTerm, statusFilter, patients]);
 
   const handleAction = useCallback((action, patientId) => {
     if (action === 'view') {
-      console.log('View patient:', patientId);
+      // Optionally implement view details popup
     } else if (action === 'edit') {
       const patient = patients.find(p => p.id === patientId);
       setSelectedPatient(patient);
-      setFormData({ ...patient });
+      setFormData({
+        fullName: patient.fullName || '',
+        dateOfBirth: patient.dateOfBirth || '',
+        gender: patient.gender || 'Male',
+        weight: patient.weight || '',
+        height: patient.height || '',
+        status: patient.status || 'Chờ xác nhận'
+      });
       setModalMode('edit');
       setIsModalOpen(true);
     } else if (action === 'delete') {
-      setPatients(patients.filter(p => p.id !== patientId));
+      PatientService.deletePatient(patientId)
+        .then(() => {
+          setPatients(patients.filter(p => p.id !== patientId));
+        })
+        .catch((error) => {
+          console.error('Error deleting patient:', error);
+          alert('Có lỗi xảy ra khi xóa bệnh nhân. Vui lòng thử lại.');
+        });
     }
   }, [patients]);
 
   const handleAddPatient = useCallback(() => {
     setModalMode('create');
     setFormData({
-      name: '',
-      age: '',
-      gender: 'Nam',
-      status: 'active',
-      lastVisit: '',
-      contact: ''
+      fullName: '',
+      dateOfBirth: '',
+      gender: 'Male',
+      weight: '',
+      height: '',
+      status: 'Chờ xác nhận'
     });
     setIsModalOpen(true);
   }, []);
 
   const handleSubmit = useCallback((e) => {
     e.preventDefault();
+    const submitData = {
+      ...formData,
+      weight: formData.weight === '' ? null : parseFloat(formData.weight),
+      height: formData.height === '' ? null : parseFloat(formData.height)
+    };
     if (modalMode === 'create') {
-      const newPatient = {
-        ...formData,
-        id: patients.length + 1,
-        age: Number(formData.age)
-      };
-      setPatients([...patients, newPatient]);
+      PatientService.addPatient(submitData)
+        .then((res) => {
+          console.log('Add patient response:', res);
+          if (res && res.id) {
+            setPatients([...patients, res]);
+            setIsModalOpen(false);
+          } else {
+            console.error('Invalid response format:', res);
+            alert('Phản hồi từ máy chủ không đúng định dạng. Vui lòng thử lại.');
+          }
+        })
+        .catch((error) => {
+          console.error('Error adding patient:', error);
+          alert('Có lỗi xảy ra khi thêm bệnh nhân. Vui lòng thử lại.');
+        });
     } else if (modalMode === 'edit') {
-      setPatients(patients.map(p =>
-        p.id === selectedPatient.id ? { ...formData, id: p.id, age: Number(formData.age) } : p
-      ));
+      PatientService.updatePatient(selectedPatient.id, submitData)
+        .then((res) => {
+          console.log('Update patient response:', res);
+          if (res && res.id) {
+            setPatients(patients.map(p =>
+              p.id === selectedPatient.id ? res : p
+            ));
+            setIsModalOpen(false);
+          } else {
+            console.error('Invalid response format:', res);
+            alert('Phản hồi từ máy chủ không đúng định dạng. Vui lòng thử lại.');
+          }
+        })
+        .catch((error) => {
+          console.error('Error updating patient:', error);
+          alert('Có lỗi xảy ra khi cập nhật bệnh nhân. Vui lòng thử lại.');
+        });
     }
-    setIsModalOpen(false);
   }, [formData, modalMode, patients, selectedPatient]);
 
   const handleInputChange = useCallback((e) => {
@@ -94,6 +145,7 @@ const PatientManagement = React.memo(() => {
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Quản lý bệnh nhân</h2>
           <p className="text-gray-600 mt-1">Quản lý và theo dõi thông tin bệnh nhân</p>
+          <div className="mt-2 text-blue-700 font-semibold">Tổng số bệnh nhân: {patients.length}</div>
         </div>
         <div className="flex gap-3">
           <button className="bg-white border border-gray-200 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-50 flex items-center space-x-2 transition-colors">
@@ -123,31 +175,45 @@ const PatientManagement = React.memo(() => {
           <table className="w-full">
             <thead className="bg-gray-50 border-b border-gray-200">
               <tr>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bệnh nhân</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tuổi</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Giới tính</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Lần khám cuối</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Liên hệ</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
-                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Thao tác</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">BỆNH NHÂN</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">TUỔI</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">GIỚI TÍNH</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">NGÀY SINH</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">LIÊN HỆ</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">TRẠNG THÁI</th>
+                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">THAO TÁC</th>
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-100">
-              {filteredPatients.map((patient) => (
-                <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-5">
-                    <div className="font-semibold text-gray-900">{patient.name}</div>
-                    <div className="text-sm text-gray-500">ID: #{patient.id}</div>
-                  </td>
-                  <td className="px-6 py-5 text-gray-900 font-medium">{patient.age}</td>
-                  <td className="px-6 py-5 text-gray-900">{patient.gender}</td>
-                  <td className="px-6 py-5 text-gray-900">{patient.lastVisit}</td>
-                  <td className="px-6 py-5 text-gray-900">{patient.contact}</td>
-                  <td className="px-6 py-5">
-                    <StatusBadge status={patient.status} />
-                  </td>
-                  <td className="px-6 py-5">
-                    <div className="flex items-center space-x-1">
+              {loading ? (
+                <tr><td colSpan={8} className="text-center py-8 text-gray-500">Đang tải dữ liệu...</td></tr>
+              ) : filteredPatients.map((patient) => {
+                // Skip rendering if patient is null or undefined
+                if (!patient) {
+                  return null;
+                }
+                
+                // Tính tuổi từ ngày sinh
+                let age = '';
+                if (patient.dateOfBirth) {
+                  const dob = new Date(patient.dateOfBirth);
+                  const now = new Date();
+                  age = now.getFullYear() - dob.getFullYear();
+                  const m = now.getMonth() - dob.getMonth();
+                  if (m < 0 || (m === 0 && now.getDate() < dob.getDate())) age--;
+                }
+                return (
+                  <tr key={patient.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-5">
+                      <div className="font-semibold text-gray-900">{patient.fullName || 'N/A'}</div>
+                      <div className="text-sm text-gray-500">ID: #{patient.id || 'N/A'}</div>
+                    </td>
+                    <td className="px-6 py-5 text-gray-900 font-medium">{age}</td>
+                    <td className="px-6 py-5 text-gray-900">{patient.gender || 'N/A'}</td>
+                    <td className="px-6 py-5 text-gray-900">{patient.dateOfBirth || 'N/A'}</td>
+                    <td className="px-6 py-5 text-gray-900">{patient.weight || ''}kg / {patient.height || ''}cm</td>
+                    <td className="px-6 py-5 text-gray-900">{patient.status || 'N/A'}</td>
+                    <td className="px-6 py-5">
                       <ActionButton
                         icon={Eye}
                         onClick={() => handleAction('view', patient.id)}
@@ -166,10 +232,10 @@ const PatientManagement = React.memo(() => {
                         color="red"
                         tooltip="Xóa"
                       />
-                    </div>
-                  </td>
-                </tr>
-              ))}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
@@ -197,26 +263,25 @@ const PatientManagement = React.memo(() => {
             <form onSubmit={handleSubmit}>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Tên bệnh nhân</label>
+                  <label className="block text-sm font-medium text-gray-700">Họ tên bệnh nhân</label>
                   <input
                     type="text"
-                    name="name"
-                    value={formData.name}
+                    name="fullName"
+                    value={formData.fullName}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700">Tuổi</label>
+                  <label className="block text-sm font-medium text-gray-700">Ngày sinh</label>
                   <input
-                    type="number"
-                    name="age"
-                    value={formData.age}
+                    type="date"
+                    name="dateOfBirth"
+                    value={formData.dateOfBirth}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                     required
-                    min="0"
                   />
                 </div>
                 <div>
@@ -227,9 +292,33 @@ const PatientManagement = React.memo(() => {
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   >
-                    <option value="Nam">Nam</option>
-                    <option value="Nữ">Nữ</option>
+                    <option value="Male">Nam</option>
+                    <option value="Female">Nữ</option>
                   </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Cân nặng (kg)</label>
+                  <input
+                    type="number"
+                    name="weight"
+                    value={formData.weight}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    step="0.01"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Chiều cao (cm)</label>
+                  <input
+                    type="number"
+                    name="height"
+                    value={formData.height}
+                    onChange={handleInputChange}
+                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    min="0"
+                    step="0.01"
+                  />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Trạng thái</label>
@@ -238,32 +327,13 @@ const PatientManagement = React.memo(() => {
                     value={formData.status}
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                    required
                   >
-                    <option value="active">Hoạt động</option>
-                    <option value="inactive">Không hoạt động</option>
+                    <option value="Đã xác nhận">Đã xác nhận</option>
+                    <option value="Chờ xác nhận">Chờ xác nhận</option>
+                    <option value="Hoàn thành">Hoàn thành</option>
+                    <option value="Đã hủy">Đã hủy</option>
                   </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Lần khám cuối</label>
-                  <input
-                    type="date"
-                    name="lastVisit"
-                    value={formData.lastVisit}
-                    onChange={handleInputChange}
-                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Liên hệ</label>
-                  <input
-                    type="text"
-                    name="contact"
-                    value={formData.contact}
-                    onChange={handleInputChange}
-                    className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
                 </div>
               </div>
               <div className="mt-6 flex justify-end gap-3">
