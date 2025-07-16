@@ -14,9 +14,9 @@ const initialForm = {
   medicalNotes: ''
 };
 
-function MedicalRecords() {
+function MedicalRecords({ doctorId }) {
   const [records, setRecords] = useState([]);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState({ ...initialForm, doctorId: doctorId || '' });
   const [showForm, setShowForm] = useState(false);
   const [isEdit, setIsEdit] = useState(false);
   const [selected, setSelected] = useState(null);
@@ -42,7 +42,7 @@ function MedicalRecords() {
   };
 
   const openAddForm = () => {
-    setForm(initialForm);
+    setForm({ ...initialForm, doctorId: doctorId || '' });
     setIsEdit(false);
     setShowForm(true);
   };
@@ -57,11 +57,25 @@ function MedicalRecords() {
   };
 
   const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
+    // Nếu là height hoặc weight thì chỉ cho nhập số
+    const { name, value } = e.target;
+    if (name === 'height' || name === 'weight') {
+      // Chỉ cho phép số và tối đa 3 ký tự
+      if (/^\d{0,3}$/.test(value)) {
+        setForm({ ...form, [name]: value });
+      }
+    } else {
+      setForm({ ...form, [name]: value });
+    }
   };
 
   const handleSave = async () => {
     let data = { ...form };
+    // Ép kiểu height/weight sang số, nếu rỗng thì để null
+    data.height = data.height ? Number(data.height) : null;
+    data.weight = data.weight ? Number(data.weight) : null;
+    // Luôn gán doctorId từ prop
+    data.doctorId = doctorId;
     // Format recordDate nếu chỉ có ngày hoặc thiếu giây
     if (data.recordDate && /^\d{4}-\d{2}-\d{2}$/.test(data.recordDate)) {
       data.recordDate = data.recordDate + "T00:00:00";
@@ -187,7 +201,8 @@ function MedicalRecords() {
       >
         <div style={{ flex: '1 1 250px', minWidth: 220 }}>
           <Input label="ID bệnh nhân" name="patientId" value={form.patientId} onChange={handleChange} />
-          <Input label="ID bác sĩ" name="doctorId" value={form.doctorId} onChange={handleChange} />
+          {/* doctorId không cho nhập tay, chỉ hiển thị */}
+          <Input label="ID bác sĩ" name="doctorId" value={doctorId} readOnly />
           <Input label="ID lịch hẹn" name="appointmentId" value={form.appointmentId} onChange={handleChange} />
           <Input label="Ngày ghi" name="recordDate" type="datetime-local" value={form.recordDate} onChange={handleChange} />
           <Input label="Chẩn đoán" name="diagnosis" value={form.diagnosis} onChange={handleChange} />
@@ -195,8 +210,8 @@ function MedicalRecords() {
         <div style={{ flex: '1 1 250px', minWidth: 220 }}>
           <Input label="Điều trị" name="treatment" value={form.treatment} onChange={handleChange} />
           <Input label="Đơn thuốc" name="prescription" value={form.prescription} onChange={handleChange} />
-          <Input label="Cân nặng" name="weight" value={form.weight} onChange={handleChange} />
-          <Input label="Chiều cao" name="height" value={form.height} onChange={handleChange} />
+          <Input label="Cân nặng (kg)" name="weight" value={form.weight} onChange={handleChange} type="number" min="0" max="300" />
+          <Input label="Chiều cao (cm)" name="height" value={form.height} onChange={handleChange} type="number" min="0" max="300" />
           <Input label="Ghi chú" name="medicalNotes" value={form.medicalNotes} onChange={handleChange} />
         </div>
         <div style={{ width: '100%', display: 'flex', justifyContent: 'flex-end', gap: 12, marginTop: 10 }}>

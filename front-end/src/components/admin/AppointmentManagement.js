@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppointmentService from '../../service/AppointmentService';
 
+
 const AppointmentManagement = () => {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -12,6 +13,7 @@ const AppointmentManagement = () => {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [appointmentToDelete, setAppointmentToDelete] = useState(null);
 
+
   // Form state for editing
   const [editForm, setEditForm] = useState({
     appointmentDate: '',
@@ -20,9 +22,11 @@ const AppointmentManagement = () => {
     notes: ''
   });
 
+
   useEffect(() => {
     loadAppointments();
   }, []);
+
 
   const loadAppointments = async () => {
     try {
@@ -38,6 +42,7 @@ const AppointmentManagement = () => {
       setLoading(false);
     }
   };
+
 
   const handleEditAppointment = (appointment) => {
     // Đảm bảo appointmentTime luôn là HH:mm
@@ -59,10 +64,12 @@ const AppointmentManagement = () => {
     setShowModal(true);
   };
 
+
   const handleDeleteAppointment = (appointment) => {
     setAppointmentToDelete(appointment);
     setShowDeleteModal(true);
   };
+
 
   const confirmDelete = async () => {
     try {
@@ -76,6 +83,7 @@ const AppointmentManagement = () => {
     }
   };
 
+
   const handleUpdateStatus = async (appointmentId, newStatus) => {
     try {
       await AppointmentService.updateAppointmentStatus(appointmentId, newStatus);
@@ -86,13 +94,14 @@ const AppointmentManagement = () => {
     }
   };
 
+
   const handleSaveEdit = async () => {
     try {
       const updatedData = {
         ...editForm,
         appointmentDate: editForm.appointmentDate + 'T00:00:00'
       };
-      
+     
       await AppointmentService.updateAppointment(selectedAppointment.appointmentId, updatedData);
       setShowModal(false);
       setSelectedAppointment(null);
@@ -102,6 +111,7 @@ const AppointmentManagement = () => {
       console.error('Error updating appointment:', err);
     }
   };
+
 
   // Sửa lại filter: nếu searchTerm rỗng thì không lọc theo search, nếu statusFilter là 'all' thì không lọc theo status
   const filteredAppointments = appointments.filter(appointment => {
@@ -117,6 +127,7 @@ const AppointmentManagement = () => {
   console.log('appointments:', appointments);
   console.log('filteredAppointments:', filteredAppointments);
 
+
   const getStatusBadge = (status) => {
     const statusColors = {
       'PENDING': 'bg-yellow-100 text-yellow-800',
@@ -124,13 +135,14 @@ const AppointmentManagement = () => {
       'COMPLETED': 'bg-green-100 text-green-800',
       'CANCELLED': 'bg-red-100 text-red-800'
     };
-    
+   
     return (
       <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusColors[status] || 'bg-gray-100 text-gray-800'}`}>
         {status}
       </span>
     );
   };
+
 
   if (loading) {
     return (
@@ -140,6 +152,7 @@ const AppointmentManagement = () => {
     );
   }
 
+
   return (
     <div className="p-6">
       <div className="mb-6">
@@ -147,11 +160,13 @@ const AppointmentManagement = () => {
         <p className="text-gray-600">Quản lý tất cả appointments trong hệ thống</p>
       </div>
 
+
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
         </div>
       )}
+
 
       {/* Search and Filter */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
@@ -178,6 +193,7 @@ const AppointmentManagement = () => {
           </select>
         </div>
       </div>
+
 
       {/* Appointments Table */}
       <div className="bg-white rounded-lg shadow overflow-hidden">
@@ -252,11 +268,13 @@ const AppointmentManagement = () => {
         </div>
       </div>
 
+
       {filteredAppointments.length === 0 && (
         <div className="text-center py-8 text-gray-500">
           Không tìm thấy appointments nào
         </div>
       )}
+
 
       {/* View/Edit Modal */}
       {showModal && selectedAppointment && (
@@ -266,22 +284,23 @@ const AppointmentManagement = () => {
               <h3 className="text-lg font-medium text-gray-900 mb-4">
                 Chỉnh sửa Appointment
               </h3>
-              
+             
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700">ID</label>
                   <p className="text-sm text-gray-900">{selectedAppointment.appointmentId}</p>
                 </div>
-                
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Bệnh nhân</label>
                   <p className="text-sm text-gray-900">{selectedAppointment.patientId || 'N/A'}</p>
                 </div>
-                
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Bác sĩ</label>
                   <p className="text-sm text-gray-900">{selectedAppointment.doctorId || 'N/A'}</p>
                 </div>
+
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Ngày hẹn</label>
@@ -292,7 +311,7 @@ const AppointmentManagement = () => {
                     onChange={(e) => setEditForm({...editForm, appointmentDate: e.target.value})}
                   />
                 </div>
-                
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Giờ hẹn</label>
                   <input
@@ -302,7 +321,7 @@ const AppointmentManagement = () => {
                     onChange={(e) => setEditForm({...editForm, appointmentTime: e.target.value})}
                   />
                 </div>
-                
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Status</label>
                   <select
@@ -316,7 +335,7 @@ const AppointmentManagement = () => {
                     <option value="CANCELLED">Cancelled</option>
                   </select>
                 </div>
-                
+               
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Ghi chú</label>
                   <textarea
@@ -327,7 +346,7 @@ const AppointmentManagement = () => {
                   />
                 </div>
               </div>
-              
+             
               <div className="flex justify-end space-x-3 mt-6">
                 <button
                   onClick={() => setShowModal(false)}
@@ -349,6 +368,7 @@ const AppointmentManagement = () => {
         </div>
       )}
 
+
       {/* Delete Confirmation Modal */}
       {showDeleteModal && appointmentToDelete && (
         <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full z-50">
@@ -359,7 +379,7 @@ const AppointmentManagement = () => {
                 Bạn có chắc chắn muốn xóa appointment #{appointmentToDelete.appointmentId}?
                 Hành động này không thể hoàn tác.
               </p>
-              
+             
               <div className="flex justify-end space-x-3">
                 <button
                   onClick={() => setShowDeleteModal(false)}
@@ -382,4 +402,8 @@ const AppointmentManagement = () => {
   );
 };
 
+
 export default AppointmentManagement;
+
+
+

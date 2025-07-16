@@ -16,7 +16,10 @@ public class FeedbackService {
 
 
    public List<FeedbackDTO> getFeedbacksForDoctor(Integer doctorId) {
-        return  getFeedbacksForDoctor(doctorId);
+        List<Feedback> feedbacks = feedbackRepository.findByDoctorId(doctorId);
+        return feedbacks.stream()
+            .map(FeedbackDTO::fromEntity)
+            .collect(java.util.stream.Collectors.toList());
     }
 
 

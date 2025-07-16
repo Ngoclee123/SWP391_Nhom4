@@ -51,7 +51,7 @@ const AdminDashboards = () => {
   const renderContent = useCallback(() => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
       case 'accounts':
         return <AccountManagement />;
       case 'appointments':
@@ -92,7 +92,7 @@ const AdminDashboards = () => {
       case 'vaccine-availability-management':
         return <VaccineAvailabilityManagement />;
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
     }
   }, [activeTab]);
 
