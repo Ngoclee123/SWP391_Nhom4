@@ -1,13 +1,18 @@
 package com.example.project.service;
 
 import com.example.project.dto.DoctorSearchDTO;
+import com.example.project.dto.DoctorDTO;
 import com.example.project.model.Doctor;
 import com.example.project.model.Specialty;
 import com.example.project.model.Certificate;
+import com.example.project.model.Account;
+import com.example.project.model.Role;
 import com.example.project.repository.DoctorRepository;
 import com.example.project.repository.DoctorSpecification;
 import com.example.project.repository.SpecialtyRepository;
 import com.example.project.repository.CertificateRepository;
+import com.example.project.repository.AccountRepository;
+import com.example.project.repository.RoleRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,6 +38,12 @@ public class AdminManagementDoctorService {
 
     @Autowired
     private CertificateRepository certificateRepository;
+
+    @Autowired
+    private AccountRepository accountRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
 
     public List<Specialty> getAllSpecialties() {
         logger.info("Fetching all specialties");
@@ -183,17 +194,84 @@ public class AdminManagementDoctorService {
 
     // ADMIN: Lưu (tạo/cập nhật) bác sĩ và certificates
     @Transactional
-    public Doctor saveDoctor(Doctor doctor) {
-        if (doctor.getSpecialty() == null || doctor.getSpecialty().getId() == null) {
-            throw new IllegalArgumentException("Specialty is required");
+    public Doctor saveDoctor(DoctorDTO doctorDTO) {
+        Doctor doctor;
+        if (doctorDTO.getId() != null) {
+            // Update existing doctor
+            doctor = doctorRepository.findById(doctorDTO.getId())
+                    .orElseThrow(() -> new IllegalArgumentException("Doctor not found with ID: " + doctorDTO.getId()));
+        } else {
+            // Create new doctor - tự động tạo account
+            doctor = new Doctor();
+            doctor.setCreatedAt(Instant.now());
+
+            // Tạo account mới cho bác sĩ
+            Account newAccount = new Account();
+            String username = "doctor_" + System.currentTimeMillis();
+            newAccount.setUsername(username);
+            newAccount.setPasswordHash("123456"); // Password mặc định
+            newAccount.setEmail(doctorDTO.getFullName().toLowerCase().replace(" ", "") + "@hospital.com");
+            newAccount.setFullName(doctorDTO.getFullName());
+            newAccount.setPhoneNumber(doctorDTO.getPhoneNumber());
+            newAccount.setAddress(doctorDTO.getLocational());
+            newAccount.setStatus(true);
+
+            // Set role DOCTOR
+            Role doctorRole = roleRepository.findByRolename("DOCTOR");
+            if (doctorRole == null) {
+                // Tạo role DOCTOR nếu chưa có
+                doctorRole = new Role();
+                doctorRole.setRolename("DOCTOR");
+                doctorRole = roleRepository.save(doctorRole);
+            }
+            newAccount.setRole(doctorRole);
+
+            // Lưu account
+            Account savedAccount = accountRepository.save(newAccount);
+            // QUAN TRỌNG: Set accountId cho Doctor entity
+            doctor.setAccountId(savedAccount.getId());
         }
-        Specialty specialty = specialtyRepository.findById(doctor.getSpecialty().getId())
-                .orElseThrow(() -> new IllegalArgumentException("Specialty not found"));
-        doctor.setSpecialty(specialty);
-        // Lưu các trường mới
-        // imgs, bio, dateOfBirth, locational, education, hospital, phoneNumber, status đã có trong entity
-        // Không cần xử lý certificates ở đây nữa
+
+        // Set các trường cơ bản
+        doctor.setFullName(doctorDTO.getFullName());
+        doctor.setSpecialty(specialtyRepository.findById(doctorDTO.getSpecialtyId())
+                .orElseThrow(() -> new IllegalArgumentException("Specialty not found with ID: " + doctorDTO.getSpecialtyId())));
+        doctor.setImgs(doctorDTO.getImgs());
+        doctor.setBio(doctorDTO.getBio());
+        doctor.setDateOfBirth(doctorDTO.getDateOfBirth());
+        doctor.setLocational(doctorDTO.getLocational());
+        doctor.setEducation(doctorDTO.getEducation());
+        doctor.setHospital(doctorDTO.getHospital());
+        doctor.setPhoneNumber(doctorDTO.getPhoneNumber());
+        doctor.setStatus(doctorDTO.getStatus());
+
+        // Lưu doctor trước để có id
         Doctor savedDoctor = doctorRepository.save(doctor);
+
+        // Xử lý certificates
+        if (doctorDTO.getCertificates() != null) {
+            // Đảm bảo savedDoctor có ID trước khi quản lý certificates
+            if (savedDoctor.getId() == null) {
+                logger.error("Saved doctor ID is null after persistence. Cannot manage certificates for this doctor.");
+            } else {
+                // Xóa certificates cũ cho bác sĩ này
+                List<Certificate> oldCerts = certificateRepository.findByDoctor_Id(savedDoctor.getId());
+                if (oldCerts != null && !oldCerts.isEmpty()) {
+                    certificateRepository.deleteAll(oldCerts);
+                }
+
+                // Lưu certificates mới
+                for (String certName : doctorDTO.getCertificates()) {
+                    if (certName != null && !certName.trim().isEmpty()) {
+                        Certificate cert = new Certificate();
+                        cert.setDoctor(savedDoctor); // Liên kết certificate với bác sĩ đã lưu
+                        cert.setCertificateName(certName.trim());
+                        certificateRepository.save(cert);
+                    }
+                }
+            }
+        }
+
         return savedDoctor;
     }
 

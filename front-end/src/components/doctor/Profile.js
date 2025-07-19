@@ -4,6 +4,15 @@ import DoctorDashboardService from '../../service/DoctorDashboardService';
 import UserService from '../../service/userService';
 import { jwtDecode } from 'jwt-decode';
 
+// Helper chuyển ISO string về HH:mm
+function getTimeString(isoString) {
+  if (!isoString) return '';
+  const date = new Date(isoString);
+  const hh = String(date.getHours()).padStart(2, '0');
+  const mm = String(date.getMinutes()).padStart(2, '0');
+  return `${hh}:${mm}`;
+}
+
 const Profile = () => {
   const [doctor, setDoctor] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -270,7 +279,7 @@ const Profile = () => {
                       ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white' 
                       : 'border-gray-200 bg-gray-50'
                   }`}
-                  value={doctor.startTime || ''}
+                  value={getTimeString(doctor.startTime)}
                   readOnly={!isEditing}
                 />
               </div>
@@ -283,7 +292,7 @@ const Profile = () => {
                       ? 'border-blue-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 bg-white' 
                       : 'border-gray-200 bg-gray-50'
                   }`}
-                  value={doctor.endTime || ''}
+                  value={getTimeString(doctor.endTime)}
                   readOnly={!isEditing}
                 />
               </div>

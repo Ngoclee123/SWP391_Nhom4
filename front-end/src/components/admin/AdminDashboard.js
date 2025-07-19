@@ -17,6 +17,7 @@ import VaccineAvailabilityManagement from "./VaccineAvailabilityManagement";
 import PatientStatsDashboard from './PatientStatsDashboard ';
 import DoctorStats from './DoctorStats';
 import FeedbackManagement from './FeedbackManagement ';
+import AppointmentStatsDashboard from './AppointmentStatsDashboard';
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan' },
@@ -51,7 +52,7 @@ const AdminDashboards = () => {
   const renderContent = useCallback(() => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardOverview setActiveTab={setActiveTab} />;
+        // return <DashboardOverview setActiveTab={setActiveTab} />;
       case 'accounts':
         return <AccountManagement />;
       case 'appointments':
@@ -59,13 +60,17 @@ const AdminDashboards = () => {
       case 'doctors':
         return <DoctorManagement />;
       case 'patients':
-        return <PatientManagement />;
+        // return <PatientManagement />;
         case 'patient-stats':
-          return <PatientStatsDashboard />;
+          // return <PatientStatsDashboard />;
         case 'doctor-stats':
           return <DoctorStats />;
         case 'feedbacks':
-          return <FeedbackManagement />;
+          // return <FeedbackManagement />;
+          
+      case 'appointment-stats':
+        return <AppointmentStatsDashboard />;
+
       // case 'consultations':
       // case 'reports':
       // case 'settings':

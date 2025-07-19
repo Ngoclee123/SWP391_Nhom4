@@ -85,12 +85,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Intege
     List<Object[]> countGroupByDate();
 
     // Thống kê theo bác sĩ
-    @Query("SELECT a.doctor, COUNT(*) FROM Appointment a GROUP BY a.doctor")
+    @Query("SELECT a.doctor.id, a.doctor.fullName, COUNT(*) FROM Appointment a GROUP BY a.doctor.id, a.doctor.fullName")
     List<Object[]> countGroupByDoctor();
 
-    @Query("SELECT a.doctor, COUNT(a) FROM Appointment a " +
-            "WHERE a.appointmentDate BETWEEN :startDate AND :endDate " +
-            "GROUP BY a.doctor")
+    @Query("SELECT a.doctor.id, COUNT(a) FROM Appointment a " +
+           "WHERE a.appointmentDate BETWEEN :startDate AND :endDate " +
+           "GROUP BY a.doctor.id")
     List<Object[]> countAppointmentsByDoctorInMonth(@Param("startDate") java.time.LocalDateTime startDate,
                                                     @Param("endDate") java.time.LocalDateTime endDate);
 

@@ -11,8 +11,8 @@ class DoctorService {
         try {
             const response = await axiosClient.get(url);
             console.log('Doctors response (raw):', response);
-            const data = Array.isArray(response) ? response : (response.data || []);
-            return {
+            const data = response.data && response.data.data ? response.data.data : (response.data || []);    
+                    return {
                 data: data,
                 message: data.length > 0 ? 'Danh sách bác sĩ đã được tải' : 'Không có bác sĩ nào'
             };

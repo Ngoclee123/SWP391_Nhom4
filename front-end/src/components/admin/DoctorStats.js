@@ -40,16 +40,35 @@ const DoctorStats = () => {
       setLoading(true);
       setError('');
       
+      console.log('Fetching stats for:', selectedYear, selectedMonth);
+      
       const [doctorStatsData, dashboardStatsData] = await Promise.all([
         StatsService.getDoctorStats(selectedYear, selectedMonth),
         StatsService.getDashboardStats(selectedYear, selectedMonth)
       ]);
       
-      setStats(doctorStatsData);
-      setDashboardStats(dashboardStatsData);
+      console.log('Doctor stats data:', doctorStatsData);
+      console.log('Dashboard stats data:', dashboardStatsData);
+      
+      // Đảm bảo dữ liệu là array và có dữ liệu
+      let processedStats = [];
+      if (Array.isArray(doctorStatsData) && doctorStatsData.length > 0) {
+        processedStats = doctorStatsData;
+      } else if (dashboardStatsData && dashboardStatsData.topDoctors && Array.isArray(dashboardStatsData.topDoctors)) {
+        processedStats = dashboardStatsData.topDoctors;
+      }
+      
+      setStats(processedStats);
+      setDashboardStats(dashboardStatsData || {});
+      
+      console.log('Processed stats:', processedStats);
+      console.log('Processed dashboard stats:', dashboardStatsData);
+      
     } catch (err) {
       setError('Không thể tải dữ liệu thống kê. Vui lòng thử lại.');
       console.error('Error fetching stats:', err);
+      setStats([]);
+      setDashboardStats({});
     } finally {
       setLoading(false);
     }
@@ -217,6 +236,11 @@ const DoctorStats = () => {
           <p className="text-gray-600">
             Không có dữ liệu thống kê cho tháng {selectedMonth}/{selectedYear}
           </p>
+          <div className="mt-4 text-sm text-gray-500">
+            <p>Stats length: {Array.isArray(stats) ? stats.length : 'Not array'}</p>
+            <p>Stats type: {typeof stats}</p>
+            <p>Stats content: {JSON.stringify(stats)}</p>
+          </div>
         </div>
       ) : (
         <>

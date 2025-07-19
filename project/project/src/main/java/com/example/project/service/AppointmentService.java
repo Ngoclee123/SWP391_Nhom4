@@ -256,8 +256,7 @@ public class AppointmentService {
         public long cancelled;
         public java.util.Map<String, Long> statusCounts;
         public java.util.List<Object[]> byDate;
-        public java.util.List<Object[]> byDoctor;
-
+        public java.util.List<java.util.Map<String, Object>> byDoctor;
         // Trường mới cho FE
         public long totalAppointments;
         public long todayAppointments;
@@ -281,7 +280,14 @@ public class AppointmentService {
         stats.statusCounts.put("Completed", stats.completed);
         stats.statusCounts.put("Cancelled", stats.cancelled);
         stats.byDate = appointmentRepository.countGroupByDate();
-        stats.byDoctor = appointmentRepository.countGroupByDoctor();
+        stats.byDoctor = new java.util.ArrayList<>();
+        for (Object[] arr : appointmentRepository.countGroupByDoctor()) {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("doctorId", arr[0]);
+            map.put("doctorName", arr[1]);
+            map.put("count", arr[2]);
+            stats.byDoctor.add(map);
+        }
 
         // Populate trường mới cho FE
         java.time.LocalDate today = java.time.LocalDate.now();

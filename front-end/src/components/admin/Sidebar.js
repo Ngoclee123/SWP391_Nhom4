@@ -2,15 +2,15 @@ import React from 'react';
 import { Stethoscope, BarChart3, Calendar, Users, MessageSquare, FileText, Settings, Syringe, ClipboardList ,TrendingUp } from 'lucide-react';
 
 const NAVIGATION_ITEMS = [
-  { id: 'dashboard', label: 'Tổng quan', icon: BarChart3 },
+  // { id: 'dashboard', label: 'Tổng quan', icon: BarChart3 },
   { id: 'accounts', label: 'Tài khoản', icon: Users },
   { id: 'appointments', label: 'Lịch hẹn', icon: Calendar },
   { id: 'appointment-stats', label: 'Thống kê lịch hẹn', icon: TrendingUp },
   { id: 'doctors', label: 'Bác sĩ', icon: Stethoscope },
-  { id: 'patients', label: 'Bệnh nhân', icon: Users },
-  { id: 'patient-stats', label: 'Thống kê bệnh nhân', icon: Users },
+  // { id: 'patients', label: 'Bệnh nhân', icon: Users },
+  // { id: 'patient-stats', label: 'Thống kê bệnh nhân', icon: Users },
   { id: 'doctor-stats', label: 'Thống kê bác sĩ', icon: TrendingUp },
-  { id: 'feedbacks', label: 'Quản lý Feedback', icon: MessageSquare },
+  // { id: 'feedbacks', label: 'Quản lý Feedback', icon: MessageSquare },
   //vacine
   { id: 'vaccine-management', label: 'Vaccine', icon: Syringe },
   { id: 'vaccine-appointment-management', label: 'Lịch tiêm', icon: ClipboardList },

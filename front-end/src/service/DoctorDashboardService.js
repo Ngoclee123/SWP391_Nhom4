@@ -57,8 +57,12 @@ class DoctorDashboardService {
   }
 
   async addSchedule(doctorId, data) {
-    const url = `/api/doctor-availability/doctor/${doctorId}/add`;
-    const response = await axiosClient.post(url, data);
+    const url = `/api/doctor-availability/doctor/${doctorId}/add-slots`;
+    const response = await axiosClient.post(url, {
+      startTime: data.startTime,
+      endTime: data.endTime,
+      slotMinutes: data.slotMinutes
+    });
     return response.data;
   }
 
@@ -76,6 +80,10 @@ class DoctorDashboardService {
     } catch (error) {
       throw error;
     }
+  }
+
+  async deleteSchedule(id) {
+    return axiosClient.delete(`/api/doctor-availability/${id}`);
   }
 }
 

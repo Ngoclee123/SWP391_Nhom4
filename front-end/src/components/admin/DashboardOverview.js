@@ -22,14 +22,22 @@ const DashboardOverview = React.memo(({ setActiveTab }) => {
       try {
         // Lấy tổng quan dashboard
         const stats = await StatsService.getDashboardStats();
+        console.log('Dashboard stats from API:', stats);
+        console.log('Stats type:', typeof stats);
+        console.log('Stats keys:', Object.keys(stats || {}));
         setDashboardStats(stats);
+        
         // Lấy lịch hẹn gần đây
         const appts = await AppointmentService.getRecentAppointments?.() || [];
+        console.log('Recent appointments from API:', appts);
         setRecentAppointments(appts.slice(0, 4));
+        
         // Lấy bác sĩ online
         const doctors = await DoctorService.getOnlineDoctors?.() || [];
+        console.log('Online doctors from API:', doctors);
         setOnlineDoctors(doctors);
       } catch (e) {
+        console.error('Error fetching dashboard data:', e);
         setDashboardStats({});
         setRecentAppointments([]);
         setOnlineDoctors([]);
@@ -60,13 +68,13 @@ const DashboardOverview = React.memo(({ setActiveTab }) => {
     },
     {
       title: 'Bác sĩ trực tuyến',
-      value: onlineDoctors.length,
+      value: dashboardStats.onlineDoctors || 0,
       icon: Stethoscope,
       color: 'bg-purple-500',
       change: '',
       trend: ''
     }
-  ], [dashboardStats, onlineDoctors]);
+  ], [dashboardStats]);
 
   // Tính toán phân trang cho bác sĩ
   const indexOfLastDoctor = currentDoctorPage * doctorsPerPage;
@@ -119,7 +127,7 @@ const DashboardOverview = React.memo(({ setActiveTab }) => {
         <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100 flex flex-col">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-xl font-semibold text-gray-900">Bác sĩ trực tuyến</h3>
-            <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">{onlineDoctors.length} đang hoạt động</span>
+            <span className="text-sm font-medium text-green-600 bg-green-100 px-3 py-1 rounded-full">{dashboardStats.onlineDoctors || 0} đang hoạt động</span>
           </div>
           <div className="space-y-4">
             {currentDoctors.map((doctor) => (

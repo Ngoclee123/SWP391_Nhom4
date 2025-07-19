@@ -32,7 +32,20 @@ const AppointmentManagement = () => {
     try {
       setLoading(true);
       const response = await AppointmentService.getAllAppointments();
-      setAppointments(Array.isArray(response) ? response : []);
+      // Map lại key cho đúng với frontend
+      const mapped = (Array.isArray(response.data || response) ? (response.data || response) : []).map(item => ({
+        appointmentId: item.id,
+        patientId: item.patientId,
+        doctorId: item.doctorId,
+        appointmentDate: item.appointmentDate,
+        appointmentTime: item.appointmentTime,
+        status: item.status,
+        notes: item.notes,
+        patientName: item.patientName,
+        doctorName: item.doctorName,
+        // Thêm các trường khác nếu cần
+      }));
+      setAppointments(mapped);
       setError(null);
     } catch (err) {
       setAppointments([]); // Đảm bảo luôn là mảng
@@ -45,14 +58,14 @@ const AppointmentManagement = () => {
 
 
   const handleEditAppointment = (appointment) => {
-    // Đảm bảo appointmentTime luôn là HH:mm
+    // Lấy giờ từ appointmentTime dạng ISO string
     let timeValue = '';
     if (appointment.appointmentTime) {
-      // Nếu đã đúng định dạng HH:mm thì giữ nguyên, nếu có giây thì cắt bỏ
-      const parts = appointment.appointmentTime.split(':');
-      if (parts.length >= 2) {
-        timeValue = parts[0].padStart(2, '0') + ':' + parts[1].padStart(2, '0');
-      }
+      const dateObj = new Date(appointment.appointmentTime);
+      // Lấy giờ và phút, format HH:mm
+      const hours = dateObj.getHours().toString().padStart(2, '0');
+      const minutes = dateObj.getMinutes().toString().padStart(2, '0');
+      timeValue = `${hours}:${minutes}`;
     }
     setSelectedAppointment(appointment);
     setEditForm({
@@ -240,7 +253,9 @@ const AppointmentManagement = () => {
                     {appointment.appointmentDate ? new Date(appointment.appointmentDate).toLocaleDateString('vi-VN') : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {appointment.appointmentTime ? appointment.appointmentTime.substring(0,8) : 'N/A'}
+                    {appointment.appointmentTime
+                      ? new Date(appointment.appointmentTime).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })
+                      : 'N/A'}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     {getStatusBadge(appointment.status)}
@@ -293,14 +308,13 @@ const AppointmentManagement = () => {
                
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Bệnh nhân</label>
-                  <p className="text-sm text-gray-900">{selectedAppointment.patientId || 'N/A'}</p>
+                  <p className="text-sm text-gray-900">{selectedAppointment.patientName || 'N/A'}</p>
                 </div>
                
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Bác sĩ</label>
-                  <p className="text-sm text-gray-900">{selectedAppointment.doctorId || 'N/A'}</p>
+                  <p className="text-sm text-gray-900">{selectedAppointment.doctorName || 'N/A'}</p>
                 </div>
-
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Ngày hẹn</label>
@@ -308,7 +322,7 @@ const AppointmentManagement = () => {
                     type="date"
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     value={editForm.appointmentDate}
-                    onChange={(e) => setEditForm({...editForm, appointmentDate: e.target.value})}
+                    readOnly
                   />
                 </div>
                
@@ -318,7 +332,7 @@ const AppointmentManagement = () => {
                     type="time"
                     className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                     value={editForm.appointmentTime}
-                    onChange={(e) => setEditForm({...editForm, appointmentTime: e.target.value})}
+                    readOnly
                   />
                 </div>
                

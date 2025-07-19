@@ -64,10 +64,15 @@ class UserService {
     async getAccountById(id) {
         return axiosClient.get(`/api/accounts/${id}`);
     }
+    
     async createAccount(data) {
-        const { role, ...accountData } = data;
-        return axiosClient.post(`/api/accounts?role=${role}`, accountData);
+        let { role, ...accountData } = data;
+        // Nếu role là object, lấy rolename, nếu là string thì giữ nguyên
+        if (typeof role === 'object' && role !== null) {
+            role = role.rolename;
+        }
     }
+
     async updateAccount(id, data) {
         // Đảm bảo truyền role là object nếu backend yêu cầu
         let payload = { ...data };

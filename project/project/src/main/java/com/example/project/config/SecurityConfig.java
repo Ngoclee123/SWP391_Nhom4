@@ -89,7 +89,8 @@ public class SecurityConfig {
                                 "/css/**",
                                 "/js/**",
                                 "/images/**",
-                                "/static/**"
+                                "/static/**",
+                                "/avatars/**"
                         ).permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/feedback/doctor/**").permitAll()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()

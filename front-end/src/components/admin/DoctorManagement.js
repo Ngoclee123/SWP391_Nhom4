@@ -19,6 +19,7 @@ const DoctorManagement = React.memo(() => {
     dateOfBirth: '',
     locational: '',
     education: '',
+    certificates: [''],
     hospital: '',
     phoneNumber: '',
   });
@@ -36,22 +37,28 @@ const DoctorManagement = React.memo(() => {
     setLoading(true);
     setError('');
     try {
-      const res = await DoctorService.searchDoctors({});
-      const apiDoctors = Array.isArray(res.content) ? res.content : (Array.isArray(res) ? res : []);
+      const res = await DoctorService.getAllDoctors();
+      console.log('Full response from getAllDoctors:', res);
+      const apiDoctors = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+      console.log('Processed apiDoctors:', apiDoctors);
       setDoctors(apiDoctors.map(d => {
-        // Log giá trị status thực tế để debug
+        // Log giá trị thực tế để debug
+        console.log('Doctor data from API:', d);
         console.log('Doctor status from API:', d.status);
+        console.log('Doctor dateOfBirth from API:', d.dateOfBirth);
+        console.log('Doctor hospital from API:', d.hospital);
+        
         return {
           id: d.id,
           imgs: d.imgs || '',
           name: d.fullName || d.name || '',
           specialty: d.specialtyName || d.specialty || '',
           phoneNumber: d.phoneNumber || '',
-        dateOfBirth: d.dateOfBirth || '',
+          dateOfBirth: d.dateOfBirth ? new Date(d.dateOfBirth).toLocaleDateString('vi-VN') : '',
           locational: d.locational || '',
           education: d.education || d.degree || '',
           hospital: d.hospital || d.hospitalName || '',
-          status: d.status || 'offline', // lấy đúng status từ BE, không ép về lowerCase nữa
+          status: d.status || 'offline',
         };
       }));
     } catch (err) {
@@ -96,9 +103,10 @@ const DoctorManagement = React.memo(() => {
       setLoading(true);
       DoctorService.getDoctorEntityById(doctorId)
         .then(res => {
-          const doctor = res;
+          const doctor = res.data; // Lấy id từ res.data.id
           setSelectedDoctor(doctor);
           setFormData({
+            id: doctor.id, // Lưu id vào formData để submit không bị undefined
             name: doctor.fullName || '',
             specialty: doctor.specialty?.id || '',
             status: 'online',
@@ -107,6 +115,7 @@ const DoctorManagement = React.memo(() => {
             dateOfBirth: doctor.dateOfBirth || '',
             locational: doctor.locational || '',
             education: doctor.education || '',
+            certificates: doctor.certificates || [''],
             hospital: doctor.hospital || '',
             phoneNumber: doctor.phoneNumber || '',
           });
@@ -139,6 +148,7 @@ const DoctorManagement = React.memo(() => {
       dateOfBirth: '',
       locational: '',
       education: '',
+      certificates: [''],
       hospital: '',
       phoneNumber: '',
     });
@@ -187,23 +197,31 @@ const DoctorManagement = React.memo(() => {
     setLoading(true);
     try {
       const payload = {
+        id: formData.id, // luôn gửi id khi update
         fullName: formData.name,
-        specialty: { id: Number(formData.specialty) },
-        imgs: formData.imgs,
+        specialtyId: Number(formData.specialty),
+        imgs: typeof formData.imgs === 'string' ? formData.imgs : (formData.imgs && formData.imgs.data ? formData.imgs.data : ''),
         bio: formData.bio,
         dateOfBirth: formData.dateOfBirth,
         locational: formData.locational,
         education: formData.education,
+        certificates: formData.certificates.filter(c => c && c.trim() !== ''),
         hospital: formData.hospital,
         phoneNumber: formData.phoneNumber,
         status: formData.status,
+        // Xóa accountId để backend tự xử lý
       };
       let res;
       if (modalMode === 'create') {
         res = await DoctorService.createDoctor(payload);
         setSuccess('Thêm bác sĩ thành công!');
       } else if (modalMode === 'edit') {
-        res = await DoctorService.updateDoctor(selectedDoctor.id, payload);
+        if (!formData.id || isNaN(Number(formData.id))) {
+          setError('Không xác định được ID bác sĩ để cập nhật!');
+          setLoading(false);
+          return;
+        }
+        res = await DoctorService.updateDoctor(formData.id, payload);
         setSuccess('Cập nhật bác sĩ thành công!');
       }
       console.log('Doctor API response:', res);
@@ -229,17 +247,14 @@ const DoctorManagement = React.memo(() => {
     const formDataUpload = new FormData();
     formDataUpload.append('file', file);
     try {
-      const url = await DoctorService.uploadAvatar(formDataUpload);
-      // Log giá trị url để debug
-      console.log('Upload avatar response:', url);
-      // Đảm bảo imgs là string, không phải mảng, không phải undefined
-      let imgUrl = url;
-      if (Array.isArray(url)) {
-        imgUrl = url[0];
-      } else if (typeof url === 'object' && url !== null && url.url) {
-        imgUrl = url.url;
+      let url = await DoctorService.uploadAvatar(formDataUpload);
+      // Đảm bảo imgs là string, không phải object
+      if (url && typeof url === 'object') {
+        if (url.data && typeof url.data === 'string') url = url.data;
+        else if (url.url && typeof url.url === 'string') url = url.url;
+        else if (Array.isArray(url) && typeof url[0] === 'string') url = url[0];
       }
-      setFormData(prev => ({ ...prev, imgs: imgUrl }));
+      setFormData(prev => ({ ...prev, imgs: url }));
     } catch (err) {
       setError('Upload ảnh thất bại');
     }
@@ -257,6 +272,15 @@ const DoctorManagement = React.memo(() => {
 
   return (
     <div className="p-6">
+      {/* Nút Thêm bác sĩ - bên phải */}
+      <div className="flex justify-end mb-4">
+        <button
+          onClick={handleAddDoctor}
+          className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+        >
+          + Thêm bác sĩ
+        </button>
+      </div>
       {/* Search and Filter */}
       <div className="mb-6 flex flex-col sm:flex-row gap-4">
         <div className="flex-1">
@@ -292,7 +316,6 @@ const DoctorManagement = React.memo(() => {
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SĐT</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ngày sinh</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Địa chỉ</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trình độ</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bệnh viện</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
               <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hành động</th>
@@ -303,8 +326,19 @@ const DoctorManagement = React.memo(() => {
               <tr key={doctor.id}>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{doctor.id}</td>
                 <td className="px-4 py-3 whitespace-nowrap">
-                  {doctor.imgs ? (
-                    <img src={doctor.imgs.startsWith('http') ? doctor.imgs : `http://localhost:8080${doctor.imgs}`} alt={doctor.name} className="w-12 h-12 object-cover rounded-lg" onError={e => {e.target.onerror=null; e.target.src='/logo192.png'}} />
+                  {doctor.imgs && typeof doctor.imgs === 'string' ? (
+                    <img
+                      src={
+                        doctor.imgs.startsWith('http')
+                          ? doctor.imgs
+                          : doctor.imgs.startsWith('/avatars/')
+                            ? `http://localhost:8080${doctor.imgs}`
+                            : doctor.imgs
+                      }
+                      alt={doctor.name}
+                      className="w-12 h-12 object-cover rounded-lg"
+                      onError={e => { e.target.onerror = null; e.target.src = '/logo192.png'; }}
+                    />
                   ) : (
                     <span className="inline-block w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 font-bold">
                       {doctor.name.split(' ').pop().charAt(0)}
@@ -316,7 +350,6 @@ const DoctorManagement = React.memo(() => {
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.phoneNumber}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.dateOfBirth}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.locational}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.education}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.hospital}</td>
                 <td className="px-4 py-3 whitespace-nowrap text-sm">
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${doctor.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
@@ -417,12 +450,18 @@ const DoctorManagement = React.memo(() => {
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg"
                     required={modalMode === 'create'}
                   />
-                  {formData.imgs && (
+                  {formData.imgs && typeof formData.imgs === 'string' && (
                     <img
-                      src={formData.imgs.startsWith('http') ? formData.imgs : (formData.imgs.startsWith('/avatars/') ? `http://localhost:8080${formData.imgs}` : formData.imgs)}
+                      src={
+                        formData.imgs.startsWith('http')
+                          ? formData.imgs
+                          : formData.imgs.startsWith('/avatars/')
+                            ? `http://localhost:8080${formData.imgs}`
+                            : formData.imgs
+                      }
                       alt="avatar"
                       className="mt-2 w-24 h-24 object-cover rounded-lg"
-                      onError={e => {e.target.onerror=null; e.target.src='/logo192.png'}}
+                      onError={e => { e.target.onerror = null; e.target.src = '/logo192.png'; }}
                     />
                   )}
                 </div>
@@ -464,6 +503,22 @@ const DoctorManagement = React.memo(() => {
                     onChange={handleInputChange}
                     className="mt-1 w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
                   />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700">Chứng chỉ (Certificates)</label>
+                  {formData.certificates && formData.certificates.map((cert, idx) => (
+                    <div key={idx} className="flex items-center space-x-2 mb-2">
+                      <input
+                        type="text"
+                        value={cert}
+                        onChange={e => handleCertificateChange(idx, e.target.value)}
+                        className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+                        placeholder={`Chứng chỉ #${idx + 1}`}
+                      />
+                      <button type="button" onClick={() => handleRemoveCertificate(idx)} className="text-red-500 hover:text-red-700"><X size={18} /></button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={handleAddCertificate} className="mt-1 px-3 py-1 bg-blue-500 text-white rounded hover:bg-blue-600">+ Thêm chứng chỉ</button>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700">Bệnh viện</label>

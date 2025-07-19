@@ -227,7 +227,8 @@ public class DoctorService {
             dto.setLocational(doctor.getLocational());
             dto.setEducation(doctor.getEducation());
             dto.setHospital(doctor.getHospital());
-
+            dto.setDateOfBirth(doctor.getDateOfBirth() != null ? doctor.getDateOfBirth().toString() : null);
+            dto.setStatus(doctor.getStatus());
 
             if (doctor.getAccount() != null) {
                 dto.setEmail(doctor.getAccount().getEmail());

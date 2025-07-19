@@ -6,13 +6,16 @@ import com.example.project.repository.DoctorAvailabilityRepository;
 import com.example.project.repository.DoctorRepository;
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
+import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.stream.Collectors;
+import jakarta.persistence.Query;
 
 @Service
 public class DoctorAvailabilityService {
@@ -86,5 +89,27 @@ public class DoctorAvailabilityService {
         if (dto.getStatus() != null) availability.setStatus(dto.getStatus());
         doctorAvailabilityRepository.save(availability);
         return new DoctorAvailabilityDTO(availability);
+    }
+
+
+    public void deleteAvailability(Integer id) {
+        if (!doctorAvailabilityRepository.existsById(id)) {
+            System.out.println("Không tìm thấy availability với id: " + id);
+            return;
+        }
+        System.out.println("Xóa availability với id: " + id);
+        doctorAvailabilityRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void createAvailabilitySlotsByProcedure(Integer doctorId, LocalDateTime startTime, LocalDateTime endTime, int slotMinutes) {
+        Query query = entityManager.createNativeQuery(
+            "EXEC InsertDoctorAvailabilitySlots :doctorId, :startTime, :endTime, :slotMinutes"
+        );
+        query.setParameter("doctorId", doctorId);
+        query.setParameter("startTime", startTime);
+        query.setParameter("endTime", endTime);
+        query.setParameter("slotMinutes", slotMinutes);
+        query.executeUpdate();
     }
 }
