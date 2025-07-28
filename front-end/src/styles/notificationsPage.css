@@ -1,0 +1,249 @@
+.notifications-page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px;
+}
+
+.page-title {
+  font-size: 24px;
+  font-weight: 600;
+  color: #1F2937;
+  margin-bottom: 20px;
+}
+
+.admin-actions,
+.doctor-actions {
+  margin-bottom: 20px;
+}
+
+.action-button {
+  background-color: #4F46E5;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.action-button:hover {
+  background-color: #4338CA;
+}
+
+.notifications-content {
+  display: flex;
+  background-color: white;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  overflow: hidden;
+  min-height: 70vh;
+}
+
+.notifications-sidebar {
+  width: 30%;
+  border-right: 1px solid #E5E7EB;
+  display: flex;
+  flex-direction: column;
+}
+
+.sidebar-header {
+  padding: 16px;
+  border-bottom: 1px solid #E5E7EB;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.sidebar-header h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.mark-all-read-btn {
+  background: none;
+  border: none;
+  color: #4F46E5;
+  font-size: 12px;
+  cursor: pointer;
+  padding: 0;
+}
+
+.notifications-list {
+  flex: 1;
+  overflow-y: auto;
+  max-height: calc(70vh - 60px);
+}
+
+.notification-list-item {
+  padding: 16px;
+  border-bottom: 1px solid #E5E7EB;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.notification-list-item:hover {
+  background-color: #F9FAFB;
+}
+
+.notification-list-item.selected {
+  background-color: #EEF2FF;
+}
+
+.notification-list-item.unread {
+  position: relative;
+}
+
+.notification-list-item.unread::before {
+  content: "";
+  position: absolute;
+  left: 6px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #4F46E5;
+}
+
+.notification-preview {
+  margin-left: 15px;
+}
+
+.notification-preview-subject {
+  font-size: 14px;
+  font-weight: 600;
+  margin: 0 0 5px 0;
+  color: #1F2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notification-preview-time {
+  font-size: 12px;
+  color: #6B7280;
+  margin: 0;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  border-top: 1px solid #E5E7EB;
+}
+
+.pagination-button {
+  background-color: #F3F4F6;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.page-info {
+  font-size: 12px;
+  color: #6B7280;
+}
+
+.notification-detail-panel {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.no-notification-selected {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #9CA3AF;
+  font-size: 14px;
+}
+
+.notification-detail {
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.notification-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  border-bottom: 1px solid #E5E7EB;
+  padding-bottom: 12px;
+}
+
+.notification-detail-header h2 {
+  font-size: 18px;
+  font-weight: 600;
+  color: #1F2937;
+  margin: 0;
+}
+
+.notification-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.delete-button, .close-button {
+  background-color: #F3F4F6;
+  border: 1px solid #D1D5DB;
+  border-radius: 4px;
+  padding: 6px 12px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.delete-button:hover {
+  background-color: #FEE2E2;
+  border-color: #F87171;
+  color: #B91C1C;
+}
+
+.notification-metadata {
+  margin-bottom: 20px;
+  background-color: #F9FAFB;
+  padding: 12px;
+  border-radius: 6px;
+}
+
+.notification-metadata p {
+  margin: 8px 0;
+  font-size: 13px;
+  color: #4B5563;
+}
+
+.metadata-label {
+  font-weight: 600;
+  display: inline-block;
+  width: 120px;
+}
+
+.notification-detail-body {
+  flex: 1;
+  font-size: 14px;
+  line-height: 1.6;
+  color: #1F2937;
+  white-space: pre-line;
+}
+
+.loading-notifications, .no-notifications-message {
+  padding: 20px;
+  text-align: center;
+  color: #6B7280;
+  font-size: 14px;
+} 

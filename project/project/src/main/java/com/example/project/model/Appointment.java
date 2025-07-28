@@ -1,99 +1,93 @@
 package com.example.project.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
+@Getter
+@Setter
 @Entity
 @Table(name = "Appointments")
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "appointment_id")
-    private int appointmentId;
+    private Integer appointmentId;
 
-    @Column(name = "patient_id", nullable = false)
-    private int patientId;
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
 
-    @Column(name = "doctor_id", nullable = false)
-    private int doctorId;
+    @ManyToOne
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private Doctor doctor;
 
-    @Column(name = "appointment_time", nullable = false)
-    private LocalDateTime appointmentTime;
 
-    @Column(name = "total_fee", nullable = false)
-    private double totalFee;
 
-    @Column(name = "status", nullable = false)
+    @Column(name = "appointment_date", nullable = false)
+    private LocalDateTime appointmentDate;
+
+    @Column(name = "duration", nullable = false)
+    private Integer duration;
+
+    @Column(name = "priority")
+    private String priority;
+
+    @Column(name = "consultation_type")
+    private String consultationType;
+
+    @Column(name = "status")
     private String status;
 
+    @Column(name = "notes")
+    private String notes;
+
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "specialty_id")
+    private Specialty specialty;
+
+    @Column(name = "appointment_time")
+    private OffsetDateTime appointmentTime;
+
+    @Size(max = 255)
+    @NotNull
     @Column(name = "payment_method", nullable = false)
     private String paymentMethod;
 
-    @Column(name = "created_at")
-    private LocalDateTime createdAt = LocalDateTime.now();
+    @Column(name = "total_fee")
+    private BigDecimal totalFee;
 
-    // Getters and Setters
-    public int getAppointmentId() {
-        return appointmentId;
+    @Column(name = "symptoms")
+    private String symptoms;
+
+    @Column(name = "service_id")
+    private Integer serviceId;
+
+    // Fields from second file that were not in the first and do not duplicate
+    // None were unique that are not already included in more complete form
+
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (appointmentTime == null && appointmentDate != null) {
+            appointmentTime = appointmentDate.atOffset(ZoneOffset.ofHours(7));
+        }
     }
 
-    public void setAppointmentId(int appointmentId) {
-        this.appointmentId = appointmentId;
+    public LocalDateTime getAppointmentDate() {
+        return this.appointmentDate;
     }
 
-    public int getPatientId() {
-        return patientId;
-    }
-
-    public void setPatientId(int patientId) {
-        this.patientId = patientId;
-    }
-
-    public int getDoctorId() {
-        return doctorId;
-    }
-
-    public void setDoctorId(int doctorId) {
-        this.doctorId = doctorId;
-    }
-
-    public LocalDateTime getAppointmentTime() {
-        return appointmentTime;
-    }
-
-    public void setAppointmentTime(LocalDateTime appointmentTime) {
-        this.appointmentTime = appointmentTime;
-    }
-
-    public double getTotalFee() {
-        return totalFee;
-    }
-
-    public void setTotalFee(double totalFee) {
-        this.totalFee = totalFee;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    public String getPaymentMethod() {
-        return paymentMethod;
-    }
-
-    public void setPaymentMethod(String paymentMethod) {
-        this.paymentMethod = paymentMethod;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
 }

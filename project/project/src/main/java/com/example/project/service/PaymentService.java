@@ -20,4 +20,8 @@ public class PaymentService {
     public Optional<Payment> getPaymentByVaccineAppointmentId(Integer vaccineAppointmentId) {
         return paymentRepository.findByVaccineAppointmentId(vaccineAppointmentId);
     }
+
+    public Optional<Payment> getPaymentByVaccineAppointmentIdAndPaymentMethod(Integer vaccineAppointmentId, String paymentMethod) {
+        return paymentRepository.findByVaccineAppointmentIdAndPaymentMethod(vaccineAppointmentId, paymentMethod);
+    }
 }

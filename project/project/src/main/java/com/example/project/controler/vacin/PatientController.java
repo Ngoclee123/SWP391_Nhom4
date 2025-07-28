@@ -13,6 +13,8 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -60,7 +62,7 @@ public class PatientController {
             logger.debug("Found {} patients for parentId: {}", patients.size(), parentId);
 
             List<PatientDTO> patientDTOs = patients.stream()
-                    .map(PatientDTO::new)
+                    .map(PatientDTO::new) // Sử dụng constructor mới
                     .collect(Collectors.toList());
             logger.debug("Returning {} patient DTOs: {}", patientDTOs.size(), patientDTOs);
             return ResponseEntity.ok(patientDTOs);
@@ -85,7 +87,26 @@ public class PatientController {
             String username = authentication.getName();
             logger.debug("Authenticated username: {}", username);
 
-            PatientDTO savedPatientDTO = patientService.addPatient(patientDTO, username);
+            // Chuyển accountId từ String sang Integer
+            Integer accountId;
+            try {
+                accountId = patientDTO.getAccountId();
+                if (accountId == null) {
+                    logger.error("accountId is null in patientDTO");
+                    return ResponseEntity.badRequest().body(null);
+                }
+            } catch (NumberFormatException e) {
+                logger.error("Invalid accountId format: {}", patientDTO.getAccountId(), e);
+                return ResponseEntity.badRequest().body(null);
+            }
+
+            // Parse dateOfBirth từ String sang LocalDate (nếu cần)
+            if (patientDTO.getDateOfBirth() == null) {
+                logger.error("dateOfBirth is null in patientDTO");
+                return ResponseEntity.badRequest().body(null);
+            }
+
+            PatientDTO savedPatientDTO = patientService.addPatient(patientDTO, accountId);
             logger.debug("Patient added successfully with id: {}", savedPatientDTO.getId());
             return ResponseEntity.status(201).body(savedPatientDTO);
         } catch (Exception e) {

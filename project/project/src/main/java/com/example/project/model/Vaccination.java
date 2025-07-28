@@ -47,7 +47,7 @@ public class Vaccination {
     @Column(name = "notes")
     private String notes;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
 }

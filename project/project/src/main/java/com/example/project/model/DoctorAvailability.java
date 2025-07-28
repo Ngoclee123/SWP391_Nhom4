@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 @Getter
 @Setter
 @Entity
@@ -21,16 +21,14 @@ public class DoctorAvailability {
     private Doctor doctor;
 
     @Column(name = "start_time", nullable = false)
-    private Instant startTime;
+    private LocalDateTime startTime;
 
     @Column(name = "end_time", nullable = false)
-    private Instant endTime;
+    private LocalDateTime endTime;
 
     @Column(name = "status")
     private String status;
 
     @Column(name = "created_at")
-    private Instant createdAt;
-
-
+    private LocalDateTime createdAt;
 }

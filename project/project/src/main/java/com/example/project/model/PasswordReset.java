@@ -38,7 +38,7 @@ public class PasswordReset {
     @Column(name = "expires_at", nullable = false)
     private Instant expiresAt;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
 

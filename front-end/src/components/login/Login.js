@@ -19,7 +19,8 @@ function Login() {
             const username = urlParams.get('username');
             const fullName = urlParams.get('fullName');
             const accountId = urlParams.get('accountId');
-            UserService.setUser(token, username, fullName, accountId);
+            console.log('OAuth setUser called with:', { token, username, fullName, accountId, role });
+            UserService.setUser(token, username, fullName, accountId, role);
             if (role && role.toLowerCase() === "user") {
                 navigate('/home', { replace: true });
             } else {
@@ -30,20 +31,47 @@ function Login() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        let endpoint = '/api/login/user';
-        if (location.pathname.includes('/login/admin')) endpoint = '/api/login/admin';
-        else if (location.pathname.includes('/login/doctor')) endpoint = '/api/login/doctor';
+        console.log("Current pathname:", location.pathname); // Debug
+        const endpoint = '/api/login'; // Sử dụng endpoint duy nhất
 
         try {
-            const response = await axiosClient.post(endpoint, {
+            const res = await axiosClient.post(endpoint, {
                 username: username.trim(),
                 password: password.trim(),
             });
-            UserService.setUser(response.token, response.username, response.fullName, response.accountId);
+            console.log('res:', res);
+            console.log('res.data:', res.data);
+
+            const response = res.data ? res.data : res;
+            console.log('response:', response);
+
+            // Log giá trị truyền vào setUser
+            console.log('setUser called with:', {
+                token: response.token,
+                username: response.username,
+                fullName: response.fullName,
+                accountId: response.accountId,
+                role: response.role
+            });
+            UserService.setUser(response.token, response.username, response.fullName, response.accountId, response.role);
             setError('');
-            console.log('Đăng nhập thành công:', { username: response.username, fullName: response.fullName, accountId: response.accountId, role: response.role });
-            const from = location.state?.from || `/${response.role.toLowerCase()}`;
-            navigate(from, { replace: true });
+            console.log('Đăng nhập thành công:', {
+                username: response.username,
+                fullName: response.fullName,
+                accountId: response.accountId,
+                role: response.role
+            });
+
+            if (response.role && response.role.toLowerCase() === 'doctor') {
+                console.log('Redirecting to doctor-dashboard');
+                navigate('/doctor-dashboard', { replace: true });
+            } else if (response.role && response.role.toLowerCase() === 'admin') {
+                console.log('Redirecting to admin-dashboard');
+                navigate('/admin-dashboard', { replace: true });
+            } else {
+                console.log('Redirecting to home');
+                navigate('/home', { replace: true });
+            }
         } catch (error) {
             console.error('Đăng nhập thất bại:', error);
             if (error.response && error.response.data) {

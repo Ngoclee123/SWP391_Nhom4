@@ -6,6 +6,7 @@ import com.example.project.dto.RegisterRequestDTO;
 import com.example.project.dto.ResetPasswordRequestDTO;
 import com.example.project.model.Account;
 import com.example.project.service.AccountService;
+import io.jsonwebtoken.Claims;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +14,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api")
@@ -44,6 +47,36 @@ public class AuthController {
     public ResponseEntity<?> loginDoctor(@RequestBody LoginRequest loginRequest) {
         logger.info("Doctor login attempt for username: {}", loginRequest.getUsername());
         return handleLogin(loginRequest, "DOCTOR");
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody LoginRequest loginRequest) {
+        logger.info("General login attempt for username: {}", loginRequest.getUsername());
+        return handleGeneralLogin(loginRequest);
+    }
+
+    private ResponseEntity<?> handleGeneralLogin(LoginRequest loginRequest) {
+        Account account = accountService.findByUsername(loginRequest.getUsername());
+        if (account == null) {
+            logger.warn("Login failed: Username {} not found", loginRequest.getUsername());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Username not found");
+        }
+
+        if (!account.getStatus()) {
+            logger.warn("Login failed: Account {} is disabled", loginRequest.getUsername());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Account is disabled");
+        }
+
+        if (passwordEncoder.matches(loginRequest.getPassword(), account.getPasswordHash())) {
+            String role = account.getRole().getRolename();
+            String token = jwtUtil.generateToken(account.getUsername(), account.getId(), role);
+            logger.info("Login successful for username: {}, role: {}, token: {}", loginRequest.getUsername(), role, token);
+            return ResponseEntity.ok(new AuthResponse(token, account.getUsername(), account.getFullName(), account.getId(), role));
+        } else {
+            logger.warn("Login failed: Invalid password for username {}. Raw: {}, Stored: {}",
+                    loginRequest.getUsername(), loginRequest.getPassword(), account.getPasswordHash());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid password");
+        }
     }
 
     private ResponseEntity<?> handleLogin(LoginRequest loginRequest, String expectedRole) {
@@ -123,6 +156,21 @@ public class AuthController {
         logger.warn("GET method not allowed on /login endpoint");
         return ResponseEntity.status(HttpStatus.METHOD_NOT_ALLOWED).body("GET method not allowed on /login");
     }
+
+
+//    @PostMapping("/refresh-token")
+//    public ResponseEntity<Map<String, String>> refreshToken(@RequestBody Map<String, String> request) {
+//        String refreshToken = request.get("refreshToken");
+//        if (jwtUtil.validateToken(refreshToken)) {
+//            Claims claims = jwtUtil.parseClaims(refreshToken);
+//            String username = claims.getSubject();
+//            Integer accountId = claims.get("accountId", Integer.class);
+//            String role = claims.get("role", String.class);
+//            Map<String, String> tokens = jwtUtil.generateTokens(username, accountId, role);
+//            return ResponseEntity.ok(tokens);
+//        }
+//        return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+//    }
 }
 
 class LoginRequest {

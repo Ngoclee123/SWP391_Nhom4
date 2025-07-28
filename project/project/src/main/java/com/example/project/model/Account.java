@@ -45,16 +45,16 @@ public class Account {
     @Column(name = "status")
     private Boolean status;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "updated_at")
     private Instant updatedAt;
 
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 

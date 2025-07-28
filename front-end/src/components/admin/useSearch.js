@@ -16,4 +16,4 @@ const useSearch = () => {
   };
 };
 
-export default useSearch;
+export default useSearch; 

@@ -33,7 +33,7 @@ public class Admin {
     @Column(name = "admin_role", nullable = false, length = 50)
     private String adminRole;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
 

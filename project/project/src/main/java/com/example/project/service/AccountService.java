@@ -1,9 +1,7 @@
 package com.example.project.service;
 
 
-import com.example.project.dto.NewPasswordDTO;
-import com.example.project.dto.RegisterRequestDTO;
-import com.example.project.dto.ResetPasswordRequestDTO;
+import com.example.project.dto.*;
 import com.example.project.model.Account;
 import com.example.project.model.Parent;
 import com.example.project.model.PasswordReset;
@@ -26,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
+import java.util.List;
 import java.util.UUID;
 
 import java.util.regex.Pattern;
@@ -58,9 +57,6 @@ public class AccountService {
         return parentRepository.findByAccountId(accountId);
     }
 
-//    public void saveAccount(Account account) {
-//        accountRepository.save(account);
-//    }
 
     public void saveParent(Parent parent) {
         parentRepository.save(parent);
@@ -256,7 +252,8 @@ public class AccountService {
         passwordResetRepository.delete(passwordReset);
         return true;
     }
-//ADMIN
+
+    //ADMIN
     public java.util.List<Account> findAll() {
         return accountRepository.findAllWithRole();
     }
@@ -266,11 +263,16 @@ public class AccountService {
     }
 
     public boolean deleteAccount(Integer id) {
-        if (!accountRepository.existsById(id)) {
-            return false;
+        if (accountRepository.existsById(id)) {
+            accountRepository.deleteById(id);
+            return true;
         }
-        accountRepository.deleteById(id);
-        return true;
+        return false;
     }
-}
 
+    public List<AccountStatsDTO> getAccountStats() {
+        return accountRepository.countAccountsByRole();
+    }
+
+
+}

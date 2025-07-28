@@ -38,12 +38,16 @@ public class Parent {
     @Column(name = "address")
     private String address;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
 
 
+
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
+    public Integer getParentId() {
+        return this.id; // hoặc tên biến đúng của bạn
+    }
 
 }

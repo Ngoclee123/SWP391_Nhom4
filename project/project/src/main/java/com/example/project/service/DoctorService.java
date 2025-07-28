@@ -1,13 +1,14 @@
 package com.example.project.service;
 
+import com.example.project.dto.AvailabilityDTO;
 import com.example.project.dto.DoctorSearchDTO;
-import com.example.project.model.Doctor;
-import com.example.project.model.Specialty;
-import com.example.project.model.Certificate;
+import com.example.project.dto.SlotDTO;
+import com.example.project.model.*;
+import com.example.project.repository.AppointmentRepository;
 import com.example.project.repository.DoctorRepository;
 import com.example.project.repository.DoctorSpecification;
 import com.example.project.repository.SpecialtyRepository;
-import com.example.project.repository.CertificateRepository;
+import com.example.project.repository.AccountRepository;
 import jakarta.transaction.Transactional;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -17,7 +18,11 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
-import java.util.List;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Service
@@ -26,13 +31,16 @@ public class DoctorService {
     private static final Logger logger = LoggerFactory.getLogger(DoctorService.class);
 
     @Autowired
+    private AppointmentRepository appointmentRepository;
+
+    @Autowired
     private DoctorRepository doctorRepository;
 
     @Autowired
     private SpecialtyRepository specialtyRepository;
 
     @Autowired
-    private CertificateRepository certificateRepository;
+    private AccountRepository accountRepository;
 
     public List<Specialty> getAllSpecialties() {
         logger.info("Fetching all specialties");
@@ -83,16 +91,13 @@ public class DoctorService {
                 dto.setStartTime(da.getStartTime().toString());
                 dto.setEndTime(da.getEndTime().toString());
             });
-//A
-            if (doctor.getAccount() != null) {
-                dto.setAccountId(doctor.getAccount().getId());
-                dto.setAccountUsername(doctor.getAccount().getUsername());
-                dto.setAccountEmail(doctor.getAccount().getEmail());
-                dto.setAccountRole(doctor.getAccount().getRole() != null ? doctor.getAccount().getRole().getRolename() : null);
-                dto.setAccountPhoneNumber(doctor.getAccount().getPhoneNumber());
-                dto.setAccountAddress(doctor.getAccount().getAddress());
-                dto.setAccountStatus(doctor.getAccount().getStatus());
-            }
+
+            // Map certificates
+            dto.setCertificates(
+                doctor.getCertificates() != null
+                    ? doctor.getCertificates().stream().map(c -> c.getCertificateName()).collect(java.util.stream.Collectors.toList())
+                    : new java.util.ArrayList<>()
+            );
 
             return dto;
         });
@@ -100,10 +105,22 @@ public class DoctorService {
 
     public DoctorSearchDTO getDoctorById(Integer doctorId) {
         logger.info("Fetching doctor with ID: {}", doctorId);
-        Doctor doctor = doctorRepository.findByIdWithAvailabilities(doctorId)
+        Doctor doctor = doctorRepository.findByIdWithAvailabilitiesAndCertificates(doctorId)
                 .orElseThrow(() -> {
                     logger.error("Doctor not found with ID: {}", doctorId);
                     return new RuntimeException("Doctor not found with ID: " + doctorId);
+                });
+
+        // Sử dụng mapDoctorToDTO để đảm bảo lấy đúng email từ account
+        return mapDoctorToDTO(doctor);
+    }
+
+    public DoctorSearchDTO getDoctorByAccountId(Integer accountId) {
+        logger.info("Fetching doctor by account ID: {}", accountId);
+        Doctor doctor = doctorRepository.findByAccountId(accountId)
+                .orElseThrow(() -> {
+                    logger.error("Doctor not found with account ID: {}", accountId);
+                    return new RuntimeException("Doctor not found with account ID: " + accountId);
                 });
 
         DoctorSearchDTO dto = new DoctorSearchDTO();
@@ -115,25 +132,62 @@ public class DoctorService {
         dto.setLocational(doctor.getLocational());
         dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
         dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
-
+        // Lấy thông tin lịch làm việc đầu tiên (nếu có)
         doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
             dto.setAvailabilityStatus(da.getStatus());
             dto.setStartTime(da.getStartTime().toString());
             dto.setEndTime(da.getEndTime().toString());
         });
 
-        if (doctor.getAccount() != null) {
-            dto.setAccountId(doctor.getAccount().getId());
-            dto.setAccountUsername(doctor.getAccount().getUsername());
-            dto.setAccountEmail(doctor.getAccount().getEmail());
-            dto.setAccountRole(doctor.getAccount().getRole() != null ? doctor.getAccount().getRole().getRolename() : null);
-            dto.setAccountPhoneNumber(doctor.getAccount().getPhoneNumber());
-            dto.setAccountAddress(doctor.getAccount().getAddress());
-            dto.setAccountStatus(doctor.getAccount().getStatus());
-        }
-
         return dto;
     }
+
+    public List<DoctorSearchDTO> getAvailableDoctorsBySpecialty(Integer specialtyId) {
+        logger.info("Fetching available doctors for specialtyId: {}", specialtyId);
+        List<Doctor> doctors = doctorRepository.findAll(
+                DoctorSpecification.searchDoctors(specialtyId, null, "Available", null, Instant.now())
+        );
+        return doctors.stream().map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+            doctor.getAvailabilities().stream().findFirst().ifPresent(da -> {
+                dto.setAvailabilityStatus(da.getStatus());
+                dto.setStartTime(da.getStartTime().toString());
+                dto.setEndTime(da.getEndTime().toString());
+            });
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+    public List<DoctorSearchDTO> getAllDoctorsBySpecialty(Integer specialtyId) {
+        logger.info("Fetching all doctors for specialtyId: {}", specialtyId);
+        List<Doctor> doctors = doctorRepository.findBySpecialtyId(specialtyId);
+        if (doctors == null) {
+            return List.of();
+        }
+        return doctors.stream().map(doctor -> {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setUsername(doctor.getAccount() != null ? doctor.getAccount().getUsername() : null); // Lấy username từ Account
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+            dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+            return dto;
+        }).collect(Collectors.toList());
+    }
+
+
     // New method to fetch Doctor entity
     public Doctor getDoctorEntityById(Integer doctorId) {
         logger.info("Fetching doctor entity with ID: {}", doctorId);
@@ -149,30 +203,183 @@ public class DoctorService {
         return doctorRepository.findByAccountId(accountId).orElse(null);
     }
 
+    public Integer getAccountIdByUsername(String username) {
+        Account account = accountRepository.findByUsername(username);
+        return account != null ? account.getId() : null;
+    }
+
+    //Ngọc
+
+
+    private DoctorSearchDTO mapDoctorToDTO(Doctor doctor) {
+        if (doctor == null) {
+            logger.warn("Attempted to map null doctor to DTO");
+            return null;
+        }
+
+        try {
+            DoctorSearchDTO dto = new DoctorSearchDTO();
+            dto.setId(doctor.getId());
+            dto.setFullName(doctor.getFullName());
+            dto.setBio(doctor.getBio());
+            dto.setPhoneNumber(doctor.getPhoneNumber());
+            dto.setImgs(doctor.getImgs());
+            dto.setLocational(doctor.getLocational());
+            dto.setEducation(doctor.getEducation());
+            dto.setHospital(doctor.getHospital());
+            dto.setDateOfBirth(doctor.getDateOfBirth() != null ? doctor.getDateOfBirth().toString() : null);
+            dto.setStatus(doctor.getStatus());
+
+            if (doctor.getAccount() != null) {
+                dto.setEmail(doctor.getAccount().getEmail());
+                dto.setAddress(doctor.getAccount().getAddress());
+            }
+
+            if (doctor.getSpecialty() != null) {
+                dto.setSpecialtyName(doctor.getSpecialty().getName());
+            }
+
+            if (doctor.getCertificates() != null) {
+                dto.setCertificates(doctor.getCertificates().stream()
+                        .map(Certificate::getCertificateName)
+                        .collect(Collectors.toList()));
+            }
+
+            if (doctor.getAvailabilities() != null && !doctor.getAvailabilities().isEmpty()) {
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss").withZone(ZoneId.systemDefault());
+                dto.setAvailabilities(doctor.getAvailabilities().stream()
+                        .map(avail -> {
+                            AvailabilityDTO availDto = new AvailabilityDTO();
+                            availDto.setStartTime(formatter.format(avail.getStartTime()));
+                            availDto.setEndTime(formatter.format(avail.getEndTime()));
+                            availDto.setStatus(avail.getStatus());
+                            return availDto;
+                        })
+                        .collect(Collectors.toList()));
+            }
+
+            return dto;
+        } catch (Exception e) {
+            logger.error("Error mapping doctor to DTO: {}", e.getMessage());
+            return null;
+        }
+    }
+
+    public Map<String, Object> getAllDoctors() {
+        logger.info("Fetching all doctors");
+        Map<String, Object> response = new HashMap<>();
+
+        try {
+            List<Doctor> doctors = doctorRepository.findAllWithDetails();
+            if (doctors.isEmpty()) {
+                logger.info("No doctors found in database");
+                response.put("data", Collections.emptyList());
+                return response;
+            }
+
+            List<DoctorSearchDTO> doctorDTOs = doctors.stream()
+                    .map(this::mapDoctorToDTO)
+                    .filter(dto -> dto != null)
+                    .collect(Collectors.toList());
+
+            if (doctorDTOs.isEmpty() && !doctors.isEmpty()) {
+                logger.error("Failed to map any doctors to DTOs despite having doctor records");
+                response.put("error", "Lỗi xử lý dữ liệu bác sĩ");
+                return response;
+            }
+
+            logger.info("Successfully fetched and mapped {} doctors", doctorDTOs.size());
+            response.put("data", doctorDTOs);
+            return response;
+        } catch (Exception e) {
+            logger.error("Error fetching all doctors: {}", e.getMessage());
+            response.put("error", "Không thể tải danh sách bác sĩ");
+            return response;
+        }
+    }
+
+
+    @Transactional
+    public List<SlotDTO> getAvailableSlotsForDate(Integer doctorId, LocalDate date) {
+        List<SlotDTO> allSlots = new ArrayList<>();
+
+        // 1. Lấy tất cả các ca làm việc lớn của bác sĩ trong ngày được chọn
+        List<DoctorAvailability> availabilitiesToday = doctorRepository.findById(doctorId)
+                .map(Doctor::getAvailabilities)
+                .map(set -> set.stream()
+                        .filter(a -> a.getStartTime().toLocalDate().equals(date))
+                        .collect(Collectors.toList()))
+                .orElse(Collections.emptyList());
+
+        if (availabilitiesToday.isEmpty()) {
+            return Collections.emptyList(); // Nếu bác sĩ không làm việc ngày này, trả về danh sách rỗng
+        }
+
+        // 2. Lấy danh sách các cuộc hẹn đã có của bác sĩ trong ngày
+        LocalDateTime startOfDay = date.atStartOfDay();
+        LocalDateTime endOfDay = date.plusDays(1).atStartOfDay();
+        List<Appointment> appointments = appointmentRepository.findByDoctorIdAndAppointmentDateBetween(
+                doctorId, startOfDay, endOfDay);
+
+        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern("HH:mm");
+
+        // 3. "Cắt" các ca làm việc lớn thành các slot 1 giờ
+        for (DoctorAvailability availability : availabilitiesToday) {
+            // Bỏ qua các block thời gian không ở trạng thái "Available"
+            if (!"Available".equalsIgnoreCase(availability.getStatus())) {
+                continue;
+            }
+
+            LocalDateTime slotStart = availability.getStartTime();
+            LocalDateTime slotEnd = availability.getEndTime();
+
+            while (slotStart.isBefore(slotEnd)) {
+                LocalDateTime currentSlotEnd = slotStart.plusHours(1);
+
+                // 4. Kiểm tra xem slot này có bị trùng với lịch hẹn nào đã có không
+                boolean isBooked = false;
+                for (Appointment appointment : appointments) {
+                    LocalDateTime appointmentStart = appointment.getAppointmentDate();
+                    // Nếu thời gian bắt đầu của một lịch hẹn nằm trong khoảng của slot hiện tại
+                    if (!appointmentStart.isBefore(slotStart) && appointmentStart.isBefore(currentSlotEnd)) {
+                        isBooked = true;
+                        break;
+                    }
+                }
+
+                allSlots.add(new SlotDTO(
+                        slotStart.format(timeFormatter),
+                        currentSlotEnd.format(timeFormatter),
+                        isBooked ? "Booked" : "Available"
+                ));
+                slotStart = currentSlotEnd;
+            }
+        }
+
+        // Sắp xếp các slot theo thời gian bắt đầu để đảm bảo thứ tự đúng
+        allSlots.sort(Comparator.comparing(SlotDTO::getStartTime));
+
+        return allSlots;
+    }
+
+
+
+
+
     // ADMIN: Lưu (tạo/cập nhật) bác sĩ và certificates
     @Transactional
     public Doctor saveDoctor(Doctor doctor) {
-        // if (doctor.getAccount() == null) {
-        //     throw new IllegalArgumentException("Account is required for doctor");
-        // }
-        // Đảm bảo specialty không null và là object thực
-    if (doctor.getSpecialty() == null || doctor.getSpecialty().getId() == null) {
-        throw new IllegalArgumentException("Specialty is required");
-    }
-    // Lấy Specialty từ DB dựa vào id
-    Specialty specialty = specialtyRepository.findById(doctor.getSpecialty().getId())
-        .orElseThrow(() -> new IllegalArgumentException("Specialty not found"));
-    doctor.setSpecialty(specialty);
-
-    Doctor savedDoctor = doctorRepository.save(doctor);
-    if (doctor.getCertificates() != null) {
-        certificateRepository.findByDoctor_Id(savedDoctor.getId()).forEach(certificateRepository::delete);
-        for (Certificate cert : doctor.getCertificates()) {
-            cert.setDoctor(savedDoctor);
-            certificateRepository.save(cert);
+        if (doctor.getSpecialty() == null || doctor.getSpecialty().getId() == null) {
+            throw new IllegalArgumentException("Specialty is required");
         }
-    }
-    return savedDoctor;
+        Specialty specialty = specialtyRepository.findById(doctor.getSpecialty().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Specialty not found"));
+        doctor.setSpecialty(specialty);
+        // Lưu các trường mới
+        // imgs, bio, dateOfBirth, locational, education, hospital, phoneNumber, status đã có trong entity
+        // Không cần xử lý certificates ở đây nữa
+        Doctor savedDoctor = doctorRepository.save(doctor);
+        return savedDoctor;
     }
 
     // ADMIN: Xóa bác sĩ
@@ -183,6 +390,12 @@ public class DoctorService {
         doctorRepository.deleteById(id);
         return true;
     }
+
+
+
+
+
+
 }
 
 

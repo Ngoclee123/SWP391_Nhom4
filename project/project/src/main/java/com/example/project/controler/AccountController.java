@@ -1,30 +1,34 @@
 package com.example.project.controler;
 
+import com.example.project.dto.AccountDTO;
+import com.example.project.dto.AccountStatsDTO;
 import com.example.project.dto.ChangePasswordDTO;
 import com.example.project.dto.ParentProfileDTO;
 import com.example.project.model.Account;
 import com.example.project.model.Parent;
-import com.example.project.model.Role;
-import com.example.project.service.AccountService;
 import com.example.project.repository.RoleRepository;
+import com.example.project.service.AccountService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/accounts")
 public class AccountController {
 
     private static final Logger logger = LoggerFactory.getLogger(AccountController.class);
-
     @Autowired
-    private AccountService accountService;
-
+    private PasswordEncoder passwordEncoder;
     @Autowired
     private RoleRepository roleRepository;
+    @Autowired
+    private AccountService accountService;
 
     @GetMapping("/profile/{accountId}")
     public ResponseEntity<?> getParentProfile(@PathVariable Integer accountId) {
@@ -104,11 +108,22 @@ public class AccountController {
 
     }
 
+
+
+
+
+
+
+
     // CRUD for Account (Admin)
     @GetMapping("")
     public ResponseEntity<?> getAllAccounts() {
         try {
-            return ResponseEntity.ok(accountService.findAll());
+            List<Account> accounts = accountService.findAll();
+            List<AccountDTO> accountDTOs = accounts.stream()
+                    .map(AccountDTO::toDTO)
+                    .collect(java.util.stream.Collectors.toList());
+            return ResponseEntity.ok(accountDTOs);
         } catch (Exception e) {
             logger.error("Error fetching accounts: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching accounts");
@@ -122,7 +137,7 @@ public class AccountController {
             if (account == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found");
             }
-            return ResponseEntity.ok(account);
+            return ResponseEntity.ok(AccountDTO.toDTO(account));
         } catch (Exception e) {
             logger.error("Error fetching account: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching account");
@@ -132,21 +147,31 @@ public class AccountController {
     @PostMapping("")
     public ResponseEntity<?> createAccount(@RequestBody Account account, @RequestParam String role) {
         try {
-            // Không cần account_id khi tạo mới, để database tự sinh
-            // if (account.getId() != null) {
-            //     return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Không cần truyền account_id khi tạo mới");
-            // }
-            // Lấy role từ tên (rolename) gửi lên từ front-end
             if (role == null || role.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Role is required");
             }
             var roleEntity = roleRepository.findByRolename(role);
-            if (roleEntity == null) {
+            if (roleEntity == null) {   
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Role not found");
             }
-            account.setRole(roleEntity);
-            Account created = accountService.saveAccount(account);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+
+            Account newAccount = new Account();
+            newAccount.setUsername(account.getUsername());
+            newAccount.setFullName(account.getFullName());
+            newAccount.setEmail(account.getEmail());
+            newAccount.setPasswordHash(passwordEncoder.encode(account.getPasswordHash()));
+            newAccount.setPhoneNumber(account.getPhoneNumber());
+            newAccount.setAddress(account.getAddress());
+            newAccount.setStatus(true);
+            newAccount.setCreatedAt(java.time.Instant.now());
+            newAccount.setUpdatedAt(java.time.Instant.now());
+            newAccount.setRole(roleEntity);
+
+            Account created = accountService.saveAccount(newAccount);
+
+            // Sử dụng static method toDTO
+            AccountDTO dto = AccountDTO.toDTO(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
         } catch (Exception e) {
             logger.error("Error creating account: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating account");
@@ -160,12 +185,31 @@ public class AccountController {
             if (existing == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found");
             }
-            account.setId(id);
-            Account updated = accountService.saveAccount(account);
-            return ResponseEntity.ok(updated);
+            // Chỉ cập nhật nếu trường không null
+            if (account.getUsername() != null) existing.setUsername(account.getUsername());
+            if (account.getFullName() != null) existing.setFullName(account.getFullName());
+            if (account.getEmail() != null) existing.setEmail(account.getEmail());
+            if (account.getPhoneNumber() != null) existing.setPhoneNumber(account.getPhoneNumber());
+            if (account.getAddress() != null) existing.setAddress(account.getAddress());
+            if (account.getStatus() != null) existing.setStatus(account.getStatus());
+            existing.setUpdatedAt(java.time.Instant.now());
+            if (account.getPasswordHash() != null && !account.getPasswordHash().isEmpty()) {
+                existing.setPasswordHash(passwordEncoder.encode(account.getPasswordHash()));
+            }
+            if (account.getRole() != null) {
+                String rolename = account.getRole().getRolename();
+                if (rolename != null) {
+                    var roleEntity = roleRepository.findByRolename(rolename);
+                    if (roleEntity != null) {
+                        existing.setRole(roleEntity);
+                    }
+                }
+            }
+            Account updated = accountService.saveAccount(existing);
+            return ResponseEntity.ok(AccountDTO.toDTO(updated));
         } catch (Exception e) {
-            logger.error("Error updating account: {}", e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating account");
+            logger.error("Error updating account: {}", e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating account: " + e.getMessage());
         }
     }
 
@@ -181,6 +225,11 @@ public class AccountController {
             logger.error("Error deleting account: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error deleting account");
         }
+    }
+
+    @GetMapping("/stats")
+    public ResponseEntity<List<AccountStatsDTO>> getAccountStats() {
+        return ResponseEntity.ok(accountService.getAccountStats());
     }
 
 }

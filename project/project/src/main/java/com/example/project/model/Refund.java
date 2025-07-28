@@ -47,7 +47,7 @@ public class Refund {
     @Column(name = "processed_at")
     private Instant processedAt;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
 

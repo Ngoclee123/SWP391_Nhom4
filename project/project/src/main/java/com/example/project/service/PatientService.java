@@ -27,35 +27,30 @@ public class PatientService {
     @Autowired
     private ParentRepository parentRepository;
 
-    @Autowired
-    private ParentService parentService;
-
-    public Integer getParentIdByUsername(String username) {
-        logger.debug("Fetching parentId for username: {}", username);
-        Integer parentId = parentService.getParentIdByUsername(username);
-        logger.debug("ParentId for username {}: {}", username, parentId);
+    public Integer getParentIdByAccountId(Integer accountId) {
+        logger.debug("Fetching parentId for accountId: {}", accountId);
+        Parent parent = parentRepository.findByAccountId(accountId);
+        Integer parentId = (parent != null) ? parent.getId() : null;
+        logger.debug("ParentId for accountId {}: {}", accountId, parentId);
         return parentId;
     }
 
-    public PatientDTO addPatient(PatientDTO patientDTO, String username) {
+    public PatientDTO addPatient(PatientDTO patientDTO, Integer accountId) {
         try {
             logger.debug("Adding patient with data: {}", patientDTO);
-            Integer parentId = getParentIdByUsername(username);
+            Integer parentId = getParentIdByAccountId(accountId);
             if (parentId == null) {
-                logger.error("No parentId found for username: {}", username);
-                throw new IllegalArgumentException("Parent not found for username: " + username);
+                logger.error("No parentId found for accountId: {}", accountId);
+                throw new IllegalArgumentException("Parent not found for accountId: " + accountId);
             }
 
             Parent parent = parentRepository.findById(parentId)
-                    .orElseThrow(() -> {
-                        logger.error("Parent not found with id: {}", parentId);
-                        return new IllegalArgumentException("Parent not found with id: " + parentId);
-                    });
+                    .orElseThrow(() -> new IllegalArgumentException("Parent not found with id: " + parentId));
 
             Patient patient = new Patient();
             patient.setFullName(patientDTO.getFullName());
             try {
-                patient.setDateOfBirth(LocalDate.parse(patientDTO.getDateOfBirth()));
+                patient.setDateOfBirth(LocalDate.parse(patientDTO.getDateOfBirth())); // Parse từ String
             } catch (DateTimeParseException e) {
                 logger.error("Invalid dateOfBirth format: {}. Expected YYYY-MM-DD", patientDTO.getDateOfBirth(), e);
                 throw new IllegalArgumentException("Invalid dateOfBirth format: " + patientDTO.getDateOfBirth() + ". Use YYYY-MM-DD.");
@@ -88,4 +83,7 @@ public class PatientService {
         logger.debug("Found {} patients for parentId: {}", patientDTOs.size(), parentId);
         return patientDTOs;
     }
+
+
+
 }

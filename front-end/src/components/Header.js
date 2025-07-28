@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import UserService from '../service/userService';
+import NotificationBell from './NotificationBell';
 
 function Header() {
     const navigate = useNavigate();
@@ -146,6 +147,10 @@ function Header() {
                 </nav>
 
                 <div className="flex items-center space-x-4">
+                    {isLoggedIn && (
+                        <NotificationBell />
+                    )}
+                    
                     {isLoggedIn ? (
                         <div className="relative" ref={dropdownRef}>
                             <button
@@ -171,6 +176,24 @@ function Header() {
                                         className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
                                     >
                                         Thay Đổi Mật Khẩu
+                                    </button>
+                                    <button
+                                        onClick={() => { setIsDropdownOpen(false); window.location.href = '/vaccine-history'; }}
+                                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
+                                    >
+                                        Lịch sử đặt vaccin
+                                    </button>
+                                    <button
+                                        onClick={() => { setIsDropdownOpen(false); navigate('/add-patient'); }}
+                                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
+                                    >
+                                        Thêm bé
+                                    </button>
+                                    <button
+                                        onClick={() => { setIsDropdownOpen(false); navigate('/notifications'); }}
+                                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
+                                    >
+                                        Thông báo
                                     </button>
                                     <button
                                         onClick={handleLogout}
@@ -204,8 +227,9 @@ function Header() {
                         </>
                     )}
                 </div>
-            </div>
+            </div>     
         </header>
+        
     );
 }
 

@@ -19,6 +19,12 @@ const ROLE_OPTIONS = [
   { value: 'DOCTOR', label: 'Doctor' },
 ];
 
+const ROLE_LABELS = {
+  ADMIN: 'Admin',
+  USER: 'User',
+  DOCTOR: 'Doctor',
+};
+
 function AccountManagement() {
   const [accounts, setAccounts] = useState([]);
   const [form, setForm] = useState(initialForm);
@@ -28,6 +34,19 @@ function AccountManagement() {
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false); // Thêm state cho modal
+  const [sortField, setSortField] = useState('');
+  const [sortOrder, setSortOrder] = useState('asc');
+  const [currentPage, setCurrentPage] = useState(1);
+  const accountsPerPage = 7;
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
 
   const fetchAccounts = async () => {
     setLoading(true);
@@ -63,30 +82,35 @@ function AccountManagement() {
       phoneNumber: account.phoneNumber || '',
       address: account.address || '',
       status: account.status,
-      role: account.role?.name || '',
+      role: account.role?.rolename || '',
       password: '',
     });
     setIsModalOpen(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!window.confirm('Bạn có chắc muốn xóa tài khoản này?')) return;
+  // Thay thế hàm handleDelete thành handleDisable
+  const handleDisable = async (id) => {
+    if (!window.confirm('Bạn có chắc muốn vô hiệu hóa tài khoản này?')) return;
     try {
-      await userService.deleteAccount(id);
+      await userService.updateAccount(id, { status: false });
       fetchAccounts();
     } catch (err) {
-      setError('Xóa tài khoản thất bại');
+      setError('Vô hiệu hóa tài khoản thất bại');
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      const payload = {
+      let payload = {
         ...form,
         passwordHash: form.password, // Đổi tên trường cho đúng backend
       };
       delete payload.password; // Xóa trường password cũ
+      // Đảm bảo role là object { rolename: ... }
+      if (typeof payload.role === 'string') {
+        payload.role = { rolename: payload.role };
+      }
       if (editingId) {
         await userService.updateAccount(editingId, payload);
       } else {
@@ -113,16 +137,36 @@ function AccountManagement() {
   };
 
   const filteredAccounts = useMemo(() => {
-    return accounts.filter(acc => {
+    let result = accounts.filter(acc => {
       const matchesSearch =
         !search ||
         acc.username?.toLowerCase().includes(search.toLowerCase()) ||
         acc.email?.toLowerCase().includes(search.toLowerCase()) ||
         acc.fullName?.toLowerCase().includes(search.toLowerCase());
-      const matchesRole = !roleFilter || (acc.role && acc.role.name === roleFilter);
+      const matchesRole = !roleFilter || acc.roleName === roleFilter;
       return matchesSearch && matchesRole;
     });
-  }, [accounts, search, roleFilter]);
+    if (sortField === 'roleName') {
+      result = [...result].sort((a, b) => {
+        const aValue = a.roleName || '';
+        const bValue = b.roleName || '';
+        if (aValue < bValue) return sortOrder === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortOrder === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+    return result;
+  }, [accounts, search, roleFilter, sortField, sortOrder]);
+
+  // Phân trang sau khi lọc/sắp xếp
+  const paginatedAccounts = useMemo(() => {
+    const startIdx = (currentPage - 1) * accountsPerPage;
+    return filteredAccounts.slice(startIdx, startIdx + accountsPerPage);
+  }, [filteredAccounts, currentPage]);
+  const totalPages = Math.ceil(filteredAccounts.length / accountsPerPage);
+
+  // Khi search/filter đổi thì về trang 1
+  useEffect(() => { setCurrentPage(1); }, [search, roleFilter, sortField, sortOrder]);
 
   return (
     <div className="space-y-6">
@@ -296,7 +340,15 @@ function AccountManagement() {
                 <tr>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Username</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Vai trò</th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    onClick={() => handleSort('roleName')}
+                  >
+                    VAI TRÒ{' '}
+                    {sortField === 'roleName' && (
+                      <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
+                    )}
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Họ tên</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Số điện thoại</th>
                   <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Địa chỉ</th>
@@ -305,11 +357,11 @@ function AccountManagement() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
-                {filteredAccounts && filteredAccounts.length > 0 ? filteredAccounts.map((acc) => (
+                {paginatedAccounts && paginatedAccounts.length > 0 ? paginatedAccounts.map((acc) => (
                   <tr key={acc.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-5 font-medium text-gray-900">{acc.username}</td>
                     <td className="px-6 py-5 font-medium text-gray-900">{acc.email}</td>
-                    <td className="px-6 py-5 font-medium text-gray-900">{acc.role?.rolename || 'Không xác định'}</td>
+                    <td className="px-6 py-5 font-medium text-gray-900">{ROLE_LABELS[acc.roleName] || 'Không xác định'}</td>
                     <td className="px-6 py-5 font-medium text-gray-900">{acc.fullName}</td>
                     <td className="px-6 py-5 font-medium text-gray-900">{acc.phoneNumber}</td>
                     <td className="px-6 py-5 font-medium text-gray-900">{acc.address}</td>
@@ -326,12 +378,28 @@ function AccountManagement() {
                         >
                           Sửa
                         </button>
-                        <button
-                          onClick={() => handleDelete(acc.id)}
-                          className="bg-red-500 hover:bg-red-600 px-2 py-1 rounded font-semibold text-xs text-white"
-                        >
-                          Xóa
-                        </button>
+                        {acc.status ? (
+                          <button
+                            onClick={() => handleDisable(acc.id)}
+                            className="bg-gray-500 hover:bg-gray-600 px-2 py-1 rounded font-semibold text-xs text-white"
+                          >
+                            Vô hiệu hóa
+                          </button>
+                        ) : (
+                          <button
+                            onClick={async () => {
+                              try {
+                                await userService.updateAccount(acc.id, { status: true });
+                                fetchAccounts();
+                              } catch (err) {
+                                setError('Kích hoạt tài khoản thất bại');
+                              }
+                            }}
+                            className="bg-green-500 hover:bg-green-600 px-2 py-1 rounded font-semibold text-xs text-white"
+                          >
+                            Kích hoạt
+                          </button>
+                        )}
                       </div>
                     </td>
                   </tr>
@@ -345,6 +413,34 @@ function AccountManagement() {
               </tbody>
             </table>
           </div>
+          {/* PHÂN TRANG */}
+          {totalPages > 1 && (
+            <div className="flex justify-center items-center gap-2 py-4">
+              <button
+                className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+                onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                disabled={currentPage === 1}
+              >
+                &lt;
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => (
+                <button
+                  key={i + 1}
+                  className={`px-3 py-1 rounded border ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  onClick={() => setCurrentPage(i + 1)}
+                >
+                  {i + 1}
+                </button>
+              ))}
+              <button
+                className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+                onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                disabled={currentPage === totalPages}
+              >
+                &gt;
+              </button>
+            </div>
+          )}
         </div>
       )}
       {error && (

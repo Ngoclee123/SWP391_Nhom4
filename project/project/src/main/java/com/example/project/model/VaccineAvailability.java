@@ -10,7 +10,7 @@ import org.hibernate.annotations.Nationalized;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
-import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -29,7 +29,7 @@ public class VaccineAvailability {
 
     @NotNull
     @Column(name = "available_date", nullable = false)
-    private Instant availableDate;
+    private LocalDateTime availableDate;
 
     @Size(max = 255)
     @NotNull
@@ -41,8 +41,8 @@ public class VaccineAvailability {
     @Column(name = "capacity")
     private Integer capacity;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
-    private Instant createdAt;
+    private LocalDateTime createdAt;
 
 }

@@ -11,6 +11,7 @@ import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.Instant;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -35,7 +36,7 @@ public class VaccineAppointment {
 
     @NotNull
     @Column(name = "appointment_date", nullable = false)
-    private Instant appointmentDate;
+    private LocalDateTime appointmentDate;
 
     @ColumnDefault("1")
     @Column(name = "dose_number")
@@ -57,7 +58,11 @@ public class VaccineAppointment {
     @Column(name = "notes")
     private String notes;
 
-    @ColumnDefault("CURRENT_TIMESTAMP")
+    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
-    private Instant createdAt;
+    private LocalDateTime createdAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "parent_id")
+    private Parent parent;
 }
