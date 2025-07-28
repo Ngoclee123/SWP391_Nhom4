@@ -1,40 +1,35 @@
 package com.example.project.model;
 
 import jakarta.persistence.*;
-import java.time.LocalDateTime;
+import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Size;
+import lombok.Getter;
+import lombok.Setter;
 
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+
+@Getter
+@Setter
 @Entity
 @Table(name = "Appointments")
 public class Appointment {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "appointment_id")
-<<<<<<< Updated upstream
-    private Integer id;
-
-    @Column(name = "patient_id", nullable = false)
-    private Integer patientId;
-
-    @Column(name = "doctor_id", nullable = false)
-    private Integer doctorId;
-
-    @Column(name = "specialty_id", nullable = false)
-=======
     private Integer appointmentId;
 
-    @Column(name = "patient_id")
-    private Integer patientId;
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private Patient patient;
 
-    @Column(name = "doctor_id")
-    private Integer doctorId;
+    @ManyToOne
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private Doctor doctor;
 
-    @Column(name = "specialty_id")
->>>>>>> Stashed changes
-    private Integer specialtyId;
 
-    @Column(name = "service_id")
-    private Integer serviceId;
-<<<<<<< Updated upstream
 
     @Column(name = "appointment_date", nullable = false)
     private LocalDateTime appointmentDate;
@@ -52,167 +47,47 @@ public class Appointment {
     private String status;
 
     @Column(name = "notes")
-=======
-
-    @Column(name = "appointment_date")
-    private LocalDateTime appointmentDate;
-
-    private Integer duration;
-    private String priority;
-
-    @Column(name = "consultation_type")
-    private String consultationType;
-
-    private String status;
->>>>>>> Stashed changes
     private String notes;
 
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
-<<<<<<< Updated upstream
-    // ===== GETTER & SETTER =====
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "specialty_id")
+    private Specialty specialty;
 
-    public Integer getId() {
-        return id;
-    }
+    @Column(name = "appointment_time")
+    private OffsetDateTime appointmentTime;
 
-    public void setId(Integer id) {
-        this.id = id;
-=======
-    public Integer getAppointmentId() {
-        return appointmentId;
-    }
+    @Size(max = 255)
+    @NotNull
+    @Column(name = "payment_method", nullable = false)
+    private String paymentMethod;
 
-    public void setAppointmentId(Integer appointmentId) {
-        this.appointmentId = appointmentId;
->>>>>>> Stashed changes
-    }
+    @Column(name = "total_fee")
+    private BigDecimal totalFee;
 
-    public Integer getPatientId() {
-        return patientId;
-    }
+    @Column(name = "symptoms")
+    private String symptoms;
 
-    public void setPatientId(Integer patientId) {
-        this.patientId = patientId;
-    }
+    @Column(name = "service_id")
+    private Integer serviceId;
 
-    public Integer getDoctorId() {
-        return doctorId;
-    }
+    // Fields from second file that were not in the first and do not duplicate
+    // None were unique that are not already included in more complete form
 
-    public void setDoctorId(Integer doctorId) {
-        this.doctorId = doctorId;
-    }
-<<<<<<< Updated upstream
-
-    public Integer getSpecialtyId() {
-        return specialtyId;
-    }
-
-    public void setSpecialtyId(Integer specialtyId) {
-        this.specialtyId = specialtyId;
-    }
-
-    public Integer getServiceId() {
-        return serviceId;
-    }
-
-    public void setServiceId(Integer serviceId) {
-        this.serviceId = serviceId;
+    @PrePersist
+    public void prePersist() {
+        if (createdAt == null) {
+            createdAt = LocalDateTime.now();
+        }
+        if (appointmentTime == null && appointmentDate != null) {
+            appointmentTime = appointmentDate.atOffset(ZoneOffset.ofHours(7));
+        }
     }
 
     public LocalDateTime getAppointmentDate() {
-        return appointmentDate;
-    }
-
-    public void setAppointmentDate(LocalDateTime appointmentDate) {
-        this.appointmentDate = appointmentDate;
-    }
-
-    public Integer getDuration() {
-        return duration;
-    }
-
-    public void setDuration(Integer duration) {
-        this.duration = duration;
-    }
-
-    public String getPriority() {
-        return priority;
-    }
-
-    public void setPriority(String priority) {
-        this.priority = priority;
-    }
-
-    public String getConsultationType() {
-        return consultationType;
-    }
-
-=======
-    public Integer getSpecialtyId() {
-        return specialtyId;
-    }
-    public void setSpecialtyId(Integer specialtyId) {
-        this.specialtyId = specialtyId;
-    }
-    public Integer getServiceId() {
-        return serviceId;
-    }
-    public void setServiceId(Integer serviceId) {
-        this.serviceId = serviceId;
-    }
-    public LocalDateTime getAppointmentDate() {
-        return appointmentDate;
-    }
-    public void setAppointmentDate(LocalDateTime appointmentDate) {
-        this.appointmentDate = appointmentDate;
-    }
-    public Integer getDuration() {
-        return duration;
-    }
-    public void setDuration(Integer duration) {
-        this.duration = duration;
-    }
-    public String getPriority() {
-        return priority;
-    }
-    public void setPriority(String priority) {
-        this.priority = priority;
-    }
-    public String getConsultationType() {
-        return consultationType;
-    }
->>>>>>> Stashed changes
-    public void setConsultationType(String consultationType) {
-        this.consultationType = consultationType;
-    }
-    public String getStatus() {
-        return status;
-    }
-    public void setStatus(String status) {
-        this.status = status;
-    }
-<<<<<<< Updated upstream
-
-    public String getNotes() {
-        return notes;
-    }
-
-=======
-    public String getNotes() {
-        return notes;
-    }
->>>>>>> Stashed changes
-    public void setNotes(String notes) {
-        this.notes = notes;
-    }
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
+        return this.appointmentDate;
     }
 
 }

@@ -9,6 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.example.project.dto.DoctorAvailabilitySlotRequest;
 
 @RestController
 @RequestMapping("/api/doctor-availability")
@@ -32,6 +33,32 @@ public class DoctorAvailabilityController {
         }
         logger.info("API /doctor/{}/available called", doctorId);
         return doctorAvailabilityService.getAvailableByDoctorId(doctorId);
+    }
+
+    @PostMapping("/doctor/{doctorId}/add")
+    public ResponseEntity<?> createAvailability(@PathVariable Integer doctorId, @RequestBody DoctorAvailabilityDTO dto) {
+        DoctorAvailabilityDTO created = doctorAvailabilityService.createAvailability(doctorId, dto);
+        return ResponseEntity.ok(created);
+    }
+
+    @PostMapping("/doctor/{doctorId}/add-slots")
+    public ResponseEntity<?> createAvailabilitySlots(@PathVariable Integer doctorId, @RequestBody DoctorAvailabilitySlotRequest req) {
+        doctorAvailabilityService.createAvailabilitySlotsByProcedure(
+            doctorId, req.getStartTime(), req.getEndTime(), req.getSlotMinutes()
+        );
+        return ResponseEntity.ok("Inserted slots successfully");
+    }
+
+    @PutMapping("/{availabilityId}")
+    public ResponseEntity<?> updateAvailability(@PathVariable Integer availabilityId, @RequestBody DoctorAvailabilityDTO dto) {
+        DoctorAvailabilityDTO updated = doctorAvailabilityService.updateAvailability(availabilityId, dto);
+        return ResponseEntity.ok(updated);
+    }
+
+    @DeleteMapping("/{availabilityId}")
+    public ResponseEntity<?> deleteAvailability(@PathVariable Integer availabilityId) {
+        doctorAvailabilityService.deleteAvailability(availabilityId);
+        return ResponseEntity.ok().build();
     }
 
     @ExceptionHandler(IllegalArgumentException.class)

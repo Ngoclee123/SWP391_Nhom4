@@ -7,51 +7,52 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
-import java.util.Optional;
 
 @Service
 public class MedicalRecordServiceImpl implements MedicalRecordService {
-
     @Autowired
-    private MedicalRecordRepository repository;
+    private MedicalRecordRepository medicalRecordRepository;
 
     @Override
     public List<MedicalRecord> getAllRecords() {
-        return repository.findAll();
+        // Xử lý logic nếu cần, ví dụ: sắp xếp, lọc, ...
+        return medicalRecordRepository.findAll();
     }
 
     @Override
     public MedicalRecord getRecordById(Integer id) {
-        return repository.findById(id).orElse(null);
+        // Xử lý logic nếu cần, ví dụ: kiểm tra quyền truy cập, ...
+        return medicalRecordRepository.findById(id).orElse(null);
     }
 
     @Override
     public MedicalRecord createRecord(MedicalRecord record) {
-        return repository.save(record);
+        // Xử lý logic nếu cần, ví dụ: validate dữ liệu, ...
+        return medicalRecordRepository.save(record);
     }
 
     @Override
     public MedicalRecord updateRecord(Integer id, MedicalRecord record) {
-        Optional<MedicalRecord> existing = repository.findById(id);
-        if (existing.isPresent()) {
-            record.setRecordId(id);
-            return repository.save(record);
-        }
-        return null;
+        // Xử lý logic nếu cần, ví dụ: kiểm tra tồn tại, validate, ...
+        record.setRecordId(id);
+        return medicalRecordRepository.save(record);
     }
 
     @Override
     public void deleteRecord(Integer id) {
-        repository.deleteById(id);
+        // Xử lý logic nếu cần, ví dụ: kiểm tra quyền, ...
+        medicalRecordRepository.deleteById(id);
     }
 
     @Override
     public List<MedicalRecord> getRecordsByPatientId(Integer patientId) {
-        return repository.findByPatientId(patientId);
+        // Xử lý logic nếu cần
+        return medicalRecordRepository.findByPatientId(patientId);
     }
 
     @Override
     public List<MedicalRecord> getRecordsByDoctorId(Integer doctorId) {
-        return repository.findByDoctorId(doctorId);
+        // Xử lý logic nếu cần
+        return medicalRecordRepository.findByDoctorId(doctorId);
     }
-}
+} 

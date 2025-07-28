@@ -21,12 +21,13 @@ function ProfileForm() {
         const fetchUserData = async () => {
             try {
                 const response = await ProfileService.getUserProfile();
+                const data = response.data || response; // fallback nếu response là object data luôn
                 setUserData({
-                    fullName: response.fullName || '',
-                    email: response.email || '',
-                    phoneNumber: response.phoneNumber || '',
-                    address: response.address || '',
-                    dateOfBirth: response.dateOfBirth || ''
+                    fullName: data.fullName || '',
+                    email: data.email || '',
+                    phoneNumber: data.phoneNumber || '',
+                    address: data.address || '',
+                    dateOfBirth: data.dateOfBirth || ''
                 });
             } catch (error) {
                 console.error('Error fetching user data:', error);
@@ -95,7 +96,8 @@ function ProfileForm() {
         }
     };
 
-    const handleCancel = () => navigate('/profile');
+
+    const handleCancel = () => navigate('/home');
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-200 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8" style={{ marginTop: '100px' }}>

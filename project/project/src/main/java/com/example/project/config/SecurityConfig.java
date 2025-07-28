@@ -1,79 +1,3 @@
-<<<<<<< Updated upstream
-package com.example.project.config;
-
-import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.http.HttpMethod; // THÊM IMPORT NÀY
-import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
-import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.security.web.SecurityFilterChain;
-import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
-import org.springframework.web.cors.CorsConfiguration;
-import org.springframework.web.cors.CorsConfigurationSource;
-import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
-
-import java.util.Arrays;
-
-@Configuration
-@EnableWebSecurity
-public class SecurityConfig {
-
-    @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
-
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return bCryptPasswordEncoder();
-    }
-
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS")); // SỬA DÒNG NÀY
-        configuration.setAllowedHeaders(Arrays.asList("*"));
-        configuration.setAllowCredentials(true);
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration);
-        return source;
-    }
-
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtFilter jwtFilter) throws Exception {
-        http
-                .csrf(csrf -> csrf.disable())
-                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .authorizeHttpRequests(auth -> auth
-                        // CÁC ENDPOINT CÔNG KHAI
-                        .requestMatchers("/api/login", "/api/register", "/api/vnpay/**", "/ws/**").permitAll()
-                        .requestMatchers(HttpMethod.GET, "/api/doctors/**", "/api/parents/**", "/api/accounts/**", "/api/doctor-availability/**", "/api/appointments/doctor/**").permitAll()
-
-                        // CÁC ENDPOINT CẦN XÁC THỰC
-                        .requestMatchers(HttpMethod.PUT, "/api/appointments/{id}/status").hasAnyRole("DOCTOR", "ADMIN") // YÊU CẦU VAI TRÒ
-
-                        // TẤT CẢ CÁC REQUEST CÒN LẠI CẦN XÁC THỰC
-                        .anyRequest().authenticated()
-                )
-                .exceptionHandling(exception -> exception
-                        .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
-                        })
-                        .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
-                        })
-                )
-                .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
-
-        return http.build();
-    }
-=======
 package com.example.project.config;
 
 import com.example.project.controler.loginGG.GoogleOAuth2SuccessHandler;
@@ -82,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.task.TaskExecutor;
+import org.springframework.http.HttpMethod;
 import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -109,7 +34,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOrigins(Arrays.asList("http://localhost:3000", "http://localhost:3001"));
-        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS","PACTH"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -149,22 +74,35 @@ public class SecurityConfig {
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers("/api/login/**", "/api/register", "/oauth2/authorization/google",
-                                "/login/oauth2/code/*", "/login", "/oauth2/redirect",
-                                "/api/vnpay/**", "/api/doctors", "/api/doctors/**", "/api/reset-password",
-                                "/api/forgot-password", "/ws/**", "/api/doctors/specialties",
-                                "/api/doctors/specialty/**", "/api/accounts/username/**", "/api/messages/history/**").permitAll()
+                        .requestMatchers(
+                                "/api/login/**",
+                                "/api/register",
+                                "/oauth2/authorization/google",
+                                "/login/oauth2/code/*",
+                                "/login",
+                                "/oauth2/redirect",
+                                "/api/vnpay/**",
+                                "/api/doctors/**","api/doctors","/api/doctors/specialties","/api/doctors/specialty/**","/ws/**",
+                                "/api/doctors/*/available-slots",
+                                "/api/appointments/book",
+                                "/api/test/**",
+                                "/favicon.ico",
+                                "/css/**",
+                                "/js/**",
+                                "/images/**",
+                                "/static/**",
+                                "/avatars/**"
+                        ).permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/feedback/doctor/**").permitAll()
                         .requestMatchers("/api/vaccines/**", "/api/parents/patients/**").authenticated()
-                        .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**").hasRole("USER")
+                        .requestMatchers("/api/vaccine-appointments", "/api/vaccine-appointments/patient/**", "/api/account/change-password/**").hasRole("USER")
                         .requestMatchers("/api/vaccine-appointments/confirm/**").hasRole("DOCTOR")
                         .requestMatchers("/api/vaccine-appointments/availability/**").permitAll()
+                        .requestMatchers("/api/vaccine-appointments/**").authenticated()
+                        .requestMatchers("/api/appointments/**").authenticated()
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .requestMatchers("/api/parent/**").hasRole("USER")
                         .requestMatchers("/api/doctor/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/doctor-availability/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/appointments/doctor/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/medical-records/**").hasRole("DOCTOR")
-                        .requestMatchers("/api/feedbacks/doctor/**").hasRole("DOCTOR")
                         .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
@@ -173,15 +111,18 @@ public class SecurityConfig {
                         .failureUrl("/login?error"))
                 .exceptionHandling(exception -> exception
                         .authenticationEntryPoint((request, response, authException) -> {
-                            response.sendError(HttpServletResponse.SC_UNAUTHORIZED, "Unauthorized");
+                            response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Unauthorized\", \"message\": \"" + authException.getMessage() + "\"}");
                         })
                         .accessDeniedHandler((request, response, accessDeniedException) -> {
-                            response.sendError(HttpServletResponse.SC_FORBIDDEN, "Forbidden");
+                            response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+                            response.setContentType("application/json");
+                            response.getWriter().write("{\"error\": \"Forbidden\", \"message\": \"" + accessDeniedException.getMessage() + "\"}");
                         })
                 )
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
->>>>>>> Stashed changes
 }

@@ -3,6 +3,7 @@ package com.example.project.service;
 import com.example.project.model.MedicalRecord;
 import java.util.List;
 
+
 public interface MedicalRecordService {
     List<MedicalRecord> getAllRecords();
     MedicalRecord getRecordById(Integer id);

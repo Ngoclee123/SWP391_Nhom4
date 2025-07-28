@@ -19,13 +19,10 @@ function Login() {
             const username = urlParams.get('username');
             const fullName = urlParams.get('fullName');
             const accountId = urlParams.get('accountId');
-            UserService.setUser(token, username, fullName, accountId);
+            console.log('OAuth setUser called with:', { token, username, fullName, accountId, role });
+            UserService.setUser(token, username, fullName, accountId, role);
             if (role && role.toLowerCase() === "user") {
                 navigate('/home', { replace: true });
-            } else if (role && role.toLowerCase() === "doctor") {
-                navigate('/doctor-dashboard', { replace: true });
-            } else if (role && role.toLowerCase() === "admin") {
-                navigate('/admin-dashboard', { replace: true });
             } else {
                 navigate('/login', { replace: true });
             }
@@ -38,26 +35,42 @@ function Login() {
         const endpoint = '/api/login'; // Sử dụng endpoint duy nhất
 
         try {
-            const response = await axiosClient.post(endpoint, {
+            const res = await axiosClient.post(endpoint, {
                 username: username.trim(),
                 password: password.trim(),
             });
-            UserService.setUser(response.token, response.username, response.fullName, response.accountId);
+            console.log('res:', res);
+            console.log('res.data:', res.data);
+
+            const response = res.data ? res.data : res;
+            console.log('response:', response);
+
+            // Log giá trị truyền vào setUser
+            console.log('setUser called with:', {
+                token: response.token,
+                username: response.username,
+                fullName: response.fullName,
+                accountId: response.accountId,
+                role: response.role
+            });
+            UserService.setUser(response.token, response.username, response.fullName, response.accountId, response.role);
             setError('');
-            console.log('Đăng nhập thành công:', { 
-                username: response.username, 
-                fullName: response.fullName, 
-                accountId: response.accountId, 
-                role: response.role 
+            console.log('Đăng nhập thành công:', {
+                username: response.username,
+                fullName: response.fullName,
+                accountId: response.accountId,
+                role: response.role
             });
 
-            // Chuyển hướng dựa trên vai trò, không phụ thuộc location.state
-            if (response.role.toLowerCase() === 'doctor') {
+            if (response.role && response.role.toLowerCase() === 'doctor') {
+                console.log('Redirecting to doctor-dashboard');
                 navigate('/doctor-dashboard', { replace: true });
-            } else if (response.role.toLowerCase() === 'admin') {
-                navigate('/admin-dashboard', { replace: true }); // Đảm bảo chuyển đến admin-dashboard
+            } else if (response.role && response.role.toLowerCase() === 'admin') {
+                console.log('Redirecting to admin-dashboard');
+                navigate('/admin-dashboard', { replace: true });
             } else {
-                navigate('/home', { replace: true }); // Mặc định là home cho user
+                console.log('Redirecting to home');
+                navigate('/home', { replace: true });
             }
         } catch (error) {
             console.error('Đăng nhập thất bại:', error);
@@ -121,8 +134,9 @@ function Login() {
                         </div>
                         <button
                             type="submit"
-                            className={`w-full py-3 rounded-lg font-semibold text-white transition duration-300 ${isFormValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
-                                }`}
+                            className={`w-full py-3 rounded-lg font-semibold text-white transition duration-300 ${
+                                isFormValid ? 'bg-blue-700 hover:bg-blue-800' : 'bg-gray-400 cursor-not-allowed'
+                            }`}
                             disabled={!isFormValid}
                         >
                             Đăng nhập
@@ -135,7 +149,7 @@ function Login() {
                             Đăng nhập với Google
                         </button>
                     </form>
-                    <div className="mt-6 text-center text-gray-700">
+                        <div className="mt-6 text-center text-gray-700">
                         <Link to="/forgot-password" className="text-blue-700 hover:underline font-semibold">
                             Quên mật khẩu?
                         </Link>

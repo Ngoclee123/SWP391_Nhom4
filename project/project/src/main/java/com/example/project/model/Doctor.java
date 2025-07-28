@@ -1,67 +1,165 @@
+//    package com.example.project.model;
+//
+//    import jakarta.persistence.*;
+//    import jakarta.persistence.CascadeType;
+//    import jakarta.persistence.Table;
+//    import jakarta.validation.constraints.Size;
+//    import lombok.Getter;
+//    import lombok.Setter;
+//    import org.hibernate.annotations.*;
+//    import org.hibernate.type.SqlTypes;
+//
+//    import java.time.Instant;
+//    import java.time.LocalDate;
+//    import java.util.ArrayList;
+//    import java.util.HashSet;
+//    import java.util.List;
+//    import java.util.Set;
+//
+//    @Getter
+//    @Setter
+//    @Entity
+//    @Table(name = "Doctors")
+//    public class Doctor {
+//
+//        @Id
+//        @GeneratedValue(strategy = GenerationType.IDENTITY)
+//        @Column(name = "doctor_id")
+//        private Integer id;
+//
+//        @ManyToOne(fetch = FetchType.LAZY)
+//        @JoinColumn(name = "account_id", referencedColumnName = "account_id", insertable = false, updatable = false)
+//        private Account account; // Liên kết với Account để lấy username
+//
+//        @Column(name = "account_id", nullable = false)
+//        private Integer accountId;
+//
+//        @Column(name = "full_name", nullable = false, columnDefinition = "NVARCHAR(100) COLLATE Vietnamese_CI_AS")
+//        @JdbcTypeCode(SqlTypes.NVARCHAR)
+//        private String fullName;
+//
+//        @ManyToOne
+//        @JoinColumn(name = "specialty_id", nullable = false)
+//        private Specialty specialty;
+//
+//        @Column(name = "phone_number")
+//        private String phoneNumber;
+//
+//        @Column(name = "bio")
+//        private String bio;
+//
+//        @Column(name = "imgs")
+//        private String imgs;
+//
+//        @Column(name = "date_of_birth")
+//        private LocalDate dateOfBirth;
+//
+//        @Column(name = "locational")
+//        private String locational;
+//
+//        @Column(name = "created_at")
+//        private Instant createdAt;
+//
+//        @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, orphanRemoval = true,fetch = FetchType.LAZY)
+//        @Fetch(FetchMode.JOIN)
+//        private List<DoctorAvailability> availabilities = new ArrayList<>();
+//
+//        @Size(max = 255)
+//        @Nationalized
+//        @Column(name = "education")
+//        private String education;
+//
+//        @Size(max = 255)
+//        @Nationalized
+//        @Column(name = "hospital")
+//        private String hospital;
+//
+//        @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+//        private Set<Certificate> certificates = new HashSet<>();
+//
+//        @Column(name = "status", length = 20)
+//        private String status = "offline";
+//    }
+
 package com.example.project.model;
 
 import jakarta.persistence.*;
+import jakarta.persistence.CascadeType;
+import jakarta.persistence.Table;
+import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
-import org.hibernate.annotations.ColumnDefault;
-import org.hibernate.annotations.Nationalized;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
+import org.hibernate.annotations.*;
+import org.hibernate.type.SqlTypes;
 
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @Getter
 @Setter
 @Entity
 @Table(name = "Doctors")
 public class Doctor {
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "doctor_id", nullable = false)
+    @Column(name = "doctor_id")
     private Integer id;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumn(name = "account_id", nullable = false)
-    private Account account;
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "account_id", referencedColumnName = "account_id", insertable = false, updatable = false)
+    private Account account; // Liên kết với Account để lấy username
 
-    @Nationalized
-    @Column(name = "full_name", nullable = false, length = 100)
+    @Column(name = "account_id", nullable = false)
+    private Integer accountId;
+
+    @Column(name = "full_name", nullable = false, columnDefinition = "NVARCHAR(100) COLLATE Vietnamese_CI_AS")
+    @JdbcTypeCode(SqlTypes.NVARCHAR)
     private String fullName;
 
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne
     @JoinColumn(name = "specialty_id", nullable = false)
     private Specialty specialty;
 
-    @Nationalized
-    @Column(name = "phone_number", length = 15)
+    @Column(name = "phone_number")
     private String phoneNumber;
 
-    @Nationalized
-    @Lob
     @Column(name = "bio")
     private String bio;
 
-    @Nationalized
-    @Column(name = "certificate")
-    private String certificate;
-
-    @Nationalized
     @Column(name = "imgs")
     private String imgs;
 
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
 
-    @Nationalized
     @Column(name = "locational")
     private String locational;
 
-    @ColumnDefault("sysdatetime()")
     @Column(name = "created_at")
     private Instant createdAt;
-    @OneToMany(mappedBy = "doctor", fetch = FetchType.LAZY)
-    private List<DoctorAvailability> availabilities;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.JOIN)
+    private List<DoctorAvailability> availabilities = new ArrayList<>();
+
+    @Size(max = 255)
+    @Nationalized
+    @Column(name = "education")
+    private String education;
+
+    @Size(max = 255)
+    @Nationalized
+    @Column(name = "hospital")
+    private String hospital;
+
+    @OneToMany(mappedBy = "doctor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private Set<Certificate> certificates = new HashSet<>();
+
+    @Column(name = "status", length = 20)
+    private String status = "offline";
 }

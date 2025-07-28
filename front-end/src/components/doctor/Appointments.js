@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import AppointmentService from '../../service/AppointmentService';
+import DoctorDashboardService from '../../service/DoctorDashboardService';
+import axiosClient from '../../api/axiosClient';
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -11,92 +12,109 @@ const statusColors = {
 function Appointments({ doctorId }) {
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
-<<<<<<< Updated upstream
-  const [error, setError] = useState(null);
-=======
   const [filter, setFilter] = useState('all');
->>>>>>> Stashed changes
+  const [updatingId, setUpdatingId] = useState(null);
+  const [editingId, setEditingId] = useState(null);
+  const [editForm, setEditForm] = useState({ appointmentDate: '', duration: 30 });
 
   useEffect(() => {
     if (!doctorId) return;
-    setLoading(true);
-<<<<<<< Updated upstream
-    setError(null);
-    const token = localStorage.getItem('token');
-    AppointmentService.getAppointmentsByDoctorId(doctorId, token)
-      .then((data) => {
-        setAppointments(data || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        setError("Không thể tải lịch hẹn");
-        setLoading(false);
-        console.error("Error fetching appointments:", err);
-      });
+    fetchAppointments();
   }, [doctorId]);
 
-  const handleStatusChange = (appointmentId, newStatus) => {
-    const token = localStorage.getItem('token');
-    if (!token) return alert('Vui lòng đăng nhập lại!');
-
-    AppointmentService.updateAppointmentStatus(appointmentId, newStatus, token)
-      .then(() => {
-        setAppointments(prev =>
-          prev.map(app =>
-            app.id === appointmentId ? { ...app, status: newStatus } : app
-          )
-        );
-        alert('Cập nhật trạng thái thành công!');
-      })
-      .catch(err => {
-        console.error("Lỗi khi cập nhật trạng thái:", err);
-        alert('Có lỗi xảy ra, vui lòng thử lại.');
-      });
+  const fetchAppointments = async () => {
+    setLoading(true);
+    try {
+      const res = await DoctorDashboardService.getAppointmentsByDoctorId(doctorId);
+      setAppointments(res.data || res);
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  if (loading) return <div className="text-center text-gray-500">Đang tải lịch hẹn...</div>;
-  if (error) return <div className="text-center text-red-500">{error}</div>;
+  const handleUpdateStatus = async (appointmentId, status) => {
+    setUpdatingId(appointmentId);
+    try {
+      await DoctorDashboardService.updateAppointmentStatus(appointmentId, status);
+      fetchAppointments();
+    } catch (e) {
+      alert('Có lỗi xảy ra khi cập nhật trạng thái!');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
 
-  return (
-    <div className="p-4 bg-white shadow rounded-lg">
-      <h3 className="text-xl font-semibold mb-4">Lịch hẹn</h3>
-      {appointments.length === 0 ? (
-        <p className="text-gray-500">Không có lịch hẹn</p>
-      ) : (
-        <ul className="divide-y divide-gray-200">
-          {appointments.map((app) => (
-            <li key={app.id} className="py-4 flex justify-between items-center">
-              <div>
-                <p className="font-medium">Bệnh nhân ID: {app.patientId}</p>
-                <p className="text-sm text-gray-600">Ngày: {new Date(app.appointmentDate).toLocaleString()}</p>
-                <p className="text-sm">Trạng thái: <span className="font-semibold">{app.status}</span></p>
-              </div>
-              {app.status === 'Pending' && (
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => handleStatusChange(app.id, 'Confirmed')}
-                    className="px-3 py-1 bg-green-500 text-white rounded-md hover:bg-green-600"
-                  >
-                    Xác nhận
-                  </button>
-                  <button
-                    onClick={() => handleStatusChange(app.id, 'Cancelled')}
-                    className="px-3 py-1 bg-red-500 text-white rounded-md hover:bg-red-600"
-                  >
-                    Hủy
-                  </button>
-                </div>
-              )}
-            </li>
-          ))}
-        </ul>
-=======
-    DoctorDashboardService.getAppointmentsByDoctorId(doctorId)
-      .then((res) => setAppointments(res.data || res))
-      .finally(() => setLoading(false));
-  }, [doctorId]);
+  const handleEditAppointment = (appointment) => {
+    setEditingId(appointment.id);
+    const localDate = new Date(appointment.appointmentDate);
+    const year = localDate.getFullYear();
+    const month = String(localDate.getMonth() + 1).padStart(2, '0');
+    const day = String(localDate.getDate()).padStart(2, '0');
+    const hours = String(localDate.getHours()).padStart(2, '0');
+    const minutes = String(localDate.getMinutes()).padStart(2, '0');
+    const dateStr = `${year}-${month}-${day}T${hours}:${minutes}`;
+    setEditForm({
+      appointmentDate: dateStr,
+      duration: appointment.duration || 30,
+    });
+  };
 
-  // Lọc lịch hẹn theo filter
+  const handleSaveEdit = async () => {
+    if (!editingId || !editForm.appointmentDate || !editForm.duration) {
+      alert('Vui lòng nhập đầy đủ thông tin!');
+      return;
+    }
+    if (!window.confirm('Việc thay đổi thời lượng sẽ đẩy lui các lịch hẹn sau. Bạn có chắc chắn?')) {
+      return;
+    }
+
+    setUpdatingId(editingId);
+    try {
+      const currentAppointment = appointments.find(a => a.id === editingId);
+      if (!currentAppointment) {
+        alert('Lịch hẹn không tồn tại!');
+        return;
+      }
+
+      const currentDuration = currentAppointment.duration || 0;
+      const newDuration = parseInt(editForm.duration);
+      const deltaMinutes = newDuration - currentDuration; // Số phút tăng thêm
+
+      // Tính appointmentTime mới dựa trên duration tăng
+      const newAppointmentTime = new Date(currentAppointment.appointmentDate);
+      newAppointmentTime.setMinutes(newAppointmentTime.getMinutes() + newDuration); // Thời gian kết thúc mới
+
+      const appointmentDTO = {
+        appointmentDate: editForm.appointmentDate, // Giữ nguyên ngày và giờ gốc
+        appointmentTime: newAppointmentTime.toISOString().split('.')[0] + '+07:00', // Cập nhật thời gian kết thúc mới với offset
+        duration: newDuration, // Gửi duration mới
+      };
+      console.log('Sending DTO to backend:', appointmentDTO);
+      const response = await DoctorDashboardService.updateAppointment(editingId, appointmentDTO);
+      console.log('Response from backend:', response);
+      fetchAppointments();
+      setEditingId(null);
+    } catch (e) {
+      console.error('Error updating appointment:', e);
+      let errorMsg = 'Có lỗi xảy ra khi cập nhật lịch hẹn!';
+      if (e.response) {
+        if (e.response.status === 404) errorMsg = 'Lịch hẹn không tồn tại!';
+        else if (e.response.status === 400) errorMsg = 'Dữ liệu không hợp lệ: ' + (e.response.data.message || e.message);
+        else if (e.response.status === 401) errorMsg = 'Phiên đăng nhập hết hạn, vui lòng đăng nhập lại!';
+      }
+      alert(errorMsg);
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingId(null);
+    setEditForm({ appointmentDate: '', duration: 30 });
+  };
+
   const now = new Date();
   const filteredAppointments = appointments.filter(app => {
     if (filter === 'all') return true;
@@ -126,30 +144,110 @@ function Appointments({ doctorId }) {
                 <th className="p-3">Thời lượng</th>
                 <th className="p-3">Trạng thái</th>
                 <th className="p-3">Ghi chú</th>
+                <th className="p-3">Hành động</th>
               </tr>
             </thead>
             <tbody>
               {filteredAppointments.map((a) => (
-                <tr key={a.appointmentId} className="border-b hover:bg-blue-50">
-                  <td className="p-3">{a.appointmentId}</td>
+                <tr key={a.id} className="border-b hover:bg-blue-50">
+                  <td className="p-3">{a.id}</td>
                   <td className="p-3">{a.patientId}</td>
                   <td className="p-3">{a.appointmentDate ? new Date(a.appointmentDate).toLocaleString("vi-VN") : '-'}</td>
                   <td className="p-3">{a.duration} phút</td>
                   <td className="p-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-semibold ${statusColors[a.status] || "bg-gray-100 text-gray-700"}`}>
-                      {a.status}
+                      {a.status === "Pending" ? "Chưa xác nhận" : a.status === "Confirmed" ? "Đã xác nhận" : a.status === "Cancelled" ? "Đã hủy" : a.status}
                     </span>
                   </td>
                   <td className="p-3">{a.notes}</td>
+                  <td className="p-3 flex gap-2">
+                    {a.status === "Pending" && (
+                      <>
+                        <button
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                          disabled={updatingId === a.id}
+                          onClick={() => handleUpdateStatus(a.id, "Confirmed")}
+                        >
+                          {updatingId === a.id ? "Đang xác nhận..." : "Xác nhận"}
+                        </button>
+                        <button
+                          className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded"
+                          disabled={updatingId === a.id}
+                          onClick={() => handleUpdateStatus(a.id, "Cancelled")}
+                        >
+                          {updatingId === a.id ? "Đang hủy..." : "Hủy"}
+                        </button>
+                      </>
+                    )}
+                    {a.status === "Confirmed" && (
+                      <button
+                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                        onClick={() => handleEditAppointment(a)}
+                      >
+                        Chỉnh sửa thời lượng
+                      </button>
+                    )}
+                    {a.status === "Cancelled" && (
+                      <span className="text-red-600 font-semibold">Đã hủy</span>
+                    )}
+                  </td>
                 </tr>
               ))}
+              {editingId && (
+                <tr className="bg-gray-50">
+                  <td colSpan="7" className="p-4">
+                    <div className="bg-white p-4 rounded-xl shadow-lg">
+                      <h3 className="text-lg font-bold mb-2">Chỉnh sửa thời lượng lịch hẹn</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Thời gian hẹn</label>
+                          <input
+                            type="datetime-local"
+                            value={editForm.appointmentDate}
+                            onChange={(e) => {
+                              setEditForm(prev => ({ ...prev, appointmentDate: prev.appointmentDate }));
+                            }}
+                            className="w-full border-2 border-gray-200 rounded-xl px-3 py-2"
+                            readOnly
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">Thời lượng (phút)</label>
+                          <input
+                            type="number"
+                            value={editForm.duration}
+                            onChange={(e) => setEditForm({ ...editForm, duration: e.target.value })}
+                            className="w-full border-2 border-gray-200 rounded-xl px-3 py-2"
+                            min="15"
+                            step="15"
+                          />
+                        </div>
+                      </div>
+                      <div className="mt-4 flex gap-2">
+                        <button
+                          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded"
+                          onClick={handleSaveEdit}
+                          disabled={updatingId === editingId}
+                        >
+                          {updatingId === editingId ? "Đang lưu..." : "Lưu"}
+                        </button>
+                        <button
+                          className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded"
+                          onClick={handleCancelEdit}
+                        >
+                          Hủy
+                        </button>
+                      </div>
+                    </div>
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
           {filteredAppointments.length === 0 && (
             <div className="text-center text-gray-500 py-8">Không có lịch hẹn nào.</div>
           )}
         </div>
->>>>>>> Stashed changes
       )}
     </div>
   );

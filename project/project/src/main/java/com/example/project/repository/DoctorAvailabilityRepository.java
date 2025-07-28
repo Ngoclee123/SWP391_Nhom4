@@ -9,13 +9,13 @@ import java.util.List;
 
 public interface DoctorAvailabilityRepository extends JpaRepository<DoctorAvailability, Integer> {
 
-    @Query("SELECT da FROM DoctorAvailability da WHERE da.doctorId = :doctorId")
+    @Query("SELECT da FROM DoctorAvailability da WHERE da.doctor.id = :doctorId")
     List<DoctorAvailability> findByDoctorId(@Param("doctorId") Integer doctorId);
 
-    @Query("SELECT da FROM DoctorAvailability da WHERE da.doctorId = :doctorId AND da.status = :status")
+    @Query("SELECT da FROM DoctorAvailability da WHERE da.doctor.id = :doctorId AND da.status = :status")
     List<DoctorAvailability> findByDoctorIdAndStatus(@Param("doctorId") Integer doctorId, @Param("status") String status);
 
-    @Query("SELECT da FROM DoctorAvailability da WHERE da.doctorId = :doctorId AND UPPER(da.status) = UPPER(:status)")
+    @Query("SELECT da FROM DoctorAvailability da WHERE da.doctor.id = :doctorId AND UPPER(da.status) = UPPER(:status)")
     List<DoctorAvailability> findByDoctorIdAndStatusIgnoreCase(@Param("doctorId") Integer doctorId, @Param("status") String status);
 
     @Query(value = "SELECT * FROM DoctorAvailability WHERE doctor_id = ?1 AND UPPER(status) = UPPER(?2)", nativeQuery = true)

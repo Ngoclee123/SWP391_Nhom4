@@ -1,5 +1,6 @@
 package com.example.project.dto;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 public class AppointmentDTO {
@@ -15,6 +16,11 @@ public class AppointmentDTO {
     private String status;
     private String notes;
     private LocalDateTime createdAt;
+    private String appointmentTime;
+    private String paymentMethod;
+    private BigDecimal totalFee;
+    private String patientName;
+    private String doctorName;
 
     public AppointmentDTO() {}
 
@@ -31,6 +37,7 @@ public class AppointmentDTO {
         this.status = status;
         this.notes = notes;
         this.createdAt = createdAt;
+
     }
 
     public Integer getId() { return id; }
@@ -57,4 +64,16 @@ public class AppointmentDTO {
     public void setNotes(String notes) { this.notes = notes; }
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
-} 
+    public String getAppointmentTime() { return appointmentTime; }
+    public void setAppointmentTime(String appointmentTime) { this.appointmentTime = appointmentTime; }
+
+    public String getPaymentMethod() { return paymentMethod; }
+    public void setPaymentMethod(String paymentMethod) { this.paymentMethod = paymentMethod; }
+
+    public BigDecimal getTotalFee() { return totalFee; }
+    public void setTotalFee(BigDecimal totalFee) { this.totalFee = totalFee; }
+    public String getPatientName() { return patientName; }
+    public void setPatientName(String patientName) { this.patientName = patientName; }
+    public String getDoctorName() { return doctorName; }
+    public void setDoctorName(String doctorName) { this.doctorName = doctorName; }
+}

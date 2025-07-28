@@ -1,32 +1,49 @@
 package com.example.project.service;
 
+
+import com.example.project.dto.*;
+import com.example.project.model.Account;
+import com.example.project.model.Parent;
+import com.example.project.model.PasswordReset;
+import com.example.project.model.Role;
+import com.example.project.repository.AccountRepository;
+import com.example.project.repository.ParentRepository;
+import com.example.project.repository.PasswordResetRepository;
+
 import com.example.project.dto.RegisterRequestDTO;
 import com.example.project.model.Account;
 import com.example.project.model.Parent;
 import com.example.project.model.Role;
 import com.example.project.repository.AccountRepository;
 import com.example.project.repository.ParentRepository;
+
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.core.userdetails.UserDetails;
-import org.springframework.security.core.userdetails.UserDetailsService;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+
+import java.util.List;
+import java.util.UUID;
+
 import java.util.regex.Pattern;
 
 @Service
-public class AccountService implements UserDetailsService {
+public class AccountService {
 
     @Autowired
     private AccountRepository accountRepository;
 
     @Autowired
     private ParentRepository parentRepository;
+
+    @Autowired
+    private PasswordResetRepository passwordResetRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+    @Autowired
+    private EmailService emailService;
 
     public Account findByUsername(String username) {
         return accountRepository.findByUsername(username);
@@ -40,9 +57,6 @@ public class AccountService implements UserDetailsService {
         return parentRepository.findByAccountId(accountId);
     }
 
-    public void saveAccount(Account account) {
-        accountRepository.save(account);
-    }
 
     public void saveParent(Parent parent) {
         parentRepository.save(parent);
@@ -78,6 +92,7 @@ public class AccountService implements UserDetailsService {
         accountRepository.save(account);
         return true;
     }
+
     @Transactional
     public Account registerAccount(RegisterRequestDTO request) {
         // Kiểm tra dữ liệu đầu vào
@@ -102,7 +117,7 @@ public class AccountService implements UserDetailsService {
         if (!Pattern.matches(emailRegex, request.getEmail())) {
             throw new RuntimeException("Email không hợp lệ");
         }
-        //kiem tra dinh dang dien thoai
+        // Kiểm tra định dạng điện thoại
         String phoneRegex = "^\\+?[0-9]{10,15}$";
         if (!Pattern.matches(phoneRegex, request.getPhoneNumber())) {
             throw new RuntimeException("Số điện thoại không hợp lệ");
@@ -147,12 +162,117 @@ public class AccountService implements UserDetailsService {
         return account;
     }
 
-    @Override
-    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        Account account = accountRepository.findByUsername(username);
+    @Transactional
+    public Account processGoogleAccount(String email, String fullName) {
+        Account account = accountRepository.findByEmail(email);
         if (account == null) {
-            throw new UsernameNotFoundException("User not found: " + username);
+            account = new Account();
+            account.setEmail(email);
+            account.setFullName(fullName);
+            account.setUsername(email.split("@")[0]); // Tạm thời dùng email làm username
+            account.setPasswordHash(passwordEncoder.encode("")); // Không cần password cho Google login
+            account.setStatus(true);
+            account.setCreatedAt(Instant.now());
+            account.setUpdatedAt(Instant.now());
+
+            // Gán vai trò mặc định (USER)
+            Role role = new Role();
+            role.setId(1); // Role USER
+            account.setRole(role);
+
+            account = accountRepository.saveAndFlush(account);
+
+            // Tạo Parent với thông tin từ Google
+            Parent parent = new Parent();
+            parent.setAccount(account);
+            parent.setFullName(fullName);
+            parent.setPhoneNumber(""); // Cần cập nhật sau nếu có
+            parent.setAddress(""); // Cần cập nhật sau nếu có
+            parent.setCreatedAt(Instant.now());
+            parentRepository.save(parent);
+        } else {
+            // Cập nhật thông tin nếu cần
+            account.setFullName(fullName);
+            account.setUpdatedAt(Instant.now());
+            accountRepository.save(account);
+
+            Parent parent = parentRepository.findByAccountId(account.getId());
+            if (parent != null) {
+                parent.setFullName(fullName);
+                parentRepository.save(parent);
+            }
         }
         return account;
     }
+
+    @Transactional
+    public String requestPasswordReset(ResetPasswordRequestDTO request) {
+        Account account = accountRepository.findByUsername(request.getUsername());
+        if (account == null) {
+            throw new RuntimeException("Tên đăng nhập không tồn tại");
+        }
+
+        String email = account.getEmail();
+        if (email == null || email.isEmpty()) {
+            throw new RuntimeException("Tài khoản này không có email liên kết");
+        }
+
+        String token = UUID.randomUUID().toString();
+        PasswordReset passwordReset = new PasswordReset();
+        passwordReset.setAccount(account);
+        passwordReset.setToken(token);
+        passwordReset.setExpiresAt(Instant.now().plusSeconds(3600)); // Token hết hạn sau 1 giờ
+        passwordReset.setCreatedAt(Instant.now());
+        passwordResetRepository.save(passwordReset);
+
+        // Gửi email với liên kết đặt lại mật khẩu
+        String resetLink = "http://localhost:3000/reset-password?token=" + token;
+        emailService.sendPasswordResetEmail(email, resetLink);
+
+        return token;
+    }
+
+    @Transactional
+    public boolean resetPassword(NewPasswordDTO request) {
+        PasswordReset passwordReset = passwordResetRepository.findByToken(request.getToken());
+        if (passwordReset == null || passwordReset.getExpiresAt().isBefore(Instant.now())) {
+            return false; // Token không hợp lệ hoặc đã hết hạn
+        }
+
+        Account account = passwordReset.getAccount();
+        if (request.getNewPassword() == null || request.getNewPassword().length() < 8) {
+            throw new RuntimeException("Mật khẩu mới phải có ít nhất 8 ký tự");
+        }
+
+        account.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+        account.setUpdatedAt(Instant.now());
+        accountRepository.save(account);
+
+        // Xóa token sau khi sử dụng
+        passwordResetRepository.delete(passwordReset);
+        return true;
+    }
+
+    //ADMIN
+    public java.util.List<Account> findAll() {
+        return accountRepository.findAllWithRole();
+    }
+
+    public Account saveAccount(Account account) {
+        return accountRepository.save(account);
+    }
+
+    public boolean deleteAccount(Integer id) {
+        if (accountRepository.existsById(id)) {
+            accountRepository.deleteById(id);
+            return true;
+        }
+        return false;
+    }
+
+    public List<AccountStatsDTO> getAccountStats() {
+        return accountRepository.countAccountsByRole();
+    }
+
+
 }
