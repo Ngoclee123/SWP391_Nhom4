@@ -13,6 +13,7 @@ import com.example.project.repository.ParentRepository;
 import com.example.project.dto.VaccineAppointmentHistoryDTO;
 import com.example.project.dto.VaccineAppointmentDTO;
 import com.example.project.dto.VaccineStatisticsDTO;
+import com.example.project.event.VaccineAppointmentCreatedEvent;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -27,9 +28,14 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.math.BigDecimal;
 import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
+import java.time.format.DateTimeFormatter;
+import java.time.LocalDateTime;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -72,6 +78,9 @@ public class VaccineAppointmentService {
     @Qualifier("securityTaskExecutor")
     private TaskExecutor taskExecutor;
 
+    @Autowired
+    private ApplicationEventPublisher eventPublisher;
+
     public ResponseEntity<Map<String, List<Map<String, Object>>>> getVaccineAvailability(Integer vaccineId) {
         try {
             logger.debug("Fetching availability for vaccineId: {}", vaccineId);
@@ -94,35 +103,40 @@ public class VaccineAppointmentService {
         }
     }
 
-    public ResponseEntity<Map<String, Object>> createAppointment(VaccineAppointmentRequest appointmentData) {
+    @Transactional
+    public ResponseEntity<?> createAppointment(VaccineAppointmentRequest request, Authentication authentication) {
         try {
-            logger.debug("Creating appointment with data: {}", appointmentData);
-            if (appointmentData == null || appointmentData.getVaccineId() == null || appointmentData.getPatientId() == null ||
-                    appointmentData.getAppointmentDate() == null || appointmentData.getLocation() == null) {
+            logger.debug("Creating appointment with data: {}", request);
+            if (request == null || request.getVaccineId() == null || request.getPatientId() == null ||
+                    request.getAppointmentDate() == null || request.getLocation() == null) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Dữ liệu không hợp lệ."));
             }
-            Integer patientId = appointmentData.getPatientId();
-            Integer vaccineId = appointmentData.getVaccineId();
-            String appointmentDateStr = appointmentData.getAppointmentDate();
+            Integer patientId = request.getPatientId();
+            Integer vaccineId = request.getVaccineId();
+            String appointmentDateStr = request.getAppointmentDate();
             logger.debug("Received appointmentDateStr: {}", appointmentDateStr);
-            String location = appointmentData.getLocation();
-            String notes = appointmentData.getNotes();
-            Integer doseNumber = appointmentData.getDoseNumber();
-            Instant appointmentDate;
-            try {
-                logger.debug("Parsing appointmentDate: {}", appointmentDateStr);
-                appointmentDate = Instant.parse(appointmentDateStr);
-                logger.debug("Parsed appointmentDate: {}", appointmentDate.toString());
-            } catch (Exception e) {
-                logger.error("Invalid appointmentDate format: {}", appointmentDateStr, e);
-                return ResponseEntity.badRequest().body(Map.of("message", "Định dạng ngày không hợp lệ: " + e.getMessage()));
-            }
+            String location = request.getLocation();
+            String notes = request.getNotes();
+            Integer doseNumber = request.getDoseNumber();
+            // Parse ISO string local time thành LocalDateTime và ép micro giây về 0
+            LocalDateTime appointmentDate = LocalDateTime.parse(appointmentDateStr).withNano(0);
+            logger.debug("Parsed appointmentDate (Local): {}", appointmentDate.toString());
             Patient patient = patientRepository.findById(patientId)
                     .orElseThrow(() -> new IllegalArgumentException("Patient not found"));
             Vaccine vaccine = vaccineRepository.findById(vaccineId)
                     .orElseThrow(() -> new IllegalArgumentException("Vaccine not found"));
-            VaccineAvailability availability = vaccineAvailabilityRepository.findByVaccine_vaccin_idAndAvailableDateAndLocation(
-                    vaccineId, appointmentDate, location);
+            // Lấy tất cả slot cùng vaccineId, location, so sánh availableDate đến giây (bỏ qua micro giây)
+            List<VaccineAvailability> slots = vaccineAvailabilityRepository.findByVaccine_vaccin_id(vaccineId);
+            // Log debug để kiểm tra giá trị thực tế
+            System.out.println("Request: " + appointmentDate + " - " + location);
+            for (VaccineAvailability va : slots) {
+                System.out.println("Slot: " + va.getAvailableDate().withNano(0) + " - " + va.getLocation() + " - capacity: " + va.getCapacity());
+            }
+            // So sánh location không phân biệt hoa thường, bỏ dấu cách thừa
+            VaccineAvailability availability = slots.stream()
+                .filter(va -> va.getLocation().trim().equalsIgnoreCase(location.trim())
+                    && va.getAvailableDate().withNano(0).equals(appointmentDate))
+                .findFirst().orElse(null);
             if (availability == null || availability.getCapacity() <= 0) {
                 return ResponseEntity.badRequest().body(Map.of("message", "Ngày giờ hoặc địa điểm không khả dụng."));
             }
@@ -134,22 +148,34 @@ public class VaccineAppointmentService {
             appointment.setLocation(location);
             appointment.setStatus("Pending");
             appointment.setNotes(notes);
-            appointment.setCreatedAt(Instant.now());
+            appointment.setCreatedAt(LocalDateTime.now());
             Integer parentId = getCurrentParentId();
             Parent parent = parentRepository.findById(parentId).orElseThrow(() -> new IllegalArgumentException("Parent not found"));
             appointment.setParent(parent);
-            vaccineAppointmentRepository.save(appointment);
+            VaccineAppointment savedAppointment = vaccineAppointmentRepository.save(appointment);
+
+            // Publish event for notification after transaction completes
+            logger.info("About to publish event for vaccine appointment ID: {}", savedAppointment.getId());
+            eventPublisher.publishEvent(new VaccineAppointmentCreatedEvent(this, savedAppointment.getId()));
+            logger.info("Published vaccine appointment created event for ID: {}", savedAppointment.getId());
+
             availability.setCapacity(availability.getCapacity() - 1);
             vaccineAvailabilityRepository.save(availability);
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Đặt lịch thành công!");
-            response.put("vaccineAppointmentId", appointment.getId());
-            response.put("data", Map.of(
-                "vaccineName", vaccine.getName(),
-                "price", vaccine.getPrice(),
-                "location", location,
-                "appointmentDate", appointmentDate.toString()
-            ));
+            response.put("vaccineAppointmentId", savedAppointment.getId());
+            response.put("id", savedAppointment.getId()); // Thêm key id để đảm bảo
+            
+            Map<String, Object> data = new HashMap<>();
+            data.put("vaccineName", vaccine.getName());
+            data.put("price", vaccine.getPrice());
+            data.put("location", location);
+            data.put("appointmentDate", appointmentDate.toString());
+            data.put("appointmentId", savedAppointment.getId()); // Thêm appointmentId vào data
+            
+            response.put("data", data);
+            
+            logger.info("Created appointment with ID: {}, response: {}", savedAppointment.getId(), response);
             return ResponseEntity.ok(response);
         } catch (IllegalArgumentException e) {
             logger.error("Validation error in createAppointment: {}", e.getMessage());
@@ -257,12 +283,12 @@ public class VaccineAppointmentService {
                 }
                 appointment.setVaccine(vaccine.get());
 
-                appointment.setAppointmentDate(Instant.parse(request.getAppointmentDate()));
+                appointment.setAppointmentDate(LocalDateTime.parse(request.getAppointmentDate()));
                 appointment.setDoseNumber(request.getDoseNumber() != null ? request.getDoseNumber() : 1);
                 appointment.setLocation(request.getLocation());
                 appointment.setNotes(request.getNotes());
                 appointment.setStatus("Pending");
-                appointment.setCreatedAt(Instant.now());
+                appointment.setCreatedAt(LocalDateTime.now());
                 Parent parent = parentRepository.findById(parentId).orElseThrow(() -> new IllegalArgumentException("Parent not found"));
                 appointment.setParent(parent);
                 return vaccineAppointmentRepository.save(appointment);
@@ -431,7 +457,12 @@ public class VaccineAppointmentService {
                 dto.setVaccineName(null);
                 dto.setVaccineId(null);
             }
-            dto.setAppointmentDate(va.getAppointmentDate() != null ? va.getAppointmentDate().toString() : null);
+            // Chuyển appointmentDate từ UTC sang local time (Asia/Ho_Chi_Minh)
+            if (va.getAppointmentDate() != null) {
+                dto.setAppointmentDate(va.getAppointmentDate());
+            } else {
+                dto.setAppointmentDate(null);
+            }
             dto.setLocation(va.getLocation());
             dto.setStatus(va.getStatus());
             return dto;
@@ -473,5 +504,39 @@ public class VaccineAppointmentService {
         dto.setVaccineTypeCount(typeCount);
         dto.setVaccineCategoryCount(new java.util.HashMap<>()); // Nếu có danh mục, bổ sung sau
         return dto;
+    }
+
+    // API cho user gửi yêu cầu hủy lịch vaccine
+    public ResponseEntity<?> requestCancelAppointment(Integer appointmentId) {
+        Optional<VaccineAppointment> opt = vaccineAppointmentRepository.findById(appointmentId);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        VaccineAppointment app = opt.get();
+        // Chỉ cho phép hủy khi đang Pending hoặc Confirmed
+        if (!app.getStatus().equalsIgnoreCase("Pending") && !app.getStatus().equalsIgnoreCase("Confirmed")) {
+            return ResponseEntity.badRequest().body(Map.of("message", "Không thể yêu cầu hủy ở trạng thái hiện tại."));
+        }
+        app.setStatus("CancelRequested");
+        vaccineAppointmentRepository.save(app);
+        return ResponseEntity.ok(Map.of("message", "Đã gửi yêu cầu hủy lịch thành công."));
+    }
+
+    // API cho admin duyệt trạng thái
+    public ResponseEntity<?> adminUpdateStatus(Integer appointmentId, String newStatus) {
+        Optional<VaccineAppointment> opt = vaccineAppointmentRepository.findById(appointmentId);
+        if (opt.isEmpty()) return ResponseEntity.notFound().build();
+        VaccineAppointment app = opt.get();
+        String current = app.getStatus();
+        // Chỉ cho phép chuyển hợp lệ
+        if (current.equalsIgnoreCase("Pending") && (newStatus.equalsIgnoreCase("Confirmed") || newStatus.equalsIgnoreCase("Cancelled"))) {
+            app.setStatus(newStatus);
+        } else if (current.equalsIgnoreCase("Confirmed") && newStatus.equalsIgnoreCase("Completed")) {
+            app.setStatus("Completed");
+        } else if (current.equalsIgnoreCase("CancelRequested") && newStatus.equalsIgnoreCase("Cancelled")) {
+            app.setStatus("Cancelled");
+        } else {
+            return ResponseEntity.badRequest().body(Map.of("message", "Chuyển trạng thái không hợp lệ."));
+        }
+        vaccineAppointmentRepository.save(app);
+        return ResponseEntity.ok(Map.of("message", "Cập nhật trạng thái thành công."));
     }
 }

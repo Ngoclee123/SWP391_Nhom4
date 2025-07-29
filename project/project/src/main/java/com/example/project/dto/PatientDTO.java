@@ -29,9 +29,14 @@ public class PatientDTO {
     @JsonProperty("accountId")
     private Integer accountId;
 
-    // Constructor mặc định
+    private String status;
+    private String createdAt;
+    // Default constructor
     public PatientDTO() {
+        this.status = "Chờ xác nhận";
     }
+
+
 
     // Constructor từ Patient
     public PatientDTO(com.example.project.model.Patient patient) {
@@ -41,6 +46,8 @@ public class PatientDTO {
         this.gender = patient.getGender();
         this.weight = patient.getWeight() != null ? patient.getWeight().doubleValue() : null;
         this.height = patient.getHeight() != null ? patient.getHeight().doubleValue() : null;
+        this.createdAt = patient.getCreatedAt() != null ? patient.getCreatedAt().toString() : null;
+        this.status = patient.getStatus() != null ? patient.getStatus() : "Chờ xác nhận";
     }
 
     // Constructor đầy đủ
@@ -108,5 +115,12 @@ public class PatientDTO {
 
     public void setAccountId(Integer accountId) {
         this.accountId = accountId;
+    }
+    public String getStatus() {
+        return status;
+    }
+
+    public void setStatus(String status) {
+        this.status = status;
     }
 }

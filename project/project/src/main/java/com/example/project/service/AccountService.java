@@ -263,11 +263,16 @@ public class AccountService {
     }
 
     public boolean deleteAccount(Integer id) {
-        if (accountRepository.existsById(id)) {
+        try {
             accountRepository.deleteById(id);
             return true;
+        } catch (Exception e) {
+            return false;
         }
-        return false;
+    }
+
+    public List<Account> findByRoleName(String roleName) {
+        return accountRepository.findByRoleName(roleName);
     }
 
     public List<AccountStatsDTO> getAccountStats() {

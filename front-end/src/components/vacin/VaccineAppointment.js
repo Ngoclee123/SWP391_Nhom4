@@ -1,9 +1,10 @@
-
-
 import { useState, useEffect, useCallback } from "react"
 import { useNavigate, useParams, useLocation } from "react-router-dom"
 import VaccineAppointmentService from "../../service/VaccineAppointmentService"
 import UserService from "../../service/userService"
+import ReactDatePicker from "react-datepicker"
+import "react-datepicker/dist/react-datepicker.css"
+import { addDays, isAfter, isBefore, isSameDay, parseISO, startOfDay, format, parse } from "date-fns"
 
 const VaccineAppointment = () => {
   const navigate = useNavigate()
@@ -28,6 +29,8 @@ const VaccineAppointment = () => {
   const [error, setError] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
+  // Thêm state cho ngày đã chọn dạng Date object
+  const [selectedDate, setSelectedDate] = useState(null)
 
   useEffect(() => {
     if (!UserService.isLoggedIn()) {
@@ -54,7 +57,8 @@ const VaccineAppointment = () => {
         const availabilityRes = await VaccineAppointmentService.getVaccineAvailability(vaccineId)
         const availabilityData = availabilityRes.data?.data || availabilityRes.data || []
         if (Array.isArray(availabilityData)) {
-          setAvailableDates([...new Set(availabilityData.map((item) => item.available_date.split("T")[0]))])
+          // Giữ nguyên cả ngày + giờ
+          setAvailableDates([...new Set(availabilityData.map((item) => item.available_date))])
           setAvailableLocations([...new Set(availabilityData.map((item) => item.location))])
         }
       } catch (err) {
@@ -73,6 +77,32 @@ const VaccineAppointment = () => {
     }
   }, [navigate, vaccineId, location.state])
 
+  // Khi chọn ngày, lọc các slot có ngày trùng với ngày đã chọn
+  useEffect(() => {
+    if (!selectedDate || !availableDates.length) {
+      setAvailableTimes([])
+      return
+    }
+    // Lấy ngày đã chọn ở dạng yyyy-MM-dd
+    const selectedDateStr = format(selectedDate, "yyyy-MM-dd")
+    // Lọc các slot có ngày trùng với ngày đã chọn, lấy phần giờ
+    const times = availableDates
+      .filter(dateStr => dateStr.startsWith(selectedDateStr))
+      .map(dateStr => {
+        // Tách phần giờ
+        const timePart = dateStr.split("T")[1]?.slice(0, 5) // "07:00"
+        if (timePart) {
+          const [hour, minute] = timePart.split(":")
+          const dateObj = new Date()
+          dateObj.setHours(Number(hour), Number(minute), 0, 0)
+          return format(dateObj, "hh:mm a")
+        }
+        return null
+      })
+      .filter(Boolean)
+    setAvailableTimes([...new Set(times)])
+  }, [selectedDate, availableDates])
+
   const handleDateChange = (e) => {
     const selectedDate = e.target.value
     setFormData((prev) => ({ ...prev, appointmentDate: selectedDate, appointmentTime: "" }))
@@ -85,9 +115,7 @@ const VaccineAppointment = () => {
           .map((item) => {
             const dateObj = new Date(item.available_date)
             if (!isNaN(dateObj.getTime())) {
-              const hour = dateObj.getUTCHours().toString().padStart(2, "0")
-              const minute = dateObj.getUTCMinutes().toString().padStart(2, "0")
-              return `${hour}:${minute}`
+              return dateObj.toTimeString().slice(0, 5)
             }
             return ""
           })
@@ -103,6 +131,7 @@ const VaccineAppointment = () => {
     setFormData((prev) => ({ ...prev, [name]: value }))
   }
 
+  // Khi submit, cần chuyển lại về HH:mm (24h) để ghép ISO string gửi backend
   const handleSubmit = useCallback(
     async (e) => {
       e.preventDefault()
@@ -121,15 +150,23 @@ const VaccineAppointment = () => {
         setLoading(true)
         setIsSubmitting(true)
         const token = UserService.getToken()
-        console.log("Token before request:", token)
+        // Chuyển AM/PM về 24h
+        const [time, ampm] = formData.appointmentTime.split(" ")
+        let [hour, minute] = time.split(":")
+        hour = parseInt(hour, 10)
+        if (ampm === "PM" && hour < 12) hour += 12
+        if (ampm === "AM" && hour === 12) hour = 0
+        const hourStr = hour.toString().padStart(2, "0")
+        // Gửi local time, không offset, không Z
+        let appointmentDate = `${formData.appointmentDate}T${hourStr}:${minute}`
+        if (appointmentDate.length === 16) appointmentDate += ':00'
         const appointmentData = {
           vaccineId: formData.vaccineId,
           patientId: formData.patientId,
-          appointmentDate: `${formData.appointmentDate}T${formData.appointmentTime}:00Z`,
+          appointmentDate, // <-- gửi local time đủ giây
           location: formData.location,
           notes: formData.notes,
         }
-        console.log("Request data:", appointmentData)
         const response = await VaccineAppointmentService.createVaccineAppointment(appointmentData)
         setMessage(response.data.message)
         setError("")
@@ -148,10 +185,6 @@ const VaccineAppointment = () => {
           })
         }
       } catch (error) {
-        console.error("Error creating appointment:", error.response ? error.response.data : error.message)
-        if (error.response && error.response.status === 401) {
-          console.warn("Unauthorized, redirecting to login")
-        }
         setError("Đặt lịch thất bại. Vui lòng thử lại.")
         setMessage("")
       } finally {
@@ -187,6 +220,21 @@ const VaccineAppointment = () => {
       </div>
     )
   }
+
+  // Chuyển availableDates sang dạng Date object để so sánh dễ hơn
+  const availableDateObjects = availableDates.map(dateStr => startOfDay(new Date(dateStr)))
+
+  // Hàm kiểm tra ngày có trong availableDates không
+  const isAvailableDay = (date) => {
+    return availableDateObjects.some(availableDate => isSameDay(date, availableDate))
+  }
+
+  // Hàm custom style cho ngày có thể đặt
+  const highlightWithRanges = [
+    {
+      "react-datepicker__day--highlighted-custom": availableDateObjects
+    }
+  ]
 
   return (
     <div
@@ -371,30 +419,25 @@ const VaccineAppointment = () => {
                     <h3 className="text-lg font-semibold text-gray-800">Chọn ngày và giờ</h3>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Ngày hẹn</label>
-                      <select
-                        name="appointmentDate"
-                        value={formData.appointmentDate}
-                        onChange={handleDateChange}
-                        className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white/80 backdrop-blur-sm transition-all duration-200"
-                        disabled={isFormDisabled}
-                        required
-                      >
-                        <option value="">-- Chọn ngày --</option>
-                        {availableDates.map((date) => {
-                          const dateObj = new Date(date + "T00:00:00Z")
-                          const day = dateObj.getUTCDate().toString().padStart(2, "0")
-                          const month = (dateObj.getUTCMonth() + 1).toString().padStart(2, "0")
-                          const year = dateObj.getUTCFullYear()
-                          return (
-                            <option key={date} value={date}>
-                              {`${day}/${month}/${year}`}
-                            </option>
-                          )
-                        })}
-                      </select>
+                  <div className="mb-4">
+                    <label className="block text-gray-700 font-semibold mb-2">Chọn ngày tiêm</label>
+                    <ReactDatePicker
+                      selected={selectedDate}
+                      onChange={date => {
+                        setSelectedDate(date)
+                        setFormData(prev => ({ ...prev, appointmentDate: date ? format(date, "yyyy-MM-dd") : "" }))
+                      }}
+                      minDate={new Date()}
+                      filterDate={date => isAvailableDay(date) && !isBefore(date, startOfDay(new Date()))}
+                      highlightDates={highlightWithRanges}
+                      placeholderText="Chọn ngày tiêm"
+                      dateFormat="yyyy-MM-dd"
+                      className="border rounded px-3 py-2 w-full focus:outline-none focus:ring-2 focus:ring-blue-400"
+                      dayClassName={date =>
+                        isAvailableDay(date)
+                          ? "react-datepicker__day--highlighted-custom bg-green-400 text-white rounded-full" : undefined
+                      }
+                    />
                     </div>
 
                     {formData.appointmentDate && (
@@ -417,7 +460,6 @@ const VaccineAppointment = () => {
                         </select>
                       </div>
                     )}
-                  </div>
                 </div>
 
                 {/* Location Selection */}

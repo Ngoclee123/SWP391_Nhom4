@@ -5,6 +5,7 @@ import com.example.project.model.VaccineAppointment;
 import com.example.project.dto.VaccineAppointmentHistoryDTO;
 import com.example.project.dto.VaccineAppointmentDTO;
 import com.example.project.dto.VaccineStatisticsDTO;
+import com.example.project.service.NotificationService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,6 +18,8 @@ import org.springframework.data.domain.PageRequest;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import com.example.project.model.Notification;
 
 @RestController
 @RequestMapping("/api/vaccine-appointments")
@@ -26,6 +29,10 @@ public class VaccineAppointmentController {
 
     @Autowired
     private VaccineAppointmentService vaccineAppointmentService;
+    
+    @Autowired
+    private NotificationService notificationService;
+    
 
     @GetMapping("/availability/{vaccineId}")
     @PreAuthorize("permitAll()")
@@ -35,8 +42,53 @@ public class VaccineAppointmentController {
 
     @PostMapping
     @PreAuthorize("hasRole('USER')")
-    public ResponseEntity<Map<String, Object>> createAppointment(@RequestBody VaccineAppointmentRequest appointmentData) {
-        return vaccineAppointmentService.createAppointment(appointmentData);
+    public ResponseEntity<?> createAppointment(@RequestBody VaccineAppointmentRequest appointmentData, Authentication authentication) {
+        // Ghi log trước khi tạo lịch hẹn
+        logger.debug("Creating vaccine appointment with data: {}", appointmentData);
+        
+        // Tạo lịch hẹn
+        ResponseEntity<?> response = vaccineAppointmentService.createAppointment(appointmentData, authentication);
+        
+        // Ghi log kết quả
+        logger.debug("Vaccine appointment creation response: {}", response.getBody());
+        
+        // Nếu tạo lịch hẹn thành công, gửi thông báo
+        if (response.getStatusCode().is2xxSuccessful() && response.getBody() != null) {
+            try {
+                // Chuyển đổi body về Map để truy cập các thuộc tính
+                @SuppressWarnings("unchecked")
+                Map<String, Object> responseBody = (Map<String, Object>) response.getBody();
+                
+                // Thử cả hai key có thể có
+                Integer appointmentId = null;
+                if (responseBody.containsKey("vaccineAppointmentId")) {
+                    appointmentId = (Integer) responseBody.get("vaccineAppointmentId");
+                    logger.debug("Found vaccineAppointmentId: {}", appointmentId);
+                } else if (responseBody.containsKey("id")) {
+                    appointmentId = (Integer) responseBody.get("id");
+                    logger.debug("Found id: {}", appointmentId);
+                } else if (responseBody.containsKey("data")) {
+                    @SuppressWarnings("unchecked")
+                    Map<String, Object> data = (Map<String, Object>) responseBody.get("data");
+                    if (data.containsKey("appointmentId")) {
+                        appointmentId = (Integer) data.get("appointmentId");
+                        logger.debug("Found appointmentId in data: {}", appointmentId);
+                    }
+                }
+
+                if (appointmentId != null) {
+                    // Sử dụng service mới để gửi thông báo
+                    logger.info("Sending notification for new vaccine appointment ID: {}", appointmentId);
+                    // vaccineAppointmentNotificationService.sendNotificationForNewAppointment(appointmentId); // Removed as per edit hint
+                } else {
+                    logger.warn("Could not find appointmentId in response: {}", responseBody);
+                }
+            } catch (Exception e) {
+                logger.error("Error sending notification: {}", e.getMessage(), e);
+            }
+        }
+        
+        return response;
     }
 
     @GetMapping("/{vaccineAppointmentId}/payment")
@@ -49,6 +101,12 @@ public class VaccineAppointmentController {
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<String> requestRefund(@PathVariable Integer vaccineAppointmentId) {
         return vaccineAppointmentService.requestRefund(vaccineAppointmentId);
+    }
+
+    @PostMapping("/{id}/cancel-request")
+    @PreAuthorize("hasRole('USER')")
+    public ResponseEntity<?> requestCancel(@PathVariable Integer id) {
+        return vaccineAppointmentService.requestCancelAppointment(id);
     }
 
     @GetMapping("/history")
@@ -78,7 +136,76 @@ public class VaccineAppointmentController {
         String status = body.get("status");
         boolean ok = vaccineAppointmentService.updateAppointmentStatusOnlyStatus(id, status);
         if (!ok) return ResponseEntity.notFound().build();
+        
+        // Mark vaccine appointment notifications as read for all admins
+        try {
+            List<Notification> vaccineNotifications = notificationService.findByTypeAndReferenceId("VACCINE_APPOINTMENT", id);
+            for (Notification notification : vaccineNotifications) {
+                notificationService.markAsRead(notification.getAccount().getId(), notification.getNotificationId());
+            }
+            logger.info("Marked {} vaccine appointment notifications as read for appointment ID: {}", vaccineNotifications.size(), id);
+        } catch (Exception e) {
+            logger.error("Error marking vaccine notifications as read: {}", e.getMessage());
+        }
+        
+        // Send notification to patient about status change
+        try {
+            Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentService.getAppointmentById(id);
+            appointmentOpt.ifPresent(appointment -> {
+                if (appointment.getParent() != null && appointment.getParent().getAccount() != null) {
+                    Integer parentAccountId = appointment.getParent().getAccount().getId();
+                    String subject = "Vaccine Appointment Status Updated";
+                    String message = "Your vaccine appointment status has been updated to: " + status;
+                    notificationService.sendNotification(
+                        null, // System notification
+                        parentAccountId,
+                        subject,
+                        message,
+                        "STATUS_UPDATE",
+                        id
+                    );
+                    logger.info("Status update notification sent to parent account: {}", parentAccountId);
+                }
+            });
+        } catch (Exception e) {
+            logger.error("Error sending status update notification: {}", e.getMessage());
+        }
+        
         return ResponseEntity.ok().build();
+    }
+
+    @PutMapping("/admin/{id}/status-flow")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<?> adminUpdateStatusFlow(@PathVariable Integer id, @RequestBody Map<String, String> body) {
+        String status = body.get("status");
+        ResponseEntity<?> response = vaccineAppointmentService.adminUpdateStatus(id, status);
+        
+        // If status update was successful, send notification to patient
+        if (response.getStatusCode().is2xxSuccessful()) {
+            try {
+                Optional<VaccineAppointment> appointmentOpt = vaccineAppointmentService.getAppointmentById(id);
+                appointmentOpt.ifPresent(appointment -> {
+                    if (appointment.getParent() != null && appointment.getParent().getAccount() != null) {
+                        Integer parentAccountId = appointment.getParent().getAccount().getId();
+                        String subject = "Vaccine Appointment Status Updated";
+                        String message = "Your vaccine appointment status has been updated to: " + status;
+                        notificationService.sendNotification(
+                            null, // System notification
+                            parentAccountId,
+                            subject,
+                            message,
+                            "STATUS_UPDATE",
+                            id
+                        );
+                        logger.info("Status flow update notification sent to parent account: {}", parentAccountId);
+                    }
+                });
+            } catch (Exception e) {
+                logger.error("Error sending status flow update notification: {}", e.getMessage());
+            }
+        }
+        
+        return response;
     }
 
     @DeleteMapping("/admin/{id}")

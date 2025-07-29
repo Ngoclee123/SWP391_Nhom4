@@ -5,6 +5,7 @@ import axios from "../../api/axiosClient"
 import "./pagination.css"
 import PatientService from "../../service/PatientService"
 import VaccineService from '../../service/VaccineService'
+import VaccineAppointmentService from '../../service/VaccineAppointmentService'
 
 function VaccineAppointmentManagement() {
   const [appointments, setAppointments] = useState([])
@@ -21,6 +22,7 @@ function VaccineAppointmentManagement() {
     { value: "Confirmed", label: "Đã xác nhận", color: "bg-blue-100 text-blue-800" },
     { value: "Completed", label: "Hoàn thành", color: "bg-green-100 text-green-800" },
     { value: "Cancelled", label: "Đã hủy", color: "bg-red-100 text-red-800" },
+    { value: "CancelRequested", label: "Yêu cầu hủy", color: "bg-orange-100 text-orange-800" },
   ]
 
   useEffect(() => {
@@ -31,7 +33,7 @@ function VaccineAppointmentManagement() {
     // Lấy tên bệnh nhân cho các lịch đặt thiếu tên
     const missingPatients = appointments.filter(app => !app.patientName && app.patientId && !patientNames[app.patientId]);
     missingPatients.forEach(app => {
-      PatientService.getPatientById(app.patientId).then(data => {
+      PatientService.getPatientId(app.patientId).then(data => {
         setPatientNames(prev => ({ ...prev, [app.patientId]: data.fullName }));
       });
     });
@@ -68,8 +70,8 @@ function VaccineAppointmentManagement() {
   }
 
   const handleStatusUpdate = (id) => {
-    axios
-      .put(`/api/vaccine-appointments/admin/${id}/status`, { status: statusEdit[id] || "" })
+    const newStatus = statusEdit[id] || ""
+    VaccineAppointmentService.adminUpdateStatusFlow(id, newStatus)
       .then(fetchAppointments)
       .catch(console.error)
   }
@@ -261,7 +263,12 @@ function VaccineAppointmentManagement() {
                                 onChange={(e) => handleStatusChange(app.id, e.target.value)}
                                 className="text-xs border border-gray-200 rounded-md px-2 py-1 focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-transparent"
                               >
-                                {STATUS_OPTIONS.map((opt) => (
+                                {STATUS_OPTIONS.filter(opt => {
+                                  if (app.status === "Pending") return ["Pending", "Confirmed", "Cancelled"].includes(opt.value)
+                                  if (app.status === "Confirmed") return ["Confirmed", "Completed", "CancelRequested"].includes(opt.value)
+                                  if (app.status === "CancelRequested") return ["CancelRequested", "Cancelled"].includes(opt.value)
+                                  return [app.status].includes(opt.value)
+                                }).map((opt) => (
                                   <option key={opt.value} value={opt.value}>
                                     {opt.label}
                                   </option>

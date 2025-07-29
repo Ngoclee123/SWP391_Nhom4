@@ -1,5 +1,6 @@
 package com.example.project.controler;
 
+import com.example.project.dto.AccountDTO;
 import com.example.project.dto.AccountStatsDTO;
 import com.example.project.dto.ChangePasswordDTO;
 import com.example.project.dto.ParentProfileDTO;
@@ -14,8 +15,9 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
-
+import org.springframework.security.access.prepost.PreAuthorize;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/accounts")
@@ -118,7 +120,11 @@ public class AccountController {
     @GetMapping("")
     public ResponseEntity<?> getAllAccounts() {
         try {
-            return ResponseEntity.ok(accountService.findAll());
+            List<Account> accounts = accountService.findAll();
+            List<AccountDTO> accountDTOs = accounts.stream()
+                    .map(AccountDTO::toDTO)
+                    .collect(java.util.stream.Collectors.toList());
+            return ResponseEntity.ok(accountDTOs);
         } catch (Exception e) {
             logger.error("Error fetching accounts: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching accounts");
@@ -132,7 +138,7 @@ public class AccountController {
             if (account == null) {
                 return ResponseEntity.status(HttpStatus.NOT_FOUND).body("Account not found");
             }
-            return ResponseEntity.ok(account);
+            return ResponseEntity.ok(AccountDTO.toDTO(account));
         } catch (Exception e) {
             logger.error("Error fetching account: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error fetching account");
@@ -146,10 +152,10 @@ public class AccountController {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Role is required");
             }
             var roleEntity = roleRepository.findByRolename(role);
-            if (roleEntity == null) {
+            if (roleEntity == null) {   
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Role not found");
             }
-            // Tạo tài khoản mới theo chuẩn yêu cầu
+
             Account newAccount = new Account();
             newAccount.setUsername(account.getUsername());
             newAccount.setFullName(account.getFullName());
@@ -157,12 +163,16 @@ public class AccountController {
             newAccount.setPasswordHash(passwordEncoder.encode(account.getPasswordHash()));
             newAccount.setPhoneNumber(account.getPhoneNumber());
             newAccount.setAddress(account.getAddress());
-            newAccount.setStatus(true); // Tài khoản mặc định là active
+            newAccount.setStatus(true);
             newAccount.setCreatedAt(java.time.Instant.now());
             newAccount.setUpdatedAt(java.time.Instant.now());
             newAccount.setRole(roleEntity);
+
             Account created = accountService.saveAccount(newAccount);
-            return ResponseEntity.status(HttpStatus.CREATED).body(created);
+
+            // Sử dụng static method toDTO
+            AccountDTO dto = AccountDTO.toDTO(created);
+            return ResponseEntity.status(HttpStatus.CREATED).body(dto);
         } catch (Exception e) {
             logger.error("Error creating account: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error creating account");
@@ -197,7 +207,7 @@ public class AccountController {
                 }
             }
             Account updated = accountService.saveAccount(existing);
-            return ResponseEntity.ok(updated);
+            return ResponseEntity.ok(AccountDTO.toDTO(updated));
         } catch (Exception e) {
             logger.error("Error updating account: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Error updating account: " + e.getMessage());
@@ -223,4 +233,29 @@ public class AccountController {
         return ResponseEntity.ok(accountService.getAccountStats());
     }
 
+    @GetMapping("/patients")
+    @PreAuthorize("hasRole('DOCTOR')")
+    public ResponseEntity<List<AccountDTO>> getAllPatients() {
+        try {
+            List<Account> patients = accountService.findByRoleName("USER");
+            List<AccountDTO> patientDTOs = patients.stream()
+                    .map(account -> {
+                        AccountDTO dto = new AccountDTO();
+                        dto.setId(account.getId());
+                        dto.setUsername(account.getUsername());
+                        dto.setEmail(account.getEmail());
+                        dto.setFullName(account.getFullName());
+                        dto.setPhoneNumber(account.getPhoneNumber());
+                        dto.setAddress(account.getAddress());
+                        dto.setStatus(account.getStatus());
+                        dto.setRoleName(account.getRole().getRolename());
+                        return dto;
+                    })
+                    .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(patientDTOs);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
 }

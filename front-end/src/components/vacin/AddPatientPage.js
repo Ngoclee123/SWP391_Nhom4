@@ -27,11 +27,8 @@ const AddPatientPage = () => {
     setFormData({ fullName: "", dateOfBirth: "", gender: "", weight: "", height: "", medicalConditions: "" })
     setError({})
     setMessage("")
-    if (!vaccineId) {
-      console.warn("vaccineId is not provided in state, redirecting to default vaccine page")
-      navigate("/vaccines/1")
-    }
-  }, [vaccineId, navigate])
+    // Không tự động redirect nếu không có vaccineId, cho phép thêm bé trực tiếp
+  }, [vaccineId])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -98,9 +95,11 @@ const AddPatientPage = () => {
 
         if (newPatient.id && newPatient.fullName) {
           setMessage("Đã thêm bé mới thành công!")
-          setTimeout(() => {
-            navigate(`/vaccines/${vaccineId}`, { state: { newPatient } })
-          }, 2000)
+          if (vaccineId) {
+            setTimeout(() => {
+              navigate(`/vaccines/${vaccineId}`, { state: { newPatient } })
+            }, 2000)
+          }
           break
         } else {
           throw new Error("Invalid patient data returned from server")
@@ -658,7 +657,7 @@ const AddPatientPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }

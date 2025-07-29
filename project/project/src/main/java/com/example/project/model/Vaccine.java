@@ -8,6 +8,7 @@ import lombok.Setter;
 import org.hibernate.annotations.Nationalized;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 @Getter
 @Setter
@@ -41,4 +42,8 @@ public class Vaccine {
 
     @Column(name = "price", columnDefinition = "DECIMAL(10, 2)")
     private BigDecimal price; // Thêm trường price
+
+    @Size(max = 255)
+    @Column(name = "certificate")
+    private String certificate;
 }

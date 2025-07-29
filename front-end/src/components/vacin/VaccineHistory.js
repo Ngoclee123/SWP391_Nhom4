@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import VaccineAppointmentService from "../../service/VaccineAppointmentService"
+import { format, parseISO } from "date-fns"
 
 const PAGE_SIZE = 5
 
@@ -138,15 +139,11 @@ const VaccineHistory = () => {
   }
 
   const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    const hour = date.getUTCHours().toString().padStart(2, "0")
-    const minute = date.getUTCMinutes().toString().padStart(2, "0")
-    const day = date.getUTCDate().toString().padStart(2, "0")
-    const month = (date.getUTCMonth() + 1).toString().padStart(2, "0")
-    const year = date.getUTCFullYear()
+    // parseISO sẽ parse đúng local time nếu dateString là yyyy-MM-ddTHH:mm:ss
+    const date = parseISO(dateString)
     return {
-      time: `${hour}:${minute}`,
-      date: `${day}/${month}/${year}`,
+      time: format(date, "HH:mm"),
+      date: format(date, "dd/MM/yyyy"),
     }
   }
 
@@ -186,6 +183,17 @@ const VaccineHistory = () => {
 
     return matchesSearch && matchesFilter
   })
+
+  const handleCancelRequest = async (id) => {
+    try {
+      await VaccineAppointmentService.requestCancelVaccineAppointment(id)
+      // Sau khi gửi yêu cầu hủy, reload lại lịch sử
+      const response = await VaccineAppointmentService.getHistory(currentPage, PAGE_SIZE)
+      setHistory(response.data && Array.isArray(response.data.content) ? response.data.content : [])
+    } catch (e) {
+      alert("Gửi yêu cầu hủy thất bại!")
+    }
+  }
 
   if (loading) {
     return (
@@ -417,6 +425,14 @@ const VaccineHistory = () => {
                           >
                             {getStatusIcon(item.status)}
                             {item.status}
+                            {(item.status === "Pending" || item.status === "Confirmed") && (
+                              <button
+                                className="ml-2 px-3 py-1 rounded bg-red-500 text-white text-xs font-semibold hover:bg-red-600"
+                                onClick={() => handleCancelRequest(item.vaccineAppointmentId || item.id)}
+                              >
+                                Yêu cầu hủy
+                              </button>
+                            )}
                           </div>
                         </div>
                       </div>

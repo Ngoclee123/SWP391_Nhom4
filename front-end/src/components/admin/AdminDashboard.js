@@ -13,21 +13,33 @@ import UserService from '../../service/userService';
 import VaccineManagement from "./VaccineManagement";
 import VaccineAppointmentManagement from "./VaccineAppointmentManagement";
 import VaccineStatistics from "./VaccineStatistics";
+import VaccineAvailabilityManagement from "./VaccineAvailabilityManagement";
+import PatientStatsDashboard from './PatientStatsDashboard ';
+import DoctorStats from './DoctorStats';
+import FeedbackManagement from './FeedbackManagement ';
+import AppointmentStatsDashboard from './AppointmentStatsDashboard';
+import SendNotification from './SendNotification';
 
 const NAVIGATION_ITEMS = [
   { id: 'dashboard', label: 'Tổng quan' },
   { id: 'accounts', label: 'Tài khoản' },
   { id: 'appointments', label: 'Lịch hẹn' },
+  { id: 'appointment-stats', label: 'Thống kê lịch hẹn' },
   { id: 'doctors', label: 'Bác sĩ' },
   { id: 'patients', label: 'Bệnh nhân' },
-  { id: 'consultations', label: 'Tư vấn' },
-  { id: 'reports', label: 'Báo cáo' },
-  { id: 'settings', label: 'Cài đặt' }
+  { id: 'patient-stats', label: 'Thống kê bệnh nhân' },
+  { id: 'doctor-stats', label: 'Thống kê bác sĩ' },
+  { id: 'feedbacks', label: 'Quản lý Feedback' },
+  { id: 'notifications', label: 'Gửi thông báo' },
+  { id: 'vaccine-management', label: 'Quản lý vaccine' },
+  { id: 'vaccine-appointment-management', label: 'Lịch tiêm chủng' },
+  { id: 'vaccine-statistics', label: 'Thống kê tiêm chủng' },
+  { id: 'vaccine-availability-management', label: 'Quản lý lịch vaccine' }
 ];
 
 const AdminDashboards = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const { count: notificationCount, clearNotifications } = useNotifications();
+  const { count, notifications, loading, clearNotifications, markAsRead } = useNotifications();
   const navigate = useNavigate();
 
   // Lấy tên người dùng từ localStorage
@@ -47,7 +59,7 @@ const AdminDashboards = () => {
   const renderContent = useCallback(() => {
     switch (activeTab) {
       case 'dashboard':
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
       case 'accounts':
         return <AccountManagement />;
       case 'appointments':
@@ -56,31 +68,29 @@ const AdminDashboards = () => {
         return <DoctorManagement />;
       case 'patients':
         return <PatientManagement />;
-      case 'consultations':
-      case 'reports':
-      case 'settings':
-        return (
-          <div className="flex flex-col items-center justify-center py-24 text-center">
-            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-              <Settings className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">
-              Chức năng đang phát triển
-            </h3>
-            <p className="text-gray-600 max-w-md">
-              Tính năng {NAVIGATION_ITEMS.find(item => item.id === activeTab)?.label.toLowerCase()} 
-              đang được phát triển và sẽ sớm ra mắt trong phiên bản tiếp theo.
-            </p>
-          </div>
-        );
+        case 'patient-stats':
+          // return <PatientStatsDashboard />;
+        case 'doctor-stats':
+          return <DoctorStats />;
+        case 'feedbacks':
+          return <FeedbackManagement />;
+          
+      case 'appointment-stats':
+        return <AppointmentStatsDashboard />;
+
+      case 'notifications':
+        return <SendNotification />;
+
       case 'vaccine-management':
         return <VaccineManagement />;
       case 'vaccine-appointment-management':
         return <VaccineAppointmentManagement />;
       case 'vaccine-statistics':
         return <VaccineStatistics />;
+      case 'vaccine-availability-management':
+        return <VaccineAvailabilityManagement />;
       default:
-        return <DashboardOverview />;
+        return <DashboardOverview setActiveTab={setActiveTab} />;
     }
   }, [activeTab]);
 
@@ -93,13 +103,17 @@ const AdminDashboards = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 flex">
-      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} navigationItems={NAVIGATION_ITEMS} />
       <div className="flex-1 flex flex-col min-w-0">
         <Header 
           currentPageTitle={currentPageTitle}
-          notificationCount={notificationCount}
+          notificationCount={count}
           clearNotifications={clearNotifications}
           adminName={adminName}
+          notifications={notifications}
+          loading={loading}
+          markAsRead={markAsRead}
+          setActiveTab={setActiveTab}
         />
         <main className="flex-1 p-6 overflow-auto">
           {renderContent()}

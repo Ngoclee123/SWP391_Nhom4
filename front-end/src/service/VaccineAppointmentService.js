@@ -67,7 +67,18 @@ const VaccineAppointmentService = {
             }
         ),
     requestRefund: (vaccineAppointmentId) => axiosClient.post(`/api/vaccine-appointments/${vaccineAppointmentId}/refund`),
-    getHistory: (page = 0, size = 5) => axiosClient.get(`/api/vaccine-appointments/history?page=${page}&size=${size}`)
+    getHistory: (page = 0, size = 5) => axiosClient.get(`/api/vaccine-appointments/history?page=${page}&size=${size}`),
+    createMoMoPayment: (vaccineAppointmentId) =>
+        axiosClient.post(
+            '/api/momo/create-payment',
+            null,
+            {
+                params: { vaccineAppointmentId },
+                headers: { userId: localStorage.getItem('accountId') }
+            }
+        ),
+    requestCancelVaccineAppointment: (id) => axiosClient.post(`/api/vaccine-appointments/${id}/cancel-request`),
+    adminUpdateStatusFlow: (id, status) => axiosClient.put(`/api/vaccine-appointments/admin/${id}/status-flow`, { status }),
 };
 
 export default VaccineAppointmentService;

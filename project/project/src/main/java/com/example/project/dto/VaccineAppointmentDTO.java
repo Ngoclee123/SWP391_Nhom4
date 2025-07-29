@@ -1,10 +1,12 @@
 package com.example.project.dto;
 
+import java.time.LocalDateTime;
+
 public class VaccineAppointmentDTO {
     private Integer id;
     private String patientName;
     private String vaccineName;
-    private String appointmentDate;
+    private LocalDateTime appointmentDate;
     private String location;
     private String status;
     private Integer patientId;
@@ -16,8 +18,8 @@ public class VaccineAppointmentDTO {
     public void setPatientName(String patientName) { this.patientName = patientName; }
     public String getVaccineName() { return vaccineName; }
     public void setVaccineName(String vaccineName) { this.vaccineName = vaccineName; }
-    public String getAppointmentDate() { return appointmentDate; }
-    public void setAppointmentDate(String appointmentDate) { this.appointmentDate = appointmentDate; }
+    public LocalDateTime getAppointmentDate() { return appointmentDate; }
+    public void setAppointmentDate(LocalDateTime appointmentDate) { this.appointmentDate = appointmentDate; }
     public String getLocation() { return location; }
     public void setLocation(String location) { this.location = location; }
     public String getStatus() { return status; }

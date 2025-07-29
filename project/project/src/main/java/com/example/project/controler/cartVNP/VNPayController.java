@@ -213,7 +213,7 @@ public class VNPayController {
             String transactionStatus = request.getParameter("vnp_TransactionStatus");
             String redirectUrl;
             if ("00".equals(transactionStatus)) {
-                vaccineAppointmentService.updateAppointmentStatusOnlyStatus(vaccineAppointmentId, "Completed");
+                vaccineAppointmentService.updateAppointmentStatusOnlyStatus(vaccineAppointmentId, "Pending"); // hoặc "Confirmed" nếu muốn
                 Optional<Payment> paymentOpt = paymentService.getPaymentByVaccineAppointmentId(vaccineAppointmentId);
                 Payment payment;
                 if (paymentOpt.isPresent()) {

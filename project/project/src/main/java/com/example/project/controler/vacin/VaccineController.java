@@ -2,6 +2,8 @@ package com.example.project.controler.vacin;
 
 import com.example.project.model.Vaccine;
 import com.example.project.repository.VaccineRepository;
+import com.example.project.model.Certificate;
+import com.example.project.repository.CertificateRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -18,12 +20,18 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequestMapping("/api/vaccines")
 public class VaccineController {
 
     @Autowired
     private VaccineRepository vaccineRepository;
+
+    @Autowired
+    private CertificateRepository certificateRepository;
 
     @GetMapping
     @PreAuthorize("hasRole('USER')")
@@ -37,9 +45,9 @@ public class VaccineController {
 
     @GetMapping("/{id}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
-    public ResponseEntity<Vaccine> getVaccineById(@PathVariable Integer id) {
+    public ResponseEntity<?> getVaccineById(@PathVariable Integer id) {
         return vaccineRepository.findById(id)
-                .map(ResponseEntity::ok)
+                .map(vaccine -> ResponseEntity.ok(vaccine))
                 .orElseGet(() -> ResponseEntity.notFound().build());
     }
 

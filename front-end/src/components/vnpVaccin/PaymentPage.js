@@ -331,7 +331,7 @@ const PaymentPage = () => {
         )}
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes confetti {
           0% { transform: translateY(-100vh) rotate(0deg); opacity: 1; }
           100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }

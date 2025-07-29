@@ -45,6 +45,10 @@ const ConfirmationPage = () => {
         })
         const paymentUrl = response.data.data.paymentUrl
         window.location.href = paymentUrl
+      } else if (selectedMethod === "momo") {
+        response = await VaccineAppointmentService.createMoMoPayment(vaccineAppointmentId)
+        const paymentUrl = response.data.paymentUrl
+        window.location.href = paymentUrl
       } else if (selectedMethod === "later") {
         await VaccineAppointmentService.createPayment(vaccineAppointmentId, { method: "Cash" })
         setIsConfirmed(true)
@@ -85,6 +89,13 @@ const ConfirmationPage = () => {
       description: "Thanh toán trực tuyến qua ngân hàng",
       icon: "💳",
       color: "from-blue-500 to-cyan-500",
+    },
+    {
+      id: "momo",
+      name: "Thanh toán qua MoMo",
+      description: "Thanh toán bằng ví điện tử MoMo",
+      icon: "📱",
+      color: "from-pink-500 to-yellow-500",
     },
     {
       id: "later",
@@ -474,7 +485,7 @@ const ConfirmationPage = () => {
         </div>
       </div>
 
-      <style jsx>{`
+      <style>{`
         @keyframes fade-in {
           from { opacity: 0; transform: translateY(20px); }
           to { opacity: 1; transform: translateY(0); }

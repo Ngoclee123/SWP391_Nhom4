@@ -84,4 +84,25 @@ public class ParentService {
         logger.debug("Found parent with ID: {}", parentId);
         return parentId;
     }
+    // Thêm method mới để lấy parentId từ accountId
+    public Integer getParentIdByAccountId(Integer accountId) {
+        if (accountId == null) {
+            logger.error("AccountId is null");
+            return null;
+        }
+
+
+        logger.debug("Searching for parent with accountId: {}", accountId);
+        Parent parent = parentRepository.findByAccountId(accountId);
+        if (parent == null) {
+            logger.error("No parent found for account ID: {}", accountId);
+            return null;
+        }
+
+
+        Integer parentId = parent.getId();
+        logger.debug("Found parent with ID: {}", parentId);
+        return parentId;
+    }
+
 }

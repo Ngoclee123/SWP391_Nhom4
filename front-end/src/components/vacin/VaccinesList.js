@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 import UserService from "../../service/userService"
 import VaccineAppointmentService from "../../service/VaccineAppointmentService"
+import { FaEye, FaCalendarPlus } from 'react-icons/fa';
 
 const PAGE_SIZE = 6
 
@@ -144,6 +145,12 @@ const VaccinesList = () => {
     const matchMax = maxPrice === "" || price <= Number(maxPrice)
     return matchName && matchMin && matchMax
   })
+
+  // Thêm hàm handleDetailClick
+  const handleDetailClick = (e, vaccineId) => {
+    e.stopPropagation();
+    navigate(`/vaccine-detail/${vaccineId}`);
+  };
 
   if (loading) {
     return (
@@ -440,7 +447,7 @@ const VaccinesList = () => {
             ? filteredVaccines.map((vaccine) => (
                 <div
                   key={vaccine.id}
-                  className="group cursor-pointer bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border border-white/20"
+                  className="group cursor-pointer bg-white/80 backdrop-blur-sm rounded-3xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-2 overflow-hidden border border-white/20 relative"
                   onClick={() => handleVaccineClick(vaccine.id)}
                 >
                   <div className="relative overflow-hidden">
@@ -450,6 +457,23 @@ const VaccinesList = () => {
                       alt={vaccine.name}
                       className="h-48 w-full object-cover group-hover:scale-110 transition-transform duration-300"
                     />
+                    {/* Icon hover */}
+                    <div className="absolute top-2 right-2 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 z-20">
+                      <button
+                        className="bg-white/90 hover:bg-blue-100 text-blue-600 rounded-full p-2 shadow-md border border-blue-100"
+                        title="Xem chi tiết"
+                        onClick={(e) => handleDetailClick(e, vaccine.id)}
+                      >
+                        <FaEye size={18} />
+                      </button>
+                      <button
+                        className="bg-white/90 hover:bg-green-100 text-green-600 rounded-full p-2 shadow-md border border-green-100"
+                        title="Đặt vaccine"
+                        onClick={(e) => { e.stopPropagation(); handleVaccineClick(vaccine.id); }}
+                      >
+                        <FaCalendarPlus size={18} />
+                      </button>
+                    </div>
                   </div>
                   <div className="p-6">
                     <h3 className="text-xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-3 group-hover:from-purple-600 group-hover:to-pink-600 transition-all duration-300">

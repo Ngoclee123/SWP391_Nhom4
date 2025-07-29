@@ -381,10 +381,10 @@ function DoctorSearch() {
                           <span className="text-sm text-gray-500">/lần khám</span>
                         </div>
                         <button
-                          onClick={() => handleBookNow(doctor)}
+                          onClick={() => navigate(`/doctor/${doctor.id}`)}
                           className="bg-gradient-to-r from-blue-600 to-blue-700 text-white px-6 py-2 rounded-lg font-semibold hover:from-blue-700 hover:to-blue-800 transition-all duration-300 shadow-md hover:shadow-lg transform hover:-translate-y-0.5"
                         >
-                          Đặt lịch ngay
+                          Xem chi tiết & Đặt lịch
                         </button>
                       </div>
                     </div>
