@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
+<<<<<<< HEAD
 import CozeChat from './CozeChat';
+=======
+>>>>>>> ngocle_new
 
 function Hero({ onOpenModal }) {
   const [currentSlide, setCurrentSlide] = useState(0);
@@ -178,11 +181,16 @@ function Hero({ onOpenModal }) {
         ))}
       </div>
 
+<<<<<<< HEAD
       {/* Nhúng CozeChat widget */}
       <CozeChat />
 
       {/* Custom CSS for animations */}
       <style>{`
+=======
+      {/* Custom CSS for animations */}
+      <style jsx>{`
+>>>>>>> ngocle_new
         @keyframes slide-in-left {
           from {
             opacity: 0;

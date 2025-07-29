@@ -92,4 +92,8 @@ const FeedbackForm = ({ doctorId, parentId, appointmentId, onSuccess }) => {
   );
 };
 
+<<<<<<< HEAD
 export default FeedbackForm;
+=======
+export default FeedbackForm;
+>>>>>>> ngocle_new

@@ -16,4 +16,8 @@ const useSearch = () => {
   };
 };
 
+<<<<<<< HEAD
 export default useSearch; 
+=======
+export default useSearch;
+>>>>>>> ngocle_new

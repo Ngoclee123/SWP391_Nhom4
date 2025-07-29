@@ -4,27 +4,39 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.List;
+<<<<<<< HEAD
+=======
+
+>>>>>>> ngocle_new
 @Getter
 @Setter
 public class DoctorSearchDTO {
 
     private Integer id;
     private String fullName;
+<<<<<<< HEAD
     private String username; // Thêm trường username
+=======
+>>>>>>> ngocle_new
     private String bio;
     private String phoneNumber;
     private String imgs;
     private String locational;
+<<<<<<< HEAD
     private Integer specialtyId;
     private String specialtyName;
     private String availabilityStatus; // Từ DoctorAvailability.status
     private String startTime; // Từ DoctorAvailability.start_time
     private String endTime;   // Từ DoctorAvailability.end_time
+=======
+    private String specialtyName;
+>>>>>>> ngocle_new
     private List<String> certificates;
     private String email;
     private String address;
     private String education;
     private String hospital;
+<<<<<<< HEAD
     private String status;
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
@@ -111,4 +123,12 @@ public class DoctorSearchDTO {
 //
 //    public List<String> getCertificates() { return certificates; }
 //    public void setCertificates(List<String> certificates) { this.certificates = certificates; }
+=======
+    // Các trường mới cho giờ làm việc cố định
+    private String morningHours;
+    private String afternoonHours;
+    private List<AvailabilityDTO> availabilities;
+
+    // Getters và setters được tự động tạo bởi Lombok
+>>>>>>> ngocle_new
 }

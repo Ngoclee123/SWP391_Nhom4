@@ -54,7 +54,11 @@ public class Account {
     private Instant updatedAt;
 
 
+<<<<<<< HEAD
     @ManyToOne(fetch = FetchType.EAGER, optional = false)
+=======
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+>>>>>>> ngocle_new
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 

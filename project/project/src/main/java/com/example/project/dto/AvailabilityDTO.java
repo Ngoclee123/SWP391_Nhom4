@@ -9,4 +9,8 @@ public class AvailabilityDTO {
     private String startTime;
     private String endTime;
     private String status;
+<<<<<<< HEAD
 }
+=======
+} 
+>>>>>>> ngocle_new

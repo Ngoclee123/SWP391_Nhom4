@@ -43,11 +43,17 @@ public class Parent {
     private Instant createdAt;
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> ngocle_new
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
     public Integer getParentId() {
         return this.id; // hoặc tên biến đúng của bạn
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> ngocle_new
 }

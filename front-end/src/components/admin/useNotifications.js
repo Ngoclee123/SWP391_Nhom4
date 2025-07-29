@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import { useState, useEffect, useCallback } from 'react';
 import NotificationService from '../../service/NotificationService';
 import userService from '../../service/userService';
@@ -95,6 +96,14 @@ const useNotifications = () => {
     markAsRead, 
     fetchNotifications 
   };
+=======
+import { useState, useCallback } from 'react';
+
+const useNotifications = () => {
+  const [count, setCount] = useState(3);
+  const clearNotifications = useCallback(() => setCount(0), []);
+  return { count, clearNotifications };
+>>>>>>> ngocle_new
 };
 
 export default useNotifications;

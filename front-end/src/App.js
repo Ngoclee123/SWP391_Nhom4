@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import Header from './components/Header';
@@ -131,10 +132,54 @@ function AppRoutes() {
         <Route path="/admin-dashboard" element={<AdminDashboards />} />
         <Route path="/admin-dashboard/send-notification" element={<SendNotification />} />
         {/* Các route còn lại dùng layout chung */}
+=======
+import React, { useState, useEffect } from "react";
+import {
+  BrowserRouter as Router,
+  Route,
+  Routes,
+  useLocation,
+} from "react-router-dom";
+import Header from "./components/Header";
+import ProfileForm from "./components/ProfileForm";
+import DoctorSearch from "./components/search/DoctorSearch";
+import AppointmentForm from "./components/booking/AppointmentForm";
+import Footer from "./components/Footer";
+import Hero from "./components/Hero";
+import Services from "./components/Services";
+import WhyChooseUs from "./components/WhyChooseUs";
+import Team from "./components/Team";
+import Testimonials from "./components/Testimonials";
+import Contact from "./components/Contact";
+import Register from "./components/regiters/Register";
+import HealthNewsWebsite, { ArticleDetail } from "./components/new/NewHeath";
+import AdminDashboards from "./components/admin/AdminDashboard";
+import DoctorDetail from "./components/booking/DoctorDetail";
+import { ReceiptCent } from "lucide-react";
+import Reception from "./components/doctor/Reception";
+import BookingConfirmation from "./components/booking/BookingConfirmation";
+import Login from "./components/login/Login";
+import ChangePassword from "./components/ChangePassword";
+import VaccineAppointment from "./components/vacin/VaccineAppointment";
+import VaccinesList from "./components/vacin/VaccinesList";
+import ForgotPassword from "./components/ForgotPassword";
+import ResetPassword from "./components/ResetPassword";
+
+function App() {
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const isAdminRoute = window.location.pathname.startsWith("/admin");
+  const isRecepRoute = window.location.pathname.startsWith("/reception");
+
+  return (
+    <Router>
+      <Routes>
+        <Route path="/news/article/:id" element={<ArticleDetail />} />
+>>>>>>> ngocle_new
         <Route
           path="*"
           element={
             <div className="min-h-screen flex flex-col bg-gray-100">
+<<<<<<< HEAD
               <Header />
               <main className="flex-grow">
                 <Routes>
@@ -165,11 +210,59 @@ function AppRoutes() {
               </main>
               {!isDoctorRoute && <ChatButton />} {/* Exclude Footer for doctor route */}
               <Footer />
+=======
+              {!isAdminRoute && <Header />}
+
+              <main className="flex-grow">
+                <Routes>
+                  <Route path="/vaccines" element={<VaccinesList />} />
+                  <Route
+                    path="/vaccines/:vaccineId"
+                    element={<VaccineAppointment />}
+                  />
+                  <Route
+                    path="/home"
+                    element={<Home onOpenModal={() => setIsModalOpen(true)} />}
+                  />
+                  <Route path="/search-doctors" element={<DoctorSearch />} />
+                  <Route
+                    path="/book-appointment"
+                    element={<AppointmentForm />}
+                  />
+                  <Route path="/profile" element={<ProfileForm />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
+                  <Route path="/admin1" element={<AdminDashboards />} />
+                  <Route path="/doctors/:id" element={<DoctorDetail />} />
+                  <Route path="/reception" element={<Reception />} />
+                  <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
+                  <Route
+                    path="/booking-confirmation"
+                    element={<BookingConfirmation />}
+                  />
+                  <Route
+                    path="/change-password/:accountId"
+                    element={<ChangePassword />}
+                  />
+                  <Route
+                    path="/"
+                    element={<Home onOpenModal={() => setIsModalOpen(true)} />}
+                  />
+                </Routes>
+              </main>
+
+              {!isAdminRoute && <Footer />}
+>>>>>>> ngocle_new
             </div>
           }
         />
       </Routes>
+<<<<<<< HEAD
     </>
+=======
+    </Router>
+>>>>>>> ngocle_new
   );
 }
 
@@ -177,6 +270,7 @@ function Home({ onOpenModal }) {
   const location = useLocation();
 
   useEffect(() => {
+<<<<<<< HEAD
     if (location.pathname === '/home' || location.pathname === '/') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -186,6 +280,17 @@ function Home({ onOpenModal }) {
       const element = document.getElementById(sectionId);
       if (element) {
         element.scrollIntoView({ behavior: 'smooth' });
+=======
+    if (location.pathname === "/home" || location.pathname === "/") {
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    if (location.hash) {
+      const sectionId = location.hash.replace("#", "");
+      const element = document.getElementById(sectionId);
+      if (element) {
+        element.scrollIntoView({ behavior: "smooth" });
+>>>>>>> ngocle_new
       }
     }
   }, [location]);
@@ -197,7 +302,15 @@ function Home({ onOpenModal }) {
         <Services />
       </div>
       <WhyChooseUs />
+<<<<<<< HEAD
       <div id="team" className="min-h-screen" style={{ marginBottom: '-100px', marginTop: '140px' }}>
+=======
+      <div
+        id="team"
+        className="min-h-screen"
+        style={{ marginBottom: "-100px", marginTop: "140px" }}
+      >
+>>>>>>> ngocle_new
         <Team />
       </div>
       <div id="news" className="min-h-screen">
@@ -211,4 +324,8 @@ function Home({ onOpenModal }) {
   );
 }
 
+<<<<<<< HEAD
 export default App;
+=======
+export default App;
+>>>>>>> ngocle_new

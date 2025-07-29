@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 package com.example.project.repository;
 
 
@@ -23,3 +24,15 @@ public interface AccountRepository extends JpaRepository<Account, Integer> {
     @Query("SELECT a FROM Account a WHERE a.role.rolename = :roleName")
     List<Account> findByRoleName(String roleName);
 }
+=======
+package com.example.project.repository;
+
+
+import com.example.project.model.Account;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface AccountRepository extends JpaRepository<Account, Integer> {
+    Account findByUsername(String username);
+    Account findByEmail(String email);
+}
+>>>>>>> ngocle_new

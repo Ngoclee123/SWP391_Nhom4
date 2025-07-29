@@ -5,11 +5,20 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.Getter;
 import lombok.Setter;
+<<<<<<< HEAD
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+=======
+import java.time.LocalDateTime;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import jakarta.persistence.PrePersist;
+
+import com.example.project.model.Service;
+>>>>>>> ngocle_new
 
 @Getter
 @Setter
@@ -30,6 +39,12 @@ public class Appointment {
     private Doctor doctor;
 
 
+<<<<<<< HEAD
+=======
+    @ManyToOne
+    @JoinColumn(name = "service_id")
+    private Service service;
+>>>>>>> ngocle_new
 
     @Column(name = "appointment_date", nullable = false)
     private LocalDateTime appointmentDate;
@@ -65,17 +80,24 @@ public class Appointment {
     private String paymentMethod;
 
     @Column(name = "total_fee")
+<<<<<<< HEAD
     private BigDecimal totalFee;
+=======
+    private Double totalFee;
+>>>>>>> ngocle_new
 
     @Column(name = "symptoms")
     private String symptoms;
 
+<<<<<<< HEAD
     @Column(name = "service_id")
     private Integer serviceId;
 
     // Fields from second file that were not in the first and do not duplicate
     // None were unique that are not already included in more complete form
 
+=======
+>>>>>>> ngocle_new
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {
@@ -89,5 +111,9 @@ public class Appointment {
     public LocalDateTime getAppointmentDate() {
         return this.appointmentDate;
     }
+<<<<<<< HEAD
 
 }
+=======
+}
+>>>>>>> ngocle_new

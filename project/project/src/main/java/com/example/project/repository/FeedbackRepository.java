@@ -2,6 +2,7 @@ package com.example.project.repository;
 
 import com.example.project.model.Feedback;
 import org.springframework.data.jpa.repository.JpaRepository;
+<<<<<<< HEAD
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -22,4 +23,11 @@ public interface FeedbackRepository extends JpaRepository<Feedback, Integer> {
     @Modifying
     @Query(value = "UPDATE Feedback SET is_read = 1 WHERE feedback_id = ?1", nativeQuery = true)
     void markAsReadById(Integer id);
+=======
+import java.util.List;
+
+public interface FeedbackRepository extends JpaRepository<Feedback, Integer> {
+    List<Feedback> findByDoctor_Id(Integer doctorId);
+    boolean existsByAppointment_AppointmentId(Integer appointmentId);
+>>>>>>> ngocle_new
 }

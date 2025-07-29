@@ -45,10 +45,13 @@ public class Feedback {
     @Column(name = "created_at")
     private LocalDateTime createdAt;
 
+<<<<<<< HEAD
     @ColumnDefault("false")
     @Column(name = "is_read")
     private Boolean isRead = false;
 
+=======
+>>>>>>> ngocle_new
     @PrePersist
     public void prePersist() {
         if (createdAt == null) {

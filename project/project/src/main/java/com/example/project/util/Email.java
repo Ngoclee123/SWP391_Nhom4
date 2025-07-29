@@ -18,7 +18,11 @@ public class Email {
         try {
             SimpleMailMessage message = new SimpleMailMessage();
             message.setFrom("vanbi12092004@gmail.com");
+<<<<<<< HEAD
             message.setTo(toEmail);  
+=======
+            message.setTo(toEmail);
+>>>>>>> ngocle_new
             message.setSubject(subject);
             message.setText(content);
             mailSender.send(message);

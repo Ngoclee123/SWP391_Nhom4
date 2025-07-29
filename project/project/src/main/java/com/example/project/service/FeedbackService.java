@@ -2,6 +2,7 @@ package com.example.project.service;
 
 import com.example.project.dto.FeedbackDTO;
 import com.example.project.model.Feedback;
+<<<<<<< HEAD
 import com.example.project.repository.FeedbackRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -50,3 +51,11 @@ public class FeedbackService {
     }
 
 }
+=======
+import java.util.List;
+
+public interface FeedbackService {
+    Feedback addFeedback(FeedbackDTO dto);
+    List<Feedback> getFeedbacksByDoctorId(Integer doctorId);
+} 
+>>>>>>> ngocle_new

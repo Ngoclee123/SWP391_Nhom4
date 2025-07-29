@@ -274,4 +274,8 @@ const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
   );
 };
 
+<<<<<<< HEAD
 export default BookingModal;
+=======
+export default BookingModal;
+>>>>>>> ngocle_new

@@ -1,7 +1,13 @@
 package com.example.project.service;
 
 
+<<<<<<< HEAD
 import com.example.project.dto.*;
+=======
+import com.example.project.dto.NewPasswordDTO;
+import com.example.project.dto.RegisterRequestDTO;
+import com.example.project.dto.ResetPasswordRequestDTO;
+>>>>>>> ngocle_new
 import com.example.project.model.Account;
 import com.example.project.model.Parent;
 import com.example.project.model.PasswordReset;
@@ -24,7 +30,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.Instant;
 
+<<<<<<< HEAD
 import java.util.List;
+=======
+>>>>>>> ngocle_new
 import java.util.UUID;
 
 import java.util.regex.Pattern;
@@ -57,6 +66,12 @@ public class AccountService {
         return parentRepository.findByAccountId(accountId);
     }
 
+<<<<<<< HEAD
+=======
+    public void saveAccount(Account account) {
+        accountRepository.save(account);
+    }
+>>>>>>> ngocle_new
 
     public void saveParent(Parent parent) {
         parentRepository.save(parent);
@@ -253,6 +268,7 @@ public class AccountService {
         return true;
     }
 
+<<<<<<< HEAD
     //ADMIN
     public java.util.List<Account> findAll() {
         return accountRepository.findAllWithRole();
@@ -275,4 +291,6 @@ public class AccountService {
     }
 
 
+=======
+>>>>>>> ngocle_new
 }

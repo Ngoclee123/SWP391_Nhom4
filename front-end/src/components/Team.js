@@ -1,6 +1,10 @@
 import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
+<<<<<<< HEAD
 import DoctorDetailService from "../service/DoctorDetailService";
+=======
+import DoctorService from "../service/DoctorService";
+>>>>>>> ngocle_new
 
 function TeamMember({ id, name, role, image }) {
   return (
@@ -48,7 +52,11 @@ function Team() {
         setMessage(null);
 
         console.log("Fetching doctors...");
+<<<<<<< HEAD
         const response = await DoctorDetailService.getAllDoctors();
+=======
+        const response = await DoctorService.getAllDoctors();
+>>>>>>> ngocle_new
         console.log("Doctors response:", response);
 
         if (response.error) {
@@ -58,15 +66,23 @@ function Team() {
           return;
         }
 
+<<<<<<< HEAD
         const doctorsArray = response.data?.data;
         if (!doctorsArray || !Array.isArray(doctorsArray)) {
+=======
+        if (!response.data || !Array.isArray(response.data)) {
+>>>>>>> ngocle_new
           console.error("Invalid response format:", response);
           setError("Định dạng dữ liệu không hợp lệ");
           setDoctors([]);
           return;
         }
 
+<<<<<<< HEAD
         setDoctors(doctorsArray);
+=======
+        setDoctors(response.data);
+>>>>>>> ngocle_new
 
         if (response.message) {
           setMessage(response.message);
@@ -135,4 +151,8 @@ function Team() {
   );
 }
 
+<<<<<<< HEAD
 export default Team;
+=======
+export default Team;
+>>>>>>> ngocle_new
