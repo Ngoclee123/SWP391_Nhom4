@@ -138,6 +138,21 @@ async getFeedbackByDoctorId(doctorId) {
         }
     }
 
+    async getRecommendedDoctors(limit = 10) {
+        const url = '/api/doctors/recommended';
+        const config = {
+            params: { limit }
+        };
+        try {
+            const response = await axiosClient.get(url, config);
+            console.log('Recommended doctors response:', response);
+            return response.data;
+        } catch (error) {
+            console.error('Error fetching recommended doctors:', error);
+            throw new Error(error.response?.data?.error || 'Không thể tải danh sách bác sĩ được gợi ý');
+        }
+    }
+
     async createDoctor(data) {
         return axiosClient.post('/api/doctors', data);
     }

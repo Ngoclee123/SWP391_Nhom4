@@ -69,7 +69,7 @@ const FeedbackManagement = () => {
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Quản lý Feedback</h2>
+      <h2 className="text-3xl font-bold text-gray-900">Quản lý Feedback</h2>
       {loading && <div className="text-blue-600">Đang tải dữ liệu...</div>}
       {error && <div className="text-red-500">{error}</div>}
       <div className="flex gap-2 mb-4">
@@ -122,27 +122,87 @@ const FeedbackManagement = () => {
           </tbody>
         </table>
       </div>
-      {/* PHÂN TRANG giống quản lý bác sĩ */}
+      {/* Phân trang */}
       {totalPages > 1 && (
-        <div className="flex justify-center items-center gap-2 py-4">
+        <div className="flex justify-center items-center gap-2 py-4 bg-gray-50 border-t border-gray-200">
           <button
-            className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
             onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
             disabled={currentPage === 1}
           >
             &lt;
           </button>
-          {Array.from({ length: totalPages }, (_, i) => (
-            <button
-              key={i + 1}
-              className={`px-3 py-1 rounded border ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-              onClick={() => setCurrentPage(i + 1)}
-            >
-              {i + 1}
-            </button>
-          ))}
+          
+          {/* Hiển thị các trang */}
+          {(() => {
+            const pages = [];
+            const maxVisiblePages = 5;
+            let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+            let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+            
+            // Điều chỉnh startPage nếu endPage quá gần cuối
+            if (endPage - startPage + 1 < maxVisiblePages) {
+              startPage = Math.max(1, endPage - maxVisiblePages + 1);
+            }
+            
+            // Thêm trang đầu nếu cần
+            if (startPage > 1) {
+              pages.push(
+                <button
+                  key={1}
+                  className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
+                  onClick={() => setCurrentPage(1)}
+                >
+                  1
+                </button>
+              );
+              if (startPage > 2) {
+                pages.push(
+                  <span key="ellipsis1" className="px-2 text-gray-500">...</span>
+                );
+              }
+            }
+            
+            // Thêm các trang chính
+            for (let i = startPage; i <= endPage; i++) {
+              pages.push(
+                <button
+                  key={i}
+                  className={`px-3 py-2 rounded-lg border transition-colors ${
+                    currentPage === i 
+                      ? 'bg-blue-500 text-white border-blue-500' 
+                      : 'bg-white hover:bg-gray-50'
+                  }`}
+                  onClick={() => setCurrentPage(i)}
+                >
+                  {i}
+                </button>
+              );
+            }
+            
+            // Thêm trang cuối nếu cần
+            if (endPage < totalPages) {
+              if (endPage < totalPages - 1) {
+                pages.push(
+                  <span key="ellipsis2" className="px-2 text-gray-500">...</span>
+                );
+              }
+              pages.push(
+                <button
+                  key={totalPages}
+                  className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
+                  onClick={() => setCurrentPage(totalPages)}
+                >
+                  {totalPages}
+                </button>
+              );
+            }
+            
+            return pages;
+          })()}
+          
           <button
-            className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+            className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
             onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
             disabled={currentPage === totalPages}
           >

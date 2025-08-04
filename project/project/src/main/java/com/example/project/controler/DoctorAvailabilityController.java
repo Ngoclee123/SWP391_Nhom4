@@ -5,6 +5,9 @@ import com.example.project.service.DoctorAvailabilityService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -26,6 +29,16 @@ public class DoctorAvailabilityController {
         return doctorAvailabilityService.getByDoctorId(doctorId);
     }
 
+    @GetMapping("/doctor/{doctorId}/paginated")
+    public Page<DoctorAvailabilityDTO> getByDoctorIdPaginated(
+            @PathVariable Integer doctorId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size) {
+        logger.info("API /doctor/{}/paginated called with page={}, size={}", doctorId, page, size);
+        Pageable pageable = PageRequest.of(page, size);
+        return doctorAvailabilityService.getByDoctorIdPaginated(doctorId, pageable);
+    }
+
     @GetMapping("/doctor/{doctorId}/available")
     public List<DoctorAvailabilityDTO> getAvailableByDoctorId(@PathVariable Integer doctorId) {
         if (doctorId == null || doctorId <= 0) {
@@ -42,22 +55,20 @@ public class DoctorAvailabilityController {
     }
 
     @PostMapping("/doctor/{doctorId}/add-slots")
-    public ResponseEntity<?> createAvailabilitySlots(@PathVariable Integer doctorId, @RequestBody DoctorAvailabilitySlotRequest req) {
-        doctorAvailabilityService.createAvailabilitySlotsByProcedure(
-            doctorId, req.getStartTime(), req.getEndTime(), req.getSlotMinutes()
-        );
-        return ResponseEntity.ok("Inserted slots successfully");
+    public ResponseEntity<?> createAvailabilitySlots(@PathVariable Integer doctorId, @RequestBody DoctorAvailabilitySlotRequest request) {
+        List<DoctorAvailabilityDTO> created = doctorAvailabilityService.createAvailabilitySlots(doctorId, request);
+        return ResponseEntity.ok(created);
     }
 
-    @PutMapping("/{availabilityId}")
-    public ResponseEntity<?> updateAvailability(@PathVariable Integer availabilityId, @RequestBody DoctorAvailabilityDTO dto) {
-        DoctorAvailabilityDTO updated = doctorAvailabilityService.updateAvailability(availabilityId, dto);
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateAvailability(@PathVariable Integer id, @RequestBody DoctorAvailabilityDTO dto) {
+        DoctorAvailabilityDTO updated = doctorAvailabilityService.updateAvailability(id, dto);
         return ResponseEntity.ok(updated);
     }
 
-    @DeleteMapping("/{availabilityId}")
-    public ResponseEntity<?> deleteAvailability(@PathVariable Integer availabilityId) {
-        doctorAvailabilityService.deleteAvailability(availabilityId);
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteAvailability(@PathVariable Integer id) {
+        doctorAvailabilityService.deleteAvailability(id);
         return ResponseEntity.ok().build();
     }
 

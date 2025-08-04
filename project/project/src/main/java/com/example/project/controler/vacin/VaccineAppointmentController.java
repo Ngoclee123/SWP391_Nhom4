@@ -221,4 +221,10 @@ public class VaccineAppointmentController {
     public ResponseEntity<VaccineStatisticsDTO> getVaccineStatistics(@RequestParam int month, @RequestParam int year) {
         return ResponseEntity.ok(vaccineAppointmentService.getVaccineStatistics(month, year));
     }
+    
+    @GetMapping("/statistics/debug")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Map<String, Object>> getVaccineStatisticsDebug(@RequestParam int month, @RequestParam int year) {
+        return ResponseEntity.ok(vaccineAppointmentService.getVaccineStatisticsDebug(month, year));
+    }
 }

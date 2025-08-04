@@ -149,13 +149,10 @@ const DoctorStats = () => {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900 flex items-center">
+          <h2 className="text-3xl font-bold text-gray-900 flex items-center">
             <FaChartLine className="mr-3 text-blue-600" />
             Thống kê lượt khám bác sĩ
-          </h1>
-          <p className="text-gray-600 mt-1">
-            Theo dõi số lượt khám của từng bác sĩ theo tháng
-          </p>
+          </h2>
         </div>
         
         <div className="flex gap-3">

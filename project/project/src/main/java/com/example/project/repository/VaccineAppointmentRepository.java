@@ -35,7 +35,19 @@ public interface VaccineAppointmentRepository extends JpaRepository<VaccineAppoi
 
     @Query("SELECT SUM(p.amount) FROM Payment p WHERE p.status = 'Completed' AND MONTH(p.paymentDate) = :month AND YEAR(p.paymentDate) = :year")
     Double getTotalRevenueByMonth(@Param("month") int month, @Param("year") int year);
+    
+    // Tính doanh thu dựa trên vaccine appointments đã hoàn thành
+    @Query("SELECT SUM(v.price) FROM VaccineAppointment va JOIN va.vaccine v WHERE va.status = 'Completed' AND MONTH(va.appointmentDate) = :month AND YEAR(va.appointmentDate) = :year")
+    Double getTotalRevenueByCompletedAppointments(@Param("month") int month, @Param("year") int year);
+    
+    // Tính doanh thu dựa trên tất cả vaccine appointments trong tháng (bao gồm cả pending, confirmed)
+    @Query("SELECT SUM(v.price) FROM VaccineAppointment va JOIN va.vaccine v WHERE MONTH(va.appointmentDate) = :month AND YEAR(va.appointmentDate) = :year AND va.status IN ('Pending', 'Confirmed', 'Completed')")
+    Double getTotalRevenueByAllAppointments(@Param("month") int month, @Param("year") int year);
 
     @Query("SELECT v.name, COUNT(va.id) FROM VaccineAppointment va JOIN va.vaccine v WHERE MONTH(va.appointmentDate) = :month AND YEAR(va.appointmentDate) = :year GROUP BY v.name")
     List<Object[]> getVaccineTypeCountByMonth(@Param("month") int month, @Param("year") int year);
+    
+    // Debug: Lấy tất cả vaccine appointments trong tháng để kiểm tra
+    @Query("SELECT va.id, va.status, va.appointmentDate, v.name, v.price FROM VaccineAppointment va JOIN va.vaccine v WHERE MONTH(va.appointmentDate) = :month AND YEAR(va.appointmentDate) = :year")
+    List<Object[]> getVaccineAppointmentsForDebug(@Param("month") int month, @Param("year") int year);
 }

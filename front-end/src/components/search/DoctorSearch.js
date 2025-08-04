@@ -32,6 +32,9 @@ function DoctorSearch() {
         const specialtiesResponse = await doctorService.getAllSpecialties()
         console.log("Fetched specialties:", specialtiesResponse)
         setSpecialties(Array.isArray(specialtiesResponse) ? specialtiesResponse : [])
+        
+        // Load recommended doctors on page load instead of all doctors
+        await loadRecommendedDoctors()
       } catch (error) {
         console.error("Error fetching initial data:", error)
         setMessage("Không thể tải dữ liệu ban đầu")
@@ -51,6 +54,23 @@ function DoctorSearch() {
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [])
 
+  const loadRecommendedDoctors = async () => {
+    setLoading(true)
+    setMessage("")
+    try {
+      const recommendedDoctors = await doctorService.getRecommendedDoctors(10)
+      setDoctors(recommendedDoctors)
+      setTotalPages(1)
+      setMessage("Bác sĩ được gợi ý dựa trên đánh giá cao")
+    } catch (error) {
+      console.error("Error loading recommended doctors:", error)
+      setMessage("Không thể tải danh sách bác sĩ được gợi ý")
+      setDoctors([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
   const handleSearch = async (e) => {
     e.preventDefault()
     setLoading(true)
@@ -63,8 +83,25 @@ function DoctorSearch() {
 
       console.log("Sent availabilityTimeUTC:", availabilityTimeUTC) // Debug log
 
+      // Clean up empty values before sending
+      const cleanCriteria = {}
+      Object.keys(searchCriteria).forEach(key => {
+        if (searchCriteria[key] !== null && searchCriteria[key] !== undefined && searchCriteria[key] !== "") {
+          cleanCriteria[key] = searchCriteria[key]
+        }
+      })
+
+      // Check if any search criteria is provided
+      const hasSearchCriteria = Object.keys(cleanCriteria).length > 0 || availabilityTimeUTC
+
+      if (!hasSearchCriteria) {
+        // If no search criteria, load recommended doctors
+        await loadRecommendedDoctors()
+        return
+      }
+
       const response = await doctorService.searchDoctors({
-        ...searchCriteria,
+        ...cleanCriteria,
         availabilityTime: availabilityTimeUTC,
         page,
         size: 10,
@@ -111,12 +148,7 @@ function DoctorSearch() {
     }
   }
 
-  const isFormValid =
-    searchCriteria.specialtyId ||
-    searchCriteria.fullName ||
-    searchCriteria.availabilityStatus ||
-    searchCriteria.location ||
-    searchCriteria.availabilityTime
+  const isFormValid = true // Allow search even with empty criteria to show all doctors
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-200">
@@ -261,9 +293,21 @@ function DoctorSearch() {
         {doctors.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-8">
-              <h3 className="text-3xl font-bold text-gray-800">Kết quả tìm kiếm bác sĩ</h3>
-              <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-full shadow-sm">
-                Tìm thấy {doctors.length} bác sĩ
+              <h3 className="text-3xl font-bold text-gray-800">
+                {message.includes("gợi ý") ? "Bác sĩ được gợi ý" : "Kết quả tìm kiếm bác sĩ"}
+              </h3>
+              <div className="flex items-center gap-4">
+                <div className="text-sm text-gray-500 bg-white px-4 py-2 rounded-full shadow-sm">
+                  {message.includes("gợi ý") ? `${doctors.length} bác sĩ được gợi ý` : `Tìm thấy ${doctors.length} bác sĩ`}
+                </div>
+                {message.includes("gợi ý") && (
+                  <button
+                    onClick={loadRecommendedDoctors}
+                    className="text-sm text-blue-600 hover:text-blue-800 font-medium"
+                  >
+                    Làm mới
+                  </button>
+                )}
               </div>
             </div>
 
@@ -277,7 +321,13 @@ function DoctorSearch() {
                     {/* Doctor Image Section */}
                     <div className="relative w-40 h-48 bg-gradient-to-br from-blue-100 to-indigo-100 flex-shrink-0">
                       <img
-                        src={doctor.imgs || "/images/default-doctor.jpg"}
+                        src={
+                          doctor.imgs 
+                            ? doctor.imgs.startsWith('http') 
+                              ? doctor.imgs 
+                              : `/${doctor.imgs.replace(/\\/g, '/')}`
+                            : "/images/default-doctor.jpg"
+                        }
                         alt={doctor.fullName}
                         className="w-28 h-28 object-cover rounded-full absolute top-6 left-6 border-4 border-white shadow-lg"
                       />
@@ -300,8 +350,12 @@ function DoctorSearch() {
                             <svg className="w-4 h-4 text-yellow-400 fill-current" viewBox="0 0 20 20">
                               <path d="M10 15l-5.878 3.09 1.123-6.545L.489 6.91l6.572-.955L10 0l2.939 5.955 6.572.955-4.756 4.635 1.123 6.545z" />
                             </svg>
-                            <span className="text-sm font-medium text-gray-700 ml-1">4.8</span>
-                            <span className="text-xs text-gray-500 ml-1">(156 đánh giá)</span>
+                            <span className="text-sm font-medium text-gray-700 ml-1">
+                              {doctor.averageRating ? doctor.averageRating.toFixed(1) : "4.8"}
+                            </span>
+                            <span className="text-xs text-gray-500 ml-1">
+                              ({doctor.feedbackCount || 156} đánh giá)
+                            </span>
                           </div>
                           <div className="w-1 h-1 bg-gray-300 rounded-full"></div>
                           <span className="text-sm text-gray-600">15+ năm kinh nghiệm</span>

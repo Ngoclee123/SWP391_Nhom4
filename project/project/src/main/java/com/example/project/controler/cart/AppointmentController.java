@@ -152,6 +152,25 @@ public class AppointmentController {
     @PutMapping("/{id}/status")
     public ResponseEntity<?> updateStatus(@PathVariable int id, @RequestParam String status) {
         try {
+            // Security check: chỉ cho phép doctor update appointment của chính họ
+            Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+            if (authentication == null || !authentication.isAuthenticated()) {
+                return ResponseEntity.status(401).body("{\"error\": \"Unauthorized\", \"message\": \"Full authentication is required\"}");
+            }
+            
+            // Lấy appointment để kiểm tra doctor
+            Appointment appointment = appointmentService.getAppointmentById(id);
+            if (appointment == null) {
+                return ResponseEntity.status(404).body("{\"error\": \"Not Found\", \"message\": \"Appointment not found\"}");
+            }
+            
+            // Kiểm tra xem user hiện tại có phải là doctor của appointment này không
+            String username = authentication.getName();
+            Integer accountIdInToken = doctorService.getAccountIdByUsername(username);
+            if (accountIdInToken == null || !appointment.getDoctor().getAccountId().equals(accountIdInToken)) {
+                return ResponseEntity.status(403).body("{\"error\": \"Forbidden\", \"message\": \"You can only update your own appointments\"}");
+            }
+            
             appointmentService.updateAppointmentStatus(id, status);
             return ResponseEntity.ok("{\"message\": \"Cập nhật trạng thái thành công!\"}");
         } catch (RuntimeException e) {

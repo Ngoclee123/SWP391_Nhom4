@@ -51,9 +51,31 @@ public class AppointmentService {
             specialty = specialtyRepository.findById(requestDTO.getSpecialtyId())
                     .orElseThrow(() -> new EntityNotFoundException("Specialty not found with ID: " + requestDTO.getSpecialtyId()));
         }
-        // Bỏ xử lý service nếu serviceId null hoặc repository chưa được inject
-
-        // 2. Tạo đối tượng Appointment mới
+        
+        // 2. Kiểm tra xem slot đã được book hay chưa
+        LocalDateTime appointmentDate = requestDTO.getAppointmentDate();
+        if (appointmentDate != null) {
+            LocalDateTime startOfDay = appointmentDate.toLocalDate().atStartOfDay();
+            LocalDateTime endOfDay = appointmentDate.toLocalDate().plusDays(1).atStartOfDay();
+            
+            // Lấy tất cả appointments của bác sĩ trong ngày
+            List<Appointment> existingAppointments = appointmentRepository.findByDoctorIdAndAppointmentDateBetween(
+                    requestDTO.getDoctorId(), startOfDay, endOfDay);
+            
+            // Kiểm tra xem có appointment nào trùng thời gian không
+            for (Appointment existingAppointment : existingAppointments) {
+                LocalDateTime existingStart = existingAppointment.getAppointmentDate();
+                LocalDateTime existingEnd = existingStart.plusMinutes(existingAppointment.getDuration() != null ? existingAppointment.getDuration() : 60);
+                LocalDateTime newEnd = appointmentDate.plusMinutes(requestDTO.getDuration() != null ? requestDTO.getDuration() : 60);
+                
+                // Kiểm tra overlap
+                if (!(appointmentDate.isAfter(existingEnd) || newEnd.isBefore(existingStart))) {
+                    throw new IllegalStateException("Slot này đã được đặt lịch. Vui lòng chọn thời gian khác.");
+                }
+            }
+        }
+        
+        // 3. Tạo đối tượng Appointment mới
         Appointment appointment = new Appointment();
 
         // 3. Gán các ĐỐI TƯỢNG (không phải ID) vào appointment

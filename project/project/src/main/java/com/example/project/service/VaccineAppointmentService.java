@@ -495,15 +495,77 @@ public class VaccineAppointmentService {
 
     public VaccineStatisticsDTO getVaccineStatistics(int month, int year) {
         VaccineStatisticsDTO dto = new VaccineStatisticsDTO();
-        Double totalRevenue = vaccineAppointmentRepository.getTotalRevenueByMonth(month, year);
+        
+        // Tính doanh thu dựa trên tất cả vaccine appointments trong tháng (Pending, Confirmed, Completed)
+        Double totalRevenue = vaccineAppointmentRepository.getTotalRevenueByAllAppointments(month, year);
+        
+        // Nếu không có doanh thu từ appointments, thử tính từ completed appointments
+        if (totalRevenue == null || totalRevenue == 0) {
+            totalRevenue = vaccineAppointmentRepository.getTotalRevenueByCompletedAppointments(month, year);
+        }
+        
+        // Nếu vẫn không có, thử tính từ payments
+        if (totalRevenue == null || totalRevenue == 0) {
+            totalRevenue = vaccineAppointmentRepository.getTotalRevenueByMonth(month, year);
+        }
+        
         dto.setTotalRevenue(totalRevenue != null ? totalRevenue : 0);
+        
         Map<String, Integer> typeCount = new java.util.HashMap<>();
         for (Object[] row : vaccineAppointmentRepository.getVaccineTypeCountByMonth(month, year)) {
             typeCount.put((String) row[0], ((Number) row[1]).intValue());
         }
         dto.setVaccineTypeCount(typeCount);
         dto.setVaccineCategoryCount(new java.util.HashMap<>()); // Nếu có danh mục, bổ sung sau
+        
+        // Log để debug
+        logger.info("Vaccine statistics for {}/{}: totalRevenue={}, typeCount={}", month, year, totalRevenue, typeCount);
+        
         return dto;
+    }
+    
+    public Map<String, Object> getVaccineStatisticsDebug(int month, int year) {
+        Map<String, Object> debugInfo = new java.util.HashMap<>();
+        
+        // Lấy doanh thu từ payments
+        Double revenueFromPayments = vaccineAppointmentRepository.getTotalRevenueByMonth(month, year);
+        debugInfo.put("revenueFromPayments", revenueFromPayments);
+        
+        // Lấy doanh thu từ completed appointments
+        Double revenueFromCompletedAppointments = vaccineAppointmentRepository.getTotalRevenueByCompletedAppointments(month, year);
+        debugInfo.put("revenueFromCompletedAppointments", revenueFromCompletedAppointments);
+        
+        // Lấy doanh thu từ tất cả appointments (Pending, Confirmed, Completed)
+        Double revenueFromAllAppointments = vaccineAppointmentRepository.getTotalRevenueByAllAppointments(month, year);
+        debugInfo.put("revenueFromAllAppointments", revenueFromAllAppointments);
+        
+        // Lấy tất cả appointments trong tháng để debug
+        List<Object[]> appointments = vaccineAppointmentRepository.getVaccineAppointmentsForDebug(month, year);
+        List<Map<String, Object>> appointmentDetails = new java.util.ArrayList<>();
+        
+        for (Object[] row : appointments) {
+            Map<String, Object> detail = new java.util.HashMap<>();
+            detail.put("id", row[0]);
+            detail.put("status", row[1]);
+            detail.put("appointmentDate", row[2]);
+            detail.put("vaccineName", row[3]);
+            detail.put("vaccinePrice", row[4]);
+            appointmentDetails.add(detail);
+        }
+        
+        debugInfo.put("appointments", appointmentDetails);
+        debugInfo.put("totalAppointments", appointments.size());
+        
+        // Lấy số lượng theo loại vaccine
+        Map<String, Integer> typeCount = new java.util.HashMap<>();
+        for (Object[] row : vaccineAppointmentRepository.getVaccineTypeCountByMonth(month, year)) {
+            typeCount.put((String) row[0], ((Number) row[1]).intValue());
+        }
+        debugInfo.put("typeCount", typeCount);
+        
+        logger.info("Debug info for {}/{}: {}", month, year, debugInfo);
+        
+        return debugInfo;
     }
 
     // API cho user gửi yêu cầu hủy lịch vaccine

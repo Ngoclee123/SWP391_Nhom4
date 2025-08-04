@@ -27,6 +27,7 @@ import VaccinesList from './components/vacin/VaccinesList';
 import ForgotPassword from './components/ForgotPassword';
 import ResetPassword from './components/ResetPassword';
 import AddPatientPage from './components/vacin/AddPatientPage';
+import PatientListPage from './components/vacin/PatientListPage';
 import { handleOAuthRedirect } from './api/axiosClient'; // Import hàm từ axiosClient
 import ConfirmationPage from './components/vacin/ConfirmationPage';
 import VaccineHistory from './components/vacin/VaccineHistory';
@@ -149,6 +150,7 @@ function AppRoutes() {
                   <Route path="/vaccines" element={<VaccinesList />} />
                   <Route path="/vaccines/:vaccineId" element={<VaccineAppointment />} />
                   <Route path="/add-patient" element={<AddPatientPage />} />
+                  <Route path="/patients" element={<PatientListPage />} />
                   <Route path="/home" element={<Home onOpenModal={() => setIsModalOpen(true)} />} />
                   <Route path="/search-doctors" element={<DoctorSearch />} />
                   <Route path="/book-appointment" element={<AppointmentForm />} />
@@ -186,6 +188,8 @@ function AppRoutes() {
 
 function Home({ onOpenModal }) {
   const location = useLocation();
+  const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [newPatientName, setNewPatientName] = useState("");
 
   useEffect(() => {
     if (location.pathname === '/home' || location.pathname === '/') {
@@ -199,10 +203,50 @@ function Home({ onOpenModal }) {
         element.scrollIntoView({ behavior: 'smooth' });
       }
     }
+
+    // Xử lý thông báo thành công khi thêm bé mới
+    if (location.state?.newPatient) {
+      setNewPatientName(location.state.newPatient.fullName);
+      setShowSuccessMessage(true);
+      
+      // Tự động ẩn thông báo sau 5 giây
+      const timer = setTimeout(() => {
+        setShowSuccessMessage(false);
+        setNewPatientName("");
+      }, 5000);
+
+      // Clear state để tránh hiển thị lại khi refresh
+      window.history.replaceState({}, document.title);
+
+      return () => clearTimeout(timer);
+    }
   }, [location]);
 
   return (
     <>
+      {/* Success Message */}
+      {showSuccessMessage && (
+        <div className="fixed top-20 left-1/2 transform -translate-x-1/2 z-50 animate-slide-down">
+          <div className="bg-green-500 text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <div>
+              <p className="font-semibold">Thành công!</p>
+              <p>Đã thêm bé <span className="font-bold">{newPatientName}</span> vào hệ thống.</p>
+            </div>
+            <button
+              onClick={() => setShowSuccessMessage(false)}
+              className="ml-4 text-white/80 hover:text-white transition-colors"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+          </div>
+        </div>
+      )}
+
       <Hero onOpenModal={onOpenModal} />
       <div id="services" className="min-h-screen">
         <Services />
@@ -218,6 +262,14 @@ function Home({ onOpenModal }) {
       <div id="contact" className="min-h-screen">
         <Contact onOpenModal={onOpenModal} />
       </div>
+
+      <style>{`
+        @keyframes slide-down {
+          from { opacity: 0; transform: translateY(-10px) translateX(-50%); }
+          to { opacity: 1; transform: translateY(0) translateX(-50%); }
+        }
+        .animate-slide-down { animation: slide-down 0.4s ease-out; }
+      `}</style>
     </>
   );
 }

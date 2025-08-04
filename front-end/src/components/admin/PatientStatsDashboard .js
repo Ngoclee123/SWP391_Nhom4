@@ -74,18 +74,8 @@ const PatientStatsDashboard = React.memo(() => {
 
   return (
     <div className="space-y-8 p-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-3xl font-bold text-gray-900">Thống kê bệnh nhân</h2>
-          <p className="mt-1 text-sm text-gray-500">
-            Tổng quan về tình hình bệnh nhân trong hệ thống
-          </p>
-        </div>
-        <div className="flex items-center space-x-2">
-          <Activity className="h-5 w-5 text-blue-500" />
-          <span className="text-sm text-gray-500">Cập nhật thời gian thực</span>
-        </div>
+      <div className="mb-6">
+        <h2 className="text-3xl font-bold text-gray-900">Thống kê Bệnh nhân</h2>
       </div>
 
       {/* Stat Cards */}

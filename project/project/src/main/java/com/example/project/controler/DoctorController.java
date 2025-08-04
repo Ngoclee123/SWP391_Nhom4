@@ -504,6 +504,19 @@ public class DoctorController {
         }
     }
 
+    @GetMapping("/recommended")
+    public ResponseEntity<List<DoctorSearchDTO>> getRecommendedDoctors(
+            @RequestParam(defaultValue = "10") int limit) {
+        logger.info("GET request to /api/doctors/recommended with limit: {}", limit);
+        try {
+            List<DoctorSearchDTO> recommendedDoctors = doctorService.getRecommendedDoctors(limit);
+            return ResponseEntity.ok(recommendedDoctors);
+        } catch (Exception e) {
+            logger.error("Error fetching recommended doctors: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
     // ADMIN: Thêm mới bác sĩ (trả về kèm certificates)
     @PostMapping("")
     public ResponseEntity<?> createDoctor(@RequestBody @Valid com.example.project.dto.DoctorDTO doctor) {

@@ -40,9 +40,10 @@ public class DoctorSpecification {
                 ));
             }
 
-            if (availabilityStatus != null || availabilityTime != null) {
-                Join<Doctor, DoctorAvailability> availabilityJoin = root.join("availabilities", JoinType.INNER);
-
+            // Handle availability status and time together to avoid duplicate joins
+            if ((availabilityStatus != null && !availabilityStatus.trim().isEmpty()) || availabilityTime != null) {
+                Join<Doctor, DoctorAvailability> availabilityJoin = root.join("availabilities", JoinType.LEFT);
+                
                 if (availabilityStatus != null && !availabilityStatus.trim().isEmpty()) {
                     predicates.add(criteriaBuilder.equal(availabilityJoin.get("status"), availabilityStatus.trim()));
                 }
@@ -57,6 +58,12 @@ public class DoctorSpecification {
             }
 
             query.distinct(true);
+            
+            // If no predicates, return all doctors
+            if (predicates.isEmpty()) {
+                return criteriaBuilder.conjunction();
+            }
+            
             return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
         };
     }

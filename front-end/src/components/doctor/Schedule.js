@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import DoctorDashboardService from "../../service/DoctorDashboardService"
-import { FaCalendarAlt, FaClock, FaEdit, FaPlus } from "react-icons/fa"
+import { FaCalendarAlt, FaClock, FaEdit, FaPlus, FaChevronLeft, FaChevronRight } from "react-icons/fa"
 
 function Schedule({ doctorId }) {
   const [schedule, setSchedule] = useState([])
@@ -11,25 +11,31 @@ function Schedule({ doctorId }) {
   const [editId, setEditId] = useState(null)
   const [showForm, setShowForm] = useState(false)
   const [slotMinutes, setSlotMinutes] = useState(60);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(0)
+  const [totalPages, setTotalPages] = useState(1)
+  const [totalElements, setTotalElements] = useState(0)
+  const [pageSize, setPageSize] = useState(10)
 
   useEffect(() => {
     if (!doctorId) return
-    setLoading(true)
-    DoctorDashboardService.getScheduleByDoctorId(doctorId)
-      .then((data) => {
-        setSchedule(Array.isArray(data) ? data : [])
-        setLoading(false)
-      })
-      .catch(() => {
-        setSchedule([])
-        setLoading(false)
-      })
-  }, [doctorId])
+    fetchSchedules()
+  }, [doctorId, currentPage, pageSize])
 
   const fetchSchedules = async () => {
     setLoading(true)
-    const data = await DoctorDashboardService.getScheduleByDoctorId(doctorId)
-    setSchedule(Array.isArray(data) ? data : [])
+    try {
+      const data = await DoctorDashboardService.getScheduleByDoctorIdPaginated(doctorId, currentPage, pageSize)
+      setSchedule(Array.isArray(data.content) ? data.content : [])
+      setTotalPages(data.totalPages || 1)
+      setTotalElements(data.totalElements || 0)
+    } catch (error) {
+      console.error('Error fetching schedules:', error)
+      setSchedule([])
+      setTotalPages(1)
+      setTotalElements(0)
+    }
     setLoading(false)
   }
 
@@ -75,6 +81,35 @@ function Schedule({ doctorId }) {
       fetchSchedules();
     }
   };
+
+  // Pagination handlers
+  const handlePrevPage = () => {
+    setCurrentPage(prev => Math.max(prev - 1, 0))
+  }
+
+  const handleNextPage = () => {
+    setCurrentPage(prev => Math.min(prev + 1, totalPages - 1))
+  }
+
+  const handlePageChange = (page) => {
+    setCurrentPage(page)
+  }
+
+  const getPageNumbers = () => {
+    const pages = []
+    if (totalPages <= 7) {
+      for (let i = 0; i < totalPages; i++) pages.push(i)
+    } else {
+      if (currentPage < 4) {
+        pages.push(0, 1, 2, 3, 4, -1, totalPages - 1)
+      } else if (currentPage > totalPages - 5) {
+        pages.push(0, -1, totalPages - 5, totalPages - 4, totalPages - 3, totalPages - 2, totalPages - 1)
+      } else {
+        pages.push(0, -1, currentPage - 1, currentPage, currentPage + 1, -1, totalPages - 1)
+      }
+    }
+    return pages
+  }
 
   if (loading) {
     return (
@@ -186,61 +221,140 @@ function Schedule({ doctorId }) {
           </div>
         </div>
       ) : (
-        <ul className="space-y-4">
-          {schedule.map((item) => {
-            const start = new Date(item.startTime)
-            const end = new Date(item.endTime)
-            return (
-              <li
-                key={item.id}
-                className="flex items-center justify-between bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/30 rounded-2xl p-6 shadow-lg hover:shadow-xl border border-white/50 hover:border-blue-200 transition-all duration-300 group"
-              >
-                <div className="flex-1">
-                  <div className="font-bold text-xl text-gray-800 mb-2">
-                    {start.toLocaleDateString("vi-VN", {
-                      weekday: "long",
-                      day: "2-digit",
-                      month: "2-digit",
-                      year: "numeric",
-                    })}
+        <>
+          <ul className="space-y-4 mb-8">
+            {schedule.map((item) => {
+              const start = new Date(item.startTime)
+              const end = new Date(item.endTime)
+              return (
+                <li
+                  key={item.id}
+                  className="flex items-center justify-between bg-gradient-to-r from-white via-blue-50/50 to-indigo-50/30 rounded-2xl p-6 shadow-lg hover:shadow-xl border border-white/50 hover:border-blue-200 transition-all duration-300 group"
+                >
+                  <div className="flex-1">
+                    <div className="font-bold text-xl text-gray-800 mb-2">
+                      {start.toLocaleDateString("vi-VN", {
+                        weekday: "long",
+                        day: "2-digit",
+                        month: "2-digit",
+                        year: "numeric",
+                      })}
+                    </div>
+                    <div className="flex items-center text-gray-600 text-lg">
+                      <FaClock className="mr-2 text-blue-500" />
+                      <span className="font-medium">
+                        {start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} -{" "}
+                        {end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                      </span>
+                    </div>
                   </div>
-                  <div className="flex items-center text-gray-600 text-lg">
-                    <FaClock className="mr-2 text-blue-500" />
-                    <span className="font-medium">
-                      {start.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })} -{" "}
-                      {end.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                  <div className="flex items-center gap-4">
+                    <span
+                      className={`px-4 py-2 rounded-full text-sm font-semibold shadow-sm ${
+                        item.status === "Available"
+                          ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200"
+                          : "bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 border border-gray-200"
+                      }`}
+                    >
+                      {item.status === "Available" ? "Sẵn sàng" : item.status}
                     </span>
+                    <button
+                      className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all duration-200 group-hover:bg-blue-100"
+                      onClick={() => handleEdit(item)}
+                    >
+                      <FaEdit />
+                      Sửa
+                    </button>
+                    <button
+                      className="flex items-center gap-2 text-red-600 hover:text-red-800 font-semibold px-4 py-2 rounded-xl hover:bg-red-50 transition-all duration-200 group-hover:bg-red-100"
+                      onClick={() => handleDelete(item.id)}
+                    >
+                      🗑️
+                      Xóa
+                    </button>
                   </div>
+                </li>
+              )
+            })}
+          </ul>
+
+          {/* Pagination */}
+          {totalPages > 1 && (
+            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-white/20 p-6">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-gray-600">
+                  Trang {currentPage + 1} / {totalPages} (Tổng {totalElements} lịch làm việc)
                 </div>
-                <div className="flex items-center gap-4">
-                  <span
-                    className={`px-4 py-2 rounded-full text-sm font-semibold shadow-sm ${
-                      item.status === "Available"
-                        ? "bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 border border-green-200"
-                        : "bg-gradient-to-r from-gray-100 to-slate-100 text-gray-600 border border-gray-200"
+
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={handlePrevPage}
+                    disabled={currentPage === 0}
+                    className={`flex items-center gap-1 px-4 py-2 rounded-xl border transition-all duration-200 ${
+                      currentPage === 0
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
                     }`}
                   >
-                    {item.status === "Available" ? "Sẵn sàng" : item.status}
-                  </span>
-                  <button
-                    className="flex items-center gap-2 text-blue-600 hover:text-blue-800 font-semibold px-4 py-2 rounded-xl hover:bg-blue-50 transition-all duration-200 group-hover:bg-blue-100"
-                    onClick={() => handleEdit(item)}
-                  >
-                    <FaEdit />
-                    Sửa
+                    <FaChevronLeft className="w-4 h-4" />
+                    Trước
                   </button>
+
+                  <div className="flex items-center space-x-1">
+                    {getPageNumbers().map((page, idx) =>
+                      page === -1 ? (
+                        <span key={idx} className="px-2 py-1 text-gray-400">
+                          ...
+                        </span>
+                      ) : (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`w-10 h-10 rounded-xl transition-all duration-200 ${
+                            currentPage === page
+                              ? "bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg"
+                              : "bg-white text-gray-700 hover:bg-blue-50 border border-gray-200"
+                          }`}
+                        >
+                          {page + 1}
+                        </button>
+                      ),
+                    )}
+                  </div>
+
                   <button
-                    className="flex items-center gap-2 text-red-600 hover:text-red-800 font-semibold px-4 py-2 rounded-xl hover:bg-red-50 transition-all duration-200 group-hover:bg-red-100"
-                    onClick={() => handleDelete(item.id)}
+                    onClick={handleNextPage}
+                    disabled={currentPage >= totalPages - 1}
+                    className={`flex items-center gap-1 px-4 py-2 rounded-xl border transition-all duration-200 ${
+                      currentPage >= totalPages - 1
+                        ? "bg-gray-100 text-gray-400 border-gray-200 cursor-not-allowed"
+                        : "bg-white text-gray-700 border-gray-200 hover:bg-gray-50 hover:border-gray-300"
+                    }`}
                   >
-                    🗑️
-                    Xóa
+                    Sau
+                    <FaChevronRight className="w-4 h-4" />
                   </button>
                 </div>
-              </li>
-            )
-          })}
-        </ul>
+
+                <div className="text-sm text-gray-600">
+                  <select
+                    value={pageSize}
+                    onChange={(e) => {
+                      setPageSize(Number(e.target.value))
+                      setCurrentPage(0)
+                    }}
+                    className="border border-gray-200 rounded-lg px-2 py-1 bg-white"
+                  >
+                    <option value={5}>5 / trang</option>
+                    <option value={10}>10 / trang</option>
+                    <option value={20}>20 / trang</option>
+                    <option value={50}>50 / trang</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   )

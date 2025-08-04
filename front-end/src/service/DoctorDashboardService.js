@@ -41,6 +41,17 @@ class DoctorDashboardService {
     }
   }
 
+  async getScheduleByDoctorIdPaginated(doctorId, page = 0, size = 10) {
+    const url = `/api/doctor-availability/doctor/${doctorId}/paginated?page=${page}&size=${size}`;
+    try {
+      const response = await axiosClient.get(url);
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching paginated schedule:', error.response?.data || error.message);
+      return { content: [], totalPages: 0, totalElements: 0, currentPage: 0 };
+    }
+  }
+
   async getAppointmentsByDoctorId(doctorId) {
     const url = `/api/appointments/doctor/${doctorId}`;
     try {

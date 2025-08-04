@@ -98,11 +98,6 @@ const AppointmentStatsDashboard = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Thống kê Appointments</h1>
-        <p className="text-gray-600">Tổng quan về appointments trong hệ thống</p>
-      </div>
-
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow p-6">
@@ -113,7 +108,7 @@ const AppointmentStatsDashboard = () => {
               </svg>
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-600">Tổng Appointments</p>
+              <p className="text-sm font-medium text-gray-600">Tổng lịch hẹn</p>
               <p className="text-2xl font-bold text-gray-900">{stats.totalAppointments || 0}</p>
             </div>
           </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import DoctorDetailService from "../../service/DoctorDetailService";
 import userService from "../../service/userService";
+import feedbackService from "../../service/FeedbackService";
 
 
 import DatePicker from "react-datepicker";
@@ -40,6 +41,12 @@ function DoctorDetail() {
   const [error, setError] = useState(null);
 
 
+  // Thêm state cho feedback data và calculated rating
+  const [feedbacks, setFeedbacks] = useState([]);
+  const [calculatedRating, setCalculatedRating] = useState(0);
+  const [feedbackCount, setFeedbackCount] = useState(0);
+
+
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [availableSlots, setAvailableSlots] = useState([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
@@ -59,6 +66,7 @@ function DoctorDetail() {
         try {
           const response = await DoctorDetailService.getDoctorById(id);
           console.log("DoctorDetail fetched doctor:", response);
+          console.log("Doctor image path:", response?.imgs);
           setDoctor(response);
         } catch (err) {
           setError("Không thể tải thông tin bác sĩ. Vui lòng thử lại sau.");
@@ -78,7 +86,11 @@ function DoctorDetail() {
         setSlotsLoading(true);
         setAvailableSlots([]);
         try {
-          const dateString = selectedDate.toISOString().split("T")[0];
+          // Format date in local timezone to avoid timezone conversion issues
+          const year = selectedDate.getFullYear();
+          const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+          const day = String(selectedDate.getDate()).padStart(2, '0');
+          const dateString = `${year}-${month}-${day}`;
           const slots = await DoctorDetailService.getAvailableSlots(
             id,
             dateString
@@ -96,6 +108,41 @@ function DoctorDetail() {
       fetchAvailableSlots();
     }
   }, [id, selectedDate]);
+
+  // Thêm useEffect để fetch feedback data và tính toán rating
+  useEffect(() => {
+    if (id) {
+      const fetchFeedbackData = async () => {
+        try {
+          console.log("Fetching feedback data for doctor ID:", id);
+          const feedbackData = await feedbackService.getFeedbacksForDoctor(id);
+          console.log("Feedback data received:", feedbackData);
+          
+          setFeedbacks(feedbackData);
+          
+          // Tính toán average rating và feedback count
+          if (feedbackData && feedbackData.length > 0) {
+            const totalRating = feedbackData.reduce((sum, feedback) => sum + (feedback.rating || 0), 0);
+            const averageRating = totalRating / feedbackData.length;
+            const count = feedbackData.length;
+            
+            console.log("Calculated rating:", averageRating, "Count:", count);
+            setCalculatedRating(averageRating);
+            setFeedbackCount(count);
+          } else {
+            setCalculatedRating(0);
+            setFeedbackCount(0);
+          }
+        } catch (err) {
+          console.error("Error fetching feedback data:", err);
+          setCalculatedRating(0);
+          setFeedbackCount(0);
+        }
+      };
+      
+      fetchFeedbackData();
+    }
+  }, [id]);
 
 
   useEffect(() => {
@@ -198,6 +245,16 @@ function DoctorDetail() {
     );
   }
 
+  // Debug logging
+  if (doctor) {
+    console.log("Doctor data in render:", {
+      id: doctor.id,
+      fullName: doctor.fullName,
+      imgs: doctor.imgs,
+      specialtyName: doctor.specialtyName
+    });
+  }
+
 
   if (error || !doctor) {
     return (
@@ -230,6 +287,37 @@ function DoctorDetail() {
     }
   };
 
+  const handleBookingSuccess = () => {
+    // Refresh available slots after successful booking
+    if (id && selectedDate) {
+      const fetchAvailableSlots = async () => {
+        setSlotsLoading(true);
+        setAvailableSlots([]);
+        try {
+          // Format date in local timezone to avoid timezone conversion issues
+          const year = selectedDate.getFullYear();
+          const month = String(selectedDate.getMonth() + 1).padStart(2, '0');
+          const day = String(selectedDate.getDate()).padStart(2, '0');
+          const dateString = `${year}-${month}-${day}`;
+          const slots = await DoctorDetailService.getAvailableSlots(
+            id,
+            dateString
+          );
+          const sortedSlots = Array.isArray(slots)
+            ? slots.sort((a, b) => a.startTime.localeCompare(b.startTime))
+            : [];
+          setAvailableSlots(sortedSlots);
+        } catch (err) {
+          console.error("Error fetching available slots:", err);
+        } finally {
+          setSlotsLoading(false);
+        }
+      };
+      fetchAvailableSlots();
+    }
+    setShowBookingModal(false);
+  };
+
 
   const groupSlotsBySession = (slots) => {
     const morning = [];
@@ -258,10 +346,17 @@ function DoctorDetail() {
             <div className="flex flex-col md:flex-row items-center text-white">
               <div className="relative mb-6 md:mb-0 md:mr-8">
                 <img
-                  src={doctor.imgs}
+                  src={
+                    doctor.imgs 
+                      ? doctor.imgs.startsWith('http') 
+                        ? doctor.imgs 
+                        : `/${doctor.imgs.replace(/\\/g, '/')}`
+                      : "/images/default-doctor.jpg"
+                  }
                   alt={doctor.fullName}
                   className="w-32 h-32 rounded-full border-4 border-white shadow-lg object-cover"
                   onError={(e) => {
+                    console.log("Image failed to load:", doctor.imgs);
                     e.target.src = `https://ui-avatars.com/api/?name=${encodeURIComponent(
                       doctor.fullName || "Unknown"
                     )}&size=128&background=60a5fa&color=ffffff`;
@@ -286,9 +381,11 @@ function DoctorDetail() {
                   <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
                     <FaStar className="text-yellow-400 mr-1" />
                     <span className="font-semibold">
-                      {doctor.rating || "N/A"}
+                      {calculatedRating > 0 ? calculatedRating.toFixed(1) : "N/A"}
                     </span>
-                    <span className="text-blue-100 ml-1">(đánh giá)</span>
+                    <span className="text-blue-100 ml-1">
+                      ({feedbackCount} đánh giá)
+                    </span>
                   </div>
                   <div className="flex items-center bg-white bg-opacity-20 rounded-full px-3 py-1">
                     <FaGraduationCap className="mr-2" />
@@ -572,9 +669,10 @@ function DoctorDetail() {
       {showBookingModal && selectedSlot && (
         <BookingModal
           doctorId={id}
-          selectedDate={selectedDate.toISOString().split("T")[0]}
+          selectedDate={`${selectedDate.getFullYear()}-${String(selectedDate.getMonth() + 1).padStart(2, '0')}-${String(selectedDate.getDate()).padStart(2, '0')}`}
           selectedTime={selectedSlot.startTime}
           onClose={() => setShowBookingModal(false)}
+          onBookingSuccess={handleBookingSuccess}
         />
       )}
     </div>

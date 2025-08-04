@@ -71,9 +71,31 @@ const VaccineAppointment = () => {
     fetchData()
 
     if (location.state?.newPatient) {
-      setPatients((prev) => [...prev, location.state.newPatient])
-      setFormData((prev) => ({ ...prev, patientId: location.state.newPatient.id }))
-      setMessage("Đã thêm bé mới thành công!")
+      // Refresh lại danh sách bé từ server
+      const refreshPatients = async () => {
+        try {
+          const patientsRes = await VaccineAppointmentService.getPatients()
+          const patientsData = Array.isArray(patientsRes) ? patientsRes : patientsRes.data || []
+          setPatients(
+            patientsData.map((patient) => ({
+              id: patient.id || patient.patient_id,
+              fullName: patient.fullName || patient.full_name,
+            })),
+          )
+          // Tự động chọn bé mới
+          setFormData((prev) => ({ ...prev, patientId: location.state.newPatient.id }))
+          setMessage("Đã thêm bé mới thành công!")
+          // Clear state để tránh chọn lại khi refresh
+          navigate(location.pathname, { replace: true, state: {} })
+        } catch (err) {
+          console.error("Error refreshing patients:", err)
+          // Fallback: thêm vào state local
+          setPatients((prev) => [...prev, location.state.newPatient])
+          setFormData((prev) => ({ ...prev, patientId: location.state.newPatient.id }))
+          setMessage("Đã thêm bé mới thành công!")
+        }
+      }
+      refreshPatients()
     }
   }, [navigate, vaccineId, location.state])
 
@@ -396,17 +418,30 @@ const VaccineAppointment = () => {
                       ))}
                     </select>
 
-                    <button
-                      type="button"
-                      onClick={() => navigate("/add-patient", { state: { vaccineId } })}
-                      className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
-                      disabled={isFormDisabled}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-                      </svg>
-                      Thêm bé mới
-                    </button>
+                    <div className="flex flex-col sm:flex-row gap-2">
+                      <button
+                        type="button"
+                        onClick={() => navigate("/add-patient", { state: { vaccineId } })}
+                        className="flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium transition-colors duration-200"
+                        disabled={isFormDisabled}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                        </svg>
+                        Thêm bé mới
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => navigate("/patients")}
+                        className="flex items-center gap-2 text-indigo-600 hover:text-indigo-700 font-medium transition-colors duration-200"
+                        disabled={isFormDisabled}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197m13.5-9a2.5 2.5 0 11-5 0 2.5 2.5 0 015 0z" />
+                        </svg>
+                        Quản lý bé
+                      </button>
+                    </div>
                   </div>
                 </div>
 

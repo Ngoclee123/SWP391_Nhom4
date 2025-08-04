@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -56,6 +57,17 @@ public class DoctorService {
             Pageable pageable) {
         logger.info("Searching doctors with criteria: specialtyId={}, fullName={}, availabilityStatus={}, location={}, availabilityTime={}",
                 specialtyId, fullName, availabilityStatus, location, availabilityTime);
+
+        // Clean up empty strings
+        if (fullName != null && fullName.trim().isEmpty()) {
+            fullName = null;
+        }
+        if (availabilityStatus != null && availabilityStatus.trim().isEmpty()) {
+            availabilityStatus = null;
+        }
+        if (location != null && location.trim().isEmpty()) {
+            location = null;
+        }
 
         Instant searchTime = null;
         if (availabilityTime != null && !availabilityTime.trim().isEmpty()) {
@@ -258,6 +270,10 @@ public class DoctorService {
                         .collect(Collectors.toList()));
             }
 
+            // Tính rating trung bình và số lượng feedback
+            // Đã chuyển sang tính ở frontend theo yêu cầu trước đó
+            // Không cần tính ở đây nữa
+
             return dto;
         } catch (Exception e) {
             logger.error("Error mapping doctor to DTO: {}", e.getMessage());
@@ -389,6 +405,84 @@ public class DoctorService {
         }
         doctorRepository.deleteById(id);
         return true;
+    }
+
+    // Lấy danh sách bác sĩ được gợi ý dựa trên đánh giá cao
+    public List<DoctorSearchDTO> getRecommendedDoctors(int limit) {
+        logger.info("Fetching recommended doctors with limit: {}", limit);
+        
+        try {
+            // Lấy tất cả doctors và giới hạn số lượng
+            List<Doctor> allDoctors = doctorRepository.findAll();
+            List<Doctor> limitedDoctors = allDoctors.stream()
+                .limit(limit)
+                .collect(Collectors.toList());
+            
+            List<DoctorSearchDTO> recommendedDoctors = new ArrayList<>();
+            
+            for (Doctor doctor : limitedDoctors) {
+                DoctorSearchDTO dto = new DoctorSearchDTO();
+                dto.setId(doctor.getId());
+                dto.setFullName(doctor.getFullName());
+                dto.setBio(doctor.getBio());
+                dto.setPhoneNumber(doctor.getPhoneNumber());
+                dto.setImgs(doctor.getImgs());
+                dto.setLocational(doctor.getLocational());
+                dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+                dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+                
+                // Rating sẽ được tính ở frontend theo yêu cầu trước đó
+                // Không cần set averageRating và feedbackCount ở đây
+                
+                // Map certificates
+                dto.setCertificates(
+                    doctor.getCertificates() != null
+                        ? doctor.getCertificates().stream().map(c -> c.getCertificateName()).collect(java.util.stream.Collectors.toList())
+                        : new java.util.ArrayList<>()
+                );
+                
+                recommendedDoctors.add(dto);
+            }
+            
+            logger.info("Successfully fetched {} recommended doctors", recommendedDoctors.size());
+            return recommendedDoctors;
+            
+        } catch (Exception e) {
+            logger.error("Error fetching recommended doctors: {}", e.getMessage());
+            return new ArrayList<>();
+        }
+    }
+
+    // Lấy danh sách bác sĩ online
+    public List<DoctorSearchDTO> getOnlineDoctors() {
+        logger.info("Fetching online doctors");
+        try {
+            List<Doctor> onlineDoctors = doctorRepository.findOnlineDoctors();
+            return onlineDoctors.stream().map(doctor -> {
+                DoctorSearchDTO dto = new DoctorSearchDTO();
+                dto.setId(doctor.getId());
+                dto.setFullName(doctor.getFullName());
+                dto.setBio(doctor.getBio());
+                dto.setPhoneNumber(doctor.getPhoneNumber());
+                dto.setImgs(doctor.getImgs());
+                dto.setLocational(doctor.getLocational());
+                dto.setSpecialtyId(doctor.getSpecialty() != null ? doctor.getSpecialty().getId() : null);
+                dto.setSpecialtyName(doctor.getSpecialty() != null ? doctor.getSpecialty().getName() : null);
+                dto.setStatus(doctor.getStatus());
+                
+                // Map certificates
+                dto.setCertificates(
+                    doctor.getCertificates() != null
+                        ? doctor.getCertificates().stream().map(c -> c.getCertificateName()).collect(java.util.stream.Collectors.toList())
+                        : new java.util.ArrayList<>()
+                );
+                
+                return dto;
+            }).collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Error fetching online doctors: {}", e.getMessage());
+            return new ArrayList<>();
+        }
     }
 
 

@@ -61,7 +61,10 @@ const DoctorDashboard = () => {
     
                 // Lấy thông tin bác sĩ từ accountId
                 const doctorData = await DoctorDashboardService.getDoctorByAccountId(accountId);
+                console.log("Doctor data received:", doctorData);
+                
                 if (doctorData?.id) {
+                    console.log("Setting doctorId to:", doctorData.id);
                     setDoctorId(doctorData.id);
     
                     // LẤY DỮ LIỆU THỐNG KÊ THỰC TẾ Ở ĐÂY
@@ -69,6 +72,7 @@ const DoctorDashboard = () => {
                     setStats(statsData);
     
                 } else {
+                    console.error("Doctor data missing or invalid:", doctorData);
                     setError('Không tìm thấy ID bác sĩ');
                 }
             } catch (err) {
@@ -115,7 +119,7 @@ const DoctorDashboard = () => {
     );
 
     const menuItems = [
-        { id: 'overview', label: 'Tổng quan', icon: '📊' },
+        // { id: 'overview', label: 'Tổng quan', icon: '📊' },
         { id: 'appointments', label: 'Lịch hẹn', icon: '📅' },
         { id: 'schedule', label: 'Lịch làm việc', icon: '⏰' },
         { id: 'records', label: 'Hồ sơ khám bệnh', icon: '📋' },

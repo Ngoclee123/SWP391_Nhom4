@@ -180,12 +180,21 @@ function Appointments({ doctorId }) {
                       </>
                     )}
                     {a.status === "Confirmed" && (
-                      <button
-                        className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
-                        onClick={() => handleEditAppointment(a)}
-                      >
-                        Chỉnh sửa thời lượng
-                      </button>
+                      <>
+                        <button
+                          className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded"
+                          disabled={updatingId === a.id}
+                          onClick={() => handleUpdateStatus(a.id, "Completed")}
+                        >
+                          {updatingId === a.id ? "Đang hoàn thành..." : "Hoàn thành"}
+                        </button>
+                        <button
+                          className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded"
+                          onClick={() => handleEditAppointment(a)}
+                        >
+                          Chỉnh sửa thời lượng
+                        </button>
+                      </>
                     )}
                     {a.status === "Cancelled" && (
                       <span className="text-red-600 font-semibold">Đã hủy</span>

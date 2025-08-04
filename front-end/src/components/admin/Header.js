@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Bell, X } from 'lucide-react';
+import { Bell, X, LogOut, User } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import UserService from '../../service/userService';
 
@@ -50,110 +50,135 @@ const Header = React.memo(({ currentPageTitle, notificationCount, clearNotificat
   const avatarLetter = adminName && adminName.trim().length > 0 ? adminName.trim()[0].toUpperCase() : 'A';
 
   return (
-    <header className="bg-white shadow-sm px-6 py-4 border-b border-gray-200">
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{currentPageTitle}</h2>
-          <p className="text-gray-600 mt-1">Chào mừng bạn quay trở lại hệ thống quản trị!</p>
-        </div>
-        
-        <div className="flex items-center space-x-4">
-          <div className="relative" ref={notificationRef}>
-            <button 
-              onClick={handleNotificationClick}
-              className="p-3 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-lg transition-colors"
-            >
-              <Bell className="w-6 h-6" />
-              {notificationCount > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold">
-                  {notificationCount}
-                </span>
-              )}
-            </button>
+    <header className="bg-white shadow-sm border-b border-gray-100">
+      <div className="px-8 py-6">
+        <div className="flex items-center justify-between">
+          {/* Page Title */}
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-gray-800 mb-1">{currentPageTitle}</h1>
+            <p className="text-gray-600 font-medium">Chào mừng bạn quay trở lại hệ thống quản trị</p>
+          </div>
+          
+          {/* Right Section */}
+          <div className="flex items-center space-x-6">
+            {/* Notifications */}
+            <div className="relative" ref={notificationRef}>
+              <button 
+                onClick={handleNotificationClick}
+                className="relative p-3 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-xl transition-all duration-200 group"
+              >
+                <Bell className="w-6 h-6 group-hover:scale-110 transition-transform duration-200" />
+                {notificationCount > 0 && (
+                  <span className="absolute -top-1 -right-1 w-6 h-6 bg-red-500 text-white text-xs rounded-full flex items-center justify-center font-bold shadow-lg">
+                    {notificationCount > 99 ? '99+' : notificationCount}
+                  </span>
+                )}
+              </button>
 
-            {showNotifications && (
-              <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200">
-                  <h3 className="font-semibold text-gray-700">Thông báo</h3>
-                  <div className="flex space-x-2">
-                    {notificationCount > 0 && (
+              {/* Notification Dropdown */}
+              {showNotifications && (
+                <div className="absolute right-0 mt-3 w-96 bg-white rounded-2xl shadow-2xl border border-gray-100 z-50 overflow-hidden">
+                  {/* Header */}
+                  <div className="flex items-center justify-between px-6 py-4 bg-gradient-to-r from-blue-50 to-indigo-50 border-b border-gray-100">
+                    <h3 className="font-bold text-gray-800 text-lg">Thông báo</h3>
+                    <div className="flex items-center space-x-3">
+                      {notificationCount > 0 && (
+                        <button 
+                          onClick={clearNotifications}
+                          className="text-sm text-blue-600 hover:text-blue-800 font-medium transition-colors"
+                        >
+                          Đánh dấu đã đọc
+                        </button>
+                      )}
                       <button 
-                        onClick={clearNotifications}
-                        className="text-xs text-blue-600 hover:text-blue-800"
+                        onClick={() => setShowNotifications(false)}
+                        className="p-1 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg transition-all"
                       >
-                        Đánh dấu tất cả đã đọc
+                        <X size={18} />
                       </button>
+                    </div>
+                  </div>
+                  
+                  {/* Notifications List */}
+                  <div className="max-h-80 overflow-y-auto">
+                    {loading ? (
+                      <div className="py-12 text-center">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-3"></div>
+                        <p className="text-gray-500 font-medium">Đang tải thông báo...</p>
+                      </div>
+                    ) : notifications && notifications.length > 0 ? (
+                      <div>
+                        {notifications.map(notification => (
+                          <div 
+                            key={notification.notificationId} 
+                            className={`px-6 py-4 border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-all duration-200 ${
+                              !notification.isRead ? 'bg-blue-50/50' : ''
+                            }`}
+                            onClick={() => handleNotificationItemClick(notification)}
+                          >
+                            <div className="flex justify-between items-start mb-2">
+                              <h4 className="font-semibold text-gray-800 text-sm leading-tight">{notification.subject}</h4>
+                              {!notification.isRead && (
+                                <div className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0 ml-2"></div>
+                              )}
+                            </div>
+                            <p className="text-sm text-gray-600 mb-2 line-clamp-2">{notification.body}</p>
+                            {notification.notificationType === 'VACCINE_APPOINTMENT' && (
+                              <div className="mb-2 p-3 bg-gray-50 rounded-lg text-xs">
+                                <div className="grid grid-cols-1 gap-1">
+                                  <div><span className="font-semibold text-gray-700">Bệnh nhân:</span> {notification.patientName}</div>
+                                  <div><span className="font-semibold text-gray-700">Vaccine:</span> {notification.vaccineName}</div>
+                                  <div><span className="font-semibold text-gray-700">Ngày hẹn:</span> {notification.appointmentDate}</div>
+                                </div>
+                              </div>
+                            )}
+                            <div className="text-xs text-gray-500 font-medium">{formatDate(notification.createdAt)}</div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                        <p className="text-gray-500 font-medium">Không có thông báo nào</p>
+                      </div>
                     )}
+                  </div>
+                  
+                  {/* Footer */}
+                  <div className="px-6 py-4 bg-gray-50 border-t border-gray-100">
                     <button 
-                      onClick={() => setShowNotifications(false)}
-                      className="text-gray-500 hover:text-gray-700"
+                      onClick={() => {
+                        setActiveTab('notifications');
+                        setShowNotifications(false);
+                      }}
+                      className="w-full py-3 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl"
                     >
-                      <X size={16} />
+                      Gửi thông báo mới
                     </button>
                   </div>
                 </div>
-                
-                <div className="max-h-72 overflow-y-auto">
-                  {loading ? (
-                    <div className="py-8 text-center text-gray-500">Đang tải thông báo...</div>
-                  ) : notifications && notifications.length > 0 ? (
-                    <div>
-                      {notifications.map(notification => (
-                        <div 
-                          key={notification.notificationId} 
-                          className={`px-4 py-3 border-b border-gray-100 hover:bg-gray-50 cursor-pointer ${!notification.isRead ? 'bg-blue-50' : ''}`}
-                          onClick={() => handleNotificationItemClick(notification)}
-                        >
-                          <div className="flex justify-between items-start">
-                            <h4 className="font-medium text-gray-900 text-sm">{notification.subject}</h4>
-                            {!notification.isRead && <div className="w-2 h-2 bg-blue-600 rounded-full"></div>}
-                          </div>
-                          <p className="text-xs text-gray-600 mt-1 line-clamp-2">{notification.body}</p>
-                          {notification.notificationType === 'VACCINE_APPOINTMENT' && (
-                            <div className="mt-1 p-2 bg-gray-100 rounded text-xs">
-                              <div><span className="font-medium">Bệnh nhân:</span> {notification.patientName}</div>
-                              <div><span className="font-medium">Vaccine:</span> {notification.vaccineName}</div>
-                              <div><span className="font-medium">Ngày hẹn:</span> {notification.appointmentDate}</div>
-                            </div>
-                          )}
-                          <div className="text-xs text-gray-500 mt-1">{formatDate(notification.createdAt)}</div>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <div className="py-8 text-center text-gray-500">Không có thông báo nào</div>
-                  )}
+              )}
+            </div>
+            
+            {/* User Profile */}
+            <div className="flex items-center space-x-4 pl-6 border-l border-gray-200">
+              <div className="flex items-center space-x-3">
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center shadow-lg">
+                  <User className="w-6 h-6 text-white" />
                 </div>
-                
-                <div className="px-4 py-3 border-t border-gray-200">
-                  <button 
-                    onClick={() => {
-                      setActiveTab('notifications');
-                      setShowNotifications(false);
-                    }}
-                    className="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-lg"
-                  >
-                    Gửi thông báo mới
-                  </button>
+                <div className="text-right">
+                  <p className="font-bold text-gray-800 text-sm">{adminName || 'Admin'}</p>
+                  <p className="text-gray-500 text-xs font-medium">Quản trị viên</p>
                 </div>
               </div>
-            )}
-          </div>
-          
-          <div className="flex items-center space-x-3 pl-4 border-l border-gray-200">
-            <div className="w-10 h-10 bg-gradient-to-br from-gray-400 to-gray-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold">{avatarLetter}</span>
+              <button
+                onClick={handleLogout}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-xl font-semibold text-sm transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                <LogOut className="w-4 h-4" />
+                <span>Đăng xuất</span>
+              </button>
             </div>
-            <div className="text-sm">
-              <p className="font-semibold text-gray-900">{adminName || 'Admin'}</p>
-              <p className="text-gray-500">Quản trị viên hệ thống</p>
-            </div>
-            <button
-              onClick={handleLogout}
-              className="ml-4 px-3 py-1 bg-red-500 text-white rounded hover:bg-red-600 text-sm font-semibold"
-            >
-              Đăng xuất
-            </button>
           </div>
         </div>
       </div>

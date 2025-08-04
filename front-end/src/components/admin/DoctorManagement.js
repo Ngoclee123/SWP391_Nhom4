@@ -100,46 +100,31 @@ const DoctorManagement = React.memo(() => {
   }, [fetchDoctors, fetchSpecialties, fetchCertificates]);
 
   const handleDoctorAction = useCallback((action, doctorId) => {
-    if (action === 'view') {
-      navigate(`/admin/doctors/${doctorId}`);
-    } else if (action === 'edit') {
+    if (action === 'edit') {
       setLoading(true);
-      Promise.all([
-        DoctorService.getDoctorEntityById(doctorId),
-        DoctorService.getAdminCertificatesByDoctorId(doctorId)
-      ])
-      .then(([res, certificates]) => {
-        const doctor = res.data;
-        setSelectedDoctor(doctor);
-        setFormData({
-          id: doctor.id, // Lưu id vào formData để submit không bị undefined
-          name: doctor.fullName || '',
-          specialty: doctor.specialtyId || '',
-          status: doctor.status || 'online',
-          imgs: doctor.imgs || '',
-          bio: doctor.bio || '',
-          dateOfBirth: doctor.dateOfBirth || '',
-          locational: doctor.locational || '',
-          education: doctor.education || '',
-          certificates: Array.isArray(certificates) ? certificates : [],
-          hospital: doctor.hospital || '',
-          phoneNumber: doctor.phoneNumber || '',
-        });
-        fetchSpecialties();
-        fetchCertificates();
-        setModalMode('edit');
-        setIsModalOpen(true);
-      })
-      .finally(() => setLoading(false));
-    } else if (action === 'delete') {
-      if (window.confirm('Bạn có chắc muốn xóa bác sĩ này?')) {
-        setLoading(true);
-        setError('');
-        DoctorService.deleteDoctor(doctorId)
-          .then(() => fetchDoctors())
-          .catch(() => setError('Xóa bác sĩ thất bại'))
-          .finally(() => setLoading(false));
-      }
+      setError('');
+      DoctorService.getDoctorById(doctorId)
+        .then(res => {
+          const doctor = res.data || res;
+          setSelectedDoctor(doctor);
+          setFormData({
+            id: doctor.id,
+            name: doctor.fullName || doctor.name || '',
+            specialty: doctor.specialtyId?.toString() || doctor.specialty || '',
+            status: doctor.status || 'online',
+            imgs: doctor.imgs || '',
+            bio: doctor.bio || '',
+            dateOfBirth: doctor.dateOfBirth || '',
+            locational: doctor.locational || '',
+            education: doctor.education || '',
+            certificates: doctor.certificates || [''],
+            hospital: doctor.hospital || '',
+            phoneNumber: doctor.phoneNumber || '',
+          });
+          setModalMode('edit');
+          setIsModalOpen(true);
+        })
+        .finally(() => setLoading(false));
     }
   }, [fetchDoctors, fetchSpecialties, fetchCertificates, navigate]);
 
@@ -354,81 +339,82 @@ const DoctorManagement = React.memo(() => {
       </div>
       {/* Table hiển thị danh sách bác sĩ dùng filteredDoctors thay vì doctors */}
       <div className="overflow-x-auto bg-white rounded-xl shadow border border-gray-100">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
-            <tr>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ảnh</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Họ tên</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Chuyên khoa</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SĐT</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ngày sinh</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Địa chỉ</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bệnh viện</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
-              <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hành động</th>
-            </tr>
-          </thead>
-          <tbody className="bg-white divide-y divide-gray-100">
-            {paginatedDoctors.map((doctor) => (
-              <tr key={doctor.id}>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{doctor.id}</td>
-                <td className="px-4 py-3 whitespace-nowrap">
-                  {doctor.imgs && typeof doctor.imgs === 'string' ? (
-                    <img
-                      src={
-                        doctor.imgs.startsWith('http')
-                          ? doctor.imgs
-                          : doctor.imgs.startsWith('/avatars/')
-                            ? `http://localhost:8080${doctor.imgs}`
-                            : doctor.imgs
-                      }
-                      alt={doctor.name}
-                      className="w-12 h-12 object-cover rounded-lg"
-                      onError={e => { e.target.onerror = null; e.target.src = '/logo192.png'; }}
-                    />
-                  ) : (
-                    <span className="inline-block w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 font-bold">
-                      {doctor.name.split(' ').pop().charAt(0)}
-                    </span>
-                  )}
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{doctor.name}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.specialty}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.phoneNumber}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.dateOfBirth}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.locational}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.hospital}</td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${doctor.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
-                    {doctor.status === 'online' ? 'Trực tuyến' : 'Ngoại tuyến'}
-                  </span>
-                </td>
-                <td className="px-4 py-3 whitespace-nowrap text-sm">
-                  <div className="flex space-x-2">
-                    <ActionButton
-                      icon={Edit}
-                      onClick={() => handleDoctorAction('edit', doctor.id)}
-                      color="green"
-                      tooltip="Chỉnh sửa"
-                    />
-                    <ActionButton
-                      icon={X}
-                      onClick={() => handleDoctorAction('delete', doctor.id)}
-                      color="red"
-                      tooltip="Xóa"
-                    />
-                  </div>
-                </td>
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
+            <span className="ml-3 text-gray-600">Đang tải dữ liệu...</span>
+          </div>
+        ) : (
+          <table className="min-w-full divide-y divide-gray-200">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">ID</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ảnh</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Họ tên</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Chuyên khoa</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">SĐT</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Ngày sinh</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Địa chỉ</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Bệnh viện</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
+                <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Hành động</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-        {/* PHÂN TRANG */}
+            </thead>
+            <tbody className="bg-white divide-y divide-gray-100">
+              {paginatedDoctors.map((doctor) => (
+                <tr key={doctor.id}>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{doctor.id}</td>
+                  <td className="px-4 py-3 whitespace-nowrap">
+                    {doctor.imgs && typeof doctor.imgs === 'string' ? (
+                      <img
+                        src={
+                          doctor.imgs.startsWith('http')
+                            ? doctor.imgs
+                            : doctor.imgs.startsWith('/avatars/')
+                              ? `http://localhost:8080${doctor.imgs}`
+                              : doctor.imgs
+                        }
+                        alt={doctor.name}
+                        className="w-12 h-12 object-cover rounded-lg"
+                        onError={e => { e.target.onerror = null; e.target.src = '/logo192.png'; }}
+                      />
+                    ) : (
+                      <span className="inline-block w-12 h-12 bg-gray-200 rounded-lg flex items-center justify-center text-gray-500 font-bold">
+                        {doctor.name.split(' ').pop().charAt(0)}
+                      </span>
+                    )}
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm font-semibold text-gray-900">{doctor.name}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.specialty}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.phoneNumber}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.dateOfBirth}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.locational}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-700">{doctor.hospital}</td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${doctor.status === 'online' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-600'}`}>
+                      {doctor.status === 'online' ? 'Trực tuyến' : 'Ngoại tuyến'}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 whitespace-nowrap text-sm">
+                    <div className="flex space-x-2">
+                      <ActionButton
+                        icon={Edit}
+                        onClick={() => handleDoctorAction('edit', doctor.id)}
+                        color="green"
+                        tooltip="Chỉnh sửa"
+                      />
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+        {/* Phân trang */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 py-4">
+          <div className="flex justify-center items-center gap-2 py-4 bg-gray-50 border-t border-gray-200">
             <button
-              className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+              className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
@@ -437,14 +423,18 @@ const DoctorManagement = React.memo(() => {
             {Array.from({ length: totalPages }, (_, i) => (
               <button
                 key={i + 1}
-                className={`px-3 py-1 rounded border ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                className={`px-3 py-2 rounded-lg border transition-colors ${
+                  currentPage === i + 1 
+                    ? 'bg-blue-500 text-white border-blue-500' 
+                    : 'bg-white hover:bg-gray-50'
+                }`}
                 onClick={() => setCurrentPage(i + 1)}
               >
                 {i + 1}
               </button>
             ))}
             <button
-              className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+              className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >

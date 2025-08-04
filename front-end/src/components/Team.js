@@ -66,7 +66,11 @@ function Team() {
           return;
         }
 
-        setDoctors(doctorsArray);
+        // Chọn 3 bác sĩ ngẫu nhiên
+        const shuffled = doctorsArray.sort(() => 0.5 - Math.random());
+        const selectedDoctors = shuffled.slice(0, 3);
+
+        setDoctors(selectedDoctors);
 
         if (response.message) {
           setMessage(response.message);

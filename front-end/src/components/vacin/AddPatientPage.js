@@ -9,6 +9,7 @@ const AddPatientPage = () => {
   const navigate = useNavigate()
   const location = useLocation()
   const vaccineId = location.state?.vaccineId
+  const fromHome = location.state?.fromHome
   const [formData, setFormData] = useState({
     fullName: "",
     dateOfBirth: "",
@@ -63,8 +64,7 @@ const AddPatientPage = () => {
     e.preventDefault()
     setIsSubmitted(true)
 
-    if (!validateNewPatient() || !vaccineId) {
-      if (!vaccineId) setError({ ...error, general: "Không thể xác định vaccineId." })
+    if (!validateNewPatient()) {
       return
     }
 
@@ -96,8 +96,19 @@ const AddPatientPage = () => {
         if (newPatient.id && newPatient.fullName) {
           setMessage("Đã thêm bé mới thành công!")
           if (vaccineId) {
+            // Nếu có vaccineId, redirect về trang vaccine
             setTimeout(() => {
               navigate(`/vaccines/${vaccineId}`, { state: { newPatient } })
+            }, 2000)
+          } else if (fromHome) {
+            // Nếu đến từ Header/Home, redirect về trang home
+            setTimeout(() => {
+              navigate('/home', { state: { newPatient } })
+            }, 2000)
+          } else {
+            // Nếu không có vaccineId và không từ home, redirect về trang danh sách vaccine
+            setTimeout(() => {
+              navigate('/vaccines', { state: { newPatient } })
             }, 2000)
           }
           break
@@ -635,7 +646,15 @@ const AddPatientPage = () => {
 
                 <button
                   type="button"
-                  onClick={() => navigate(`/vaccines/${vaccineId || "1"}`)}
+                  onClick={() => {
+                    if (vaccineId) {
+                      navigate(`/vaccines/${vaccineId}`)
+                    } else if (fromHome) {
+                      navigate('/home')
+                    } else {
+                      navigate('/vaccines')
+                    }
+                  }}
                   disabled={loading}
                   className="flex-1 sm:flex-none bg-gray-100 hover:bg-gray-200 text-gray-700 py-4 px-8 rounded-2xl font-bold text-lg transition-all duration-300 transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
                 >

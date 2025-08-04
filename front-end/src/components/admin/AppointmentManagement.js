@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AppointmentService from '../../service/AppointmentService';
+import ActionButton from './ActionButton';
+import { Edit, Trash2 } from 'lucide-react';
 
 
 const AppointmentManagement = () => {
@@ -233,12 +235,6 @@ const AppointmentManagement = () => {
 
   return (
     <div className="p-6">
-      <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900 mb-2">Quản lý Lịch hẹn</h1>
-        <p className="text-gray-600">Quản lý tất cả lịch hẹn trong hệ thống</p>
-      </div>
-
-
       {error && (
         <div className="mb-4 p-4 bg-red-100 border border-red-400 text-red-700 rounded">
           {error}
@@ -326,19 +322,23 @@ const AppointmentManagement = () => {
                     {getStatusBadge((appointment.status || '').toUpperCase())}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <div className="flex space-x-2">
-                      <button
+                    <div className="flex items-center space-x-2">
+                      <ActionButton
                         onClick={() => handleEditAppointment(appointment)}
-                        className="text-green-600 hover:text-green-900"
+                        variant="success"
+                        size="sm"
                       >
+                        <Edit className="w-4 h-4" />
                         Sửa
-                      </button>
-                      <button
+                      </ActionButton>
+                      <ActionButton
                         onClick={() => handleDeleteAppointment(appointment)}
-                        className="text-red-600 hover:text-red-900"
+                        variant="danger"
+                        size="sm"
                       >
+                        <Trash2 className="w-4 h-4" />
                         Xóa
-                      </button>
+                      </ActionButton>
                     </div>
                   </td>
                 </tr>
@@ -346,27 +346,87 @@ const AppointmentManagement = () => {
             </tbody>
           </table>
         </div>
-        {/* PHÂN TRANG */}
+        {/* Phân trang */}
         {totalPages > 1 && (
-          <div className="flex justify-center items-center gap-2 py-4">
+          <div className="flex justify-center items-center gap-2 py-4 bg-gray-50 border-t border-gray-200">
             <button
-              className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+              className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
               disabled={currentPage === 1}
             >
               &lt;
             </button>
-            {Array.from({ length: totalPages }, (_, i) => (
-              <button
-                key={i + 1}
-                className={`px-3 py-1 rounded border ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
-                onClick={() => setCurrentPage(i + 1)}
-              >
-                {i + 1}
-              </button>
-            ))}
+            
+            {/* Hiển thị các trang */}
+            {(() => {
+              const pages = [];
+              const maxVisiblePages = 5;
+              let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+              let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+              
+              // Điều chỉnh startPage nếu endPage quá gần cuối
+              if (endPage - startPage + 1 < maxVisiblePages) {
+                startPage = Math.max(1, endPage - maxVisiblePages + 1);
+              }
+              
+              // Thêm trang đầu nếu cần
+              if (startPage > 1) {
+                pages.push(
+                  <button
+                    key={1}
+                    className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
+                    onClick={() => setCurrentPage(1)}
+                  >
+                    1
+                  </button>
+                );
+                if (startPage > 2) {
+                  pages.push(
+                    <span key="ellipsis1" className="px-2 text-gray-500">...</span>
+                  );
+                }
+              }
+              
+              // Thêm các trang chính
+              for (let i = startPage; i <= endPage; i++) {
+                pages.push(
+                  <button
+                    key={i}
+                    className={`px-3 py-2 rounded-lg border transition-colors ${
+                      currentPage === i 
+                        ? 'bg-blue-500 text-white border-blue-500' 
+                        : 'bg-white hover:bg-gray-50'
+                    }`}
+                    onClick={() => setCurrentPage(i)}
+                  >
+                    {i}
+                  </button>
+                );
+              }
+              
+              // Thêm trang cuối nếu cần
+              if (endPage < totalPages) {
+                if (endPage < totalPages - 1) {
+                  pages.push(
+                    <span key="ellipsis2" className="px-2 text-gray-500">...</span>
+                  );
+                }
+                pages.push(
+                  <button
+                    key={totalPages}
+                    className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors"
+                    onClick={() => setCurrentPage(totalPages)}
+                  >
+                    {totalPages}
+                  </button>
+                );
+              }
+              
+              return pages;
+            })()}
+            
             <button
-              className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+              className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
               disabled={currentPage === totalPages}
             >

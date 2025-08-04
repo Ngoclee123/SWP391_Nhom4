@@ -111,6 +111,23 @@ public interface DoctorRepository extends JpaRepository<Doctor, Integer>, JpaSpe
     @Query("SELECT d FROM Doctor d WHERE LOWER(d.status) = 'online'")
     List<Doctor> findOnlineDoctors();
 
+    // Lấy danh sách bác sĩ có đánh giá cao nhất
+    @Query("SELECT d.id, AVG(f.rating) as avgRating, COUNT(f.id) as feedbackCount " +
+           "FROM Doctor d " +
+           "LEFT JOIN Feedback f ON d.id = f.doctor.id " +
+           "GROUP BY d.id " +
+           "HAVING COUNT(f.id) > 0 " +
+           "ORDER BY avgRating DESC, feedbackCount DESC " +
+           "LIMIT :limit")
+    List<Object[]> findDoctorsWithAverageRating(@Param("limit") int limit);
+
+    @Query("SELECT d.id, AVG(f.rating) as avgRating, COUNT(f.id) as feedbackCount " +
+            "FROM Doctor d " +
+            "LEFT JOIN Feedback f ON d.id = f.doctor.id " +
+            "WHERE d.id = :doctorId " +
+            "GROUP BY d.id")
+    Object[] findAverageRatingByDoctorId(@Param("doctorId") Integer doctorId);
+
     @org.springframework.data.jpa.repository.Query("SELECT COUNT(d) FROM Doctor d WHERE LOWER(d.status) = LOWER(:status)")
     long countByStatus(@org.springframework.data.repository.query.Param("status") String status);
 

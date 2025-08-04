@@ -144,6 +144,15 @@ function Header() {
                     >
                         Doctors
                     </Link>
+                    <Link
+                        to="/vaccines"
+                        className={`text-gray-700 font-medium hover:text-blue-600 transform hover:scale-105 transition duration-300 ${
+                            activeLink === '/vaccines' ? 'text-blue-600 border-b-2 border-blue-600' : ''
+                        }`}
+                        onClick={() => handleNavClick('/vaccines', '')}
+                    >
+                        Vaccine
+                    </Link>
                 </nav>
 
                 <div className="flex items-center space-x-4">
@@ -193,7 +202,13 @@ function Header() {
                     Lịch sử đặt lịch
                   </button>
                                     <button
-                                        onClick={() => { setIsDropdownOpen(false); navigate('/add-patient'); }}
+                                        onClick={() => { setIsDropdownOpen(false); navigate('/patients'); }}
+                                        className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
+                                    >
+                                        Quản lý bé
+                                    </button>
+                                    <button
+                                        onClick={() => { setIsDropdownOpen(false); navigate('/add-patient', { state: { fromHome: true } }); }}
                                         className="block w-full text-left px-4 py-2 text-gray-700 hover:bg-blue-50 hover:text-blue-600 transition duration-200"
                                     >
                                         Thêm bé

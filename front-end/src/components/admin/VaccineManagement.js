@@ -87,9 +87,6 @@ function VaccineManagement() {
               </svg>
               Quản lý Vaccine
             </h2>
-            <div className="text-sm text-gray-500 bg-blue-50 px-4 py-2 rounded-full">
-              Tổng: {vaccines.length} vaccine
-            </div>
           </div>
 
           {/* Search Bar */}

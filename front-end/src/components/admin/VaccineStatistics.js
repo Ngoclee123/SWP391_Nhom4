@@ -9,6 +9,7 @@ ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend,
 
 function VaccineStatistics() {
   const [stats, setStats] = useState(null)
+  // Khởi tạo với tháng hiện tại, nhưng có thể thay đổi để xem thống kê của tháng khác
   const [month, setMonth] = useState(new Date().getMonth() + 1)
   const [year, setYear] = useState(new Date().getFullYear())
   const [loading, setLoading] = useState(false)

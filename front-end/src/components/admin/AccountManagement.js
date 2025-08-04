@@ -20,9 +20,9 @@ const ROLE_OPTIONS = [
 ];
 
 const ROLE_LABELS = {
-  ADMIN: 'Admin',
-  USER: 'User',
-  DOCTOR: 'Doctor',
+  'ADMIN': 'Admin',
+  'USER': 'User', 
+  'DOCTOR': 'Doctor'
 };
 
 function AccountManagement() {
@@ -33,26 +33,16 @@ function AccountManagement() {
   const [error, setError] = useState('');
   const [search, setSearch] = useState('');
   const [roleFilter, setRoleFilter] = useState('');
-  const [isModalOpen, setIsModalOpen] = useState(false); // Thêm state cho modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
   const [sortField, setSortField] = useState('');
   const [sortOrder, setSortOrder] = useState('asc');
-  const [currentPage, setCurrentPage] = useState(1);
-  const accountsPerPage = 7;
-
-  const handleSort = (field) => {
-    if (sortField === field) {
-      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
-    } else {
-      setSortField(field);
-      setSortOrder('asc');
-    }
-  };
+  const accountsPerPage = 10;
 
   const fetchAccounts = async () => {
     setLoading(true);
     try {
       const res = await userService.getAllAccounts();
-      // Đảm bảo luôn lấy đúng mảng account
       const accounts = Array.isArray(res) ? res : (res.data || res.content || []);
       setAccounts(accounts);
     } catch (err) {
@@ -88,7 +78,6 @@ function AccountManagement() {
     setIsModalOpen(true);
   };
 
-  // Thay thế hàm handleDelete thành handleDisable
   const handleDisable = async (id) => {
     if (!window.confirm('Bạn có chắc muốn vô hiệu hóa tài khoản này?')) return;
     try {
@@ -136,6 +125,15 @@ function AccountManagement() {
     setError('');
   };
 
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
   const filteredAccounts = useMemo(() => {
     let result = accounts.filter(acc => {
       const matchesSearch =
@@ -170,30 +168,31 @@ function AccountManagement() {
 
   return (
     <div className="space-y-6">
+      {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-3xl font-bold text-gray-900">Quản lý tài khoản</h2>
-          <p className="text-gray-600 mt-1">Quản lý và theo dõi tất cả tài khoản người dùng</p>
         </div>
         <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
           <input
             type="text"
-            placeholder="Tìm kiếm theo tên, email, username..."
-            className="w-full sm:w-64 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
+            placeholder="Tìm kiếm tài khoản..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
           <select
-            className="w-full sm:w-48 px-3 py-2 border border-gray-200 rounded-lg focus:ring-2 focus:ring-blue-500"
             value={roleFilter}
             onChange={(e) => setRoleFilter(e.target.value)}
+            className="px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           >
-            {ROLE_OPTIONS.map((opt) => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
+            <option value="">Tất cả vai trò</option>
+            <option value="ADMIN">Admin</option>
+            <option value="USER">User</option>
+            <option value="DOCTOR">Doctor</option>
           </select>
           <button
-            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-colors shadow-lg"
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-xl font-semibold transition-colors"
             onClick={() => {
               setForm(initialForm);
               setEditingId(null);
@@ -204,6 +203,7 @@ function AccountManagement() {
           </button>
         </div>
       </div>
+
       {/* Modal thêm/sửa tài khoản */}
       {isModalOpen && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -330,18 +330,20 @@ function AccountManagement() {
           </div>
         </div>
       )}
+
+      {/* Table */}
       {loading ? (
         <div className="text-center py-12 text-gray-500 text-lg">Đang tải...</div>
       ) : (
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-full">
               <thead className="bg-gray-50 border-b border-gray-200">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Username</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Email</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Tài khoản</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Thông tin</th>
                   <th
-                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
+                    className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer select-none"
                     onClick={() => handleSort('roleName')}
                   >
                     VAI TRÒ{' '}
@@ -349,39 +351,49 @@ function AccountManagement() {
                       <span>{sortOrder === 'asc' ? '↑' : '↓'}</span>
                     )}
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Họ tên</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Số điện thoại</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Địa chỉ</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
-                  <th className="px-6 py-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Thao tác</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Trạng thái</th>
+                  <th className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Thao tác</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-100">
                 {paginatedAccounts && paginatedAccounts.length > 0 ? paginatedAccounts.map((acc) => (
                   <tr key={acc.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-5 font-medium text-gray-900">{acc.username}</td>
-                    <td className="px-6 py-5 font-medium text-gray-900">{acc.email}</td>
-                    <td className="px-6 py-5 font-medium text-gray-900">{ROLE_LABELS[acc.roleName] || 'Không xác định'}</td>
-                    <td className="px-6 py-5 font-medium text-gray-900">{acc.fullName}</td>
-                    <td className="px-6 py-5 font-medium text-gray-900">{acc.phoneNumber}</td>
-                    <td className="px-6 py-5 font-medium text-gray-900">{acc.address}</td>
-                    <td className="px-6 py-5">
-                      <span className={`px-2 py-1 rounded text-xs font-semibold ${acc.status ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-500'}`}>
+                    <td className="px-4 py-4">
+                      <div>
+                        <div className="font-semibold text-gray-900">{acc.username}</div>
+                        <div className="text-sm text-gray-500">{acc.email}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <div>
+                        <div className="font-medium text-gray-900">{acc.fullName}</div>
+                        <div className="text-sm text-gray-500">{acc.phoneNumber}</div>
+                      </div>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                        {ROLE_LABELS[acc.roleName] || 'Không xác định'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-4">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        acc.status ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                      }`}>
                         {acc.status ? 'Active' : 'Inactive'}
                       </span>
                     </td>
-                    <td className="px-6 py-5">
-                      <div className="flex items-center space-x-1">
+                    <td className="px-4 py-4">
+                      <div className="flex items-center space-x-2">
                         <button
                           onClick={() => handleEdit(acc)}
-                          className="bg-yellow-400 hover:bg-yellow-500 px-2 py-1 rounded font-semibold text-xs text-white"
+                          className="bg-blue-500 hover:bg-blue-600 px-3 py-1.5 rounded-lg font-medium text-xs text-white transition-colors"
                         >
                           Sửa
                         </button>
                         {acc.status ? (
                           <button
                             onClick={() => handleDisable(acc.id)}
-                            className="bg-gray-500 hover:bg-gray-600 px-2 py-1 rounded font-semibold text-xs text-white"
+                            className="bg-gray-500 hover:bg-gray-600 px-3 py-1.5 rounded-lg font-medium text-xs text-white transition-colors"
                           >
                             Vô hiệu hóa
                           </button>
@@ -395,7 +407,7 @@ function AccountManagement() {
                                 setError('Kích hoạt tài khoản thất bại');
                               }
                             }}
-                            className="bg-green-500 hover:bg-green-600 px-2 py-1 rounded font-semibold text-xs text-white"
+                            className="bg-green-500 hover:bg-green-600 px-3 py-1.5 rounded-lg font-medium text-xs text-white transition-colors"
                           >
                             Kích hoạt
                           </button>
@@ -405,7 +417,7 @@ function AccountManagement() {
                   </tr>
                 )) : (
                   <tr>
-                    <td colSpan="8" className="text-center py-12 text-gray-500 text-lg">
+                    <td colSpan="5" className="text-center py-12 text-gray-500 text-lg">
                       Không có tài khoản nào.
                     </td>
                   </tr>
@@ -413,11 +425,12 @@ function AccountManagement() {
               </tbody>
             </table>
           </div>
-          {/* PHÂN TRANG */}
+          
+          {/* Phân trang */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 py-4">
+            <div className="flex justify-center items-center gap-2 py-4 bg-gray-50 border-t border-gray-200">
               <button
-                className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+                className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 disabled={currentPage === 1}
               >
@@ -426,14 +439,18 @@ function AccountManagement() {
               {Array.from({ length: totalPages }, (_, i) => (
                 <button
                   key={i + 1}
-                  className={`px-3 py-1 rounded border ${currentPage === i + 1 ? 'bg-blue-500 text-white' : 'bg-gray-100 hover:bg-gray-200'}`}
+                  className={`px-3 py-2 rounded-lg border transition-colors ${
+                    currentPage === i + 1 
+                      ? 'bg-blue-500 text-white border-blue-500' 
+                      : 'bg-white hover:bg-gray-50'
+                  }`}
                   onClick={() => setCurrentPage(i + 1)}
                 >
                   {i + 1}
                 </button>
               ))}
               <button
-                className="px-3 py-1 rounded border bg-gray-100 hover:bg-gray-200"
+                className="px-3 py-2 rounded-lg border bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
                 onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 disabled={currentPage === totalPages}
               >
@@ -443,8 +460,9 @@ function AccountManagement() {
           )}
         </div>
       )}
+      
       {error && (
-        <div className="text-center py-4 text-red-500">{error}</div>
+        <div className="text-center py-4 text-red-500 bg-red-50 rounded-lg">{error}</div>
       )}
     </div>
   );

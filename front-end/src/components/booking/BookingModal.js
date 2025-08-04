@@ -110,7 +110,11 @@ const BookingModal = ({ doctorId, selectedDate, selectedTime, onClose }) => {
           setError("Không lấy được mã lịch hẹn để thanh toán.");
         }
       } else {
-        setTimeout(() => onClose(), 2000);
+        // Tự động reload trang sau khi đặt lịch thành công
+        setTimeout(() => {
+          onClose();
+          window.location.reload();
+        }, 2000);
       }
 
       if (response.data && response.data.token) {
